@@ -287,3 +287,14 @@ body { font-family: var(--font); background: var(--bg); color: var(--ink); -webk
   resize: vertical; min-height: 70px; transition: .15s;
 }
 #m-problematique:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(63,203,209,.1); }
+
+/* ── Edit exposant panel ── */
+.edit-panel-inner { background: var(--white); border: 1.5px solid var(--brd2); border-radius: var(--rl); padding: 1.5rem; max-width: 560px; }
+.edit-panel-title { font-family: var(--font); font-size: 16px; font-weight: 700; color: var(--cyan-d); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px; }
+.edit-form { display: flex; flex-direction: column; gap: 12px; }
+.edit-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+.edit-exp-btn { background: transparent; border: none; cursor: pointer; color: var(--ink3); padding: 4px; border-radius: var(--r); opacity: 0; transition: .15s; display: flex; align-items: center; flex-shrink: 0; }
+.exp-item:hover .edit-exp-btn { opacity: 1; }
+.edit-exp-btn:hover { color: var(--cyan); background: var(--cyan-l); }
+.exp-item.active .edit-exp-btn { color: rgba(255,255,255,.5); }
+.exp-item.active .edit-exp-btn:hover { color: #fff; background: rgba(255,255,255,.2); }

@@ -305,22 +305,27 @@ function renderExpList() {
   listEl.innerHTML = DATA.exposants.map(exp => `
     <div class="exp-item${selId === exp.id ? ' active' : ''}" data-id="${exp.id}">
       <div class="avatar" style="font-size:12px">${initials(exp.name)}</div>
-      <div style="flex:1"><div class="ei-name">${exp.name}</div><div class="ei-cat">${exp.cat}</div></div>
+      <div style="flex:1"><div class="ei-name">${exp.name}</div><div class="ei-cat">${exp.cat}${exp.activite ? ' · '+exp.activite : ''}</div></div>
+      <button class="edit-exp-btn" data-id="${exp.id}" title="Modifier"><i class="ti ti-pencil" style="font-size:13px"></i></button>
       <button class="del-exp-btn" data-id="${exp.id}" title="Supprimer"><i class="ti ti-trash" style="font-size:13px"></i></button>
     </div>`).join('');
 
   listEl.querySelectorAll('.exp-item').forEach(item => {
     item.addEventListener('click', (e) => {
-      if (e.target.closest('.del-exp-btn')) return;
+      if (e.target.closest('.del-exp-btn') || e.target.closest('.edit-exp-btn')) return;
       selId = item.dataset.id;
       renderExpList();
       el('cal-empty').style.display = 'none';
       el('cal-panel').style.display = 'block';
+      el('edit-panel').style.display = 'none';
       renderCal();
     });
   });
   listEl.querySelectorAll('.del-exp-btn').forEach(btn => {
     btn.addEventListener('click', (e) => { e.stopPropagation(); deleteExposant(btn.dataset.id); });
+  });
+  listEl.querySelectorAll('.edit-exp-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); openEditPanel(btn.dataset.id); });
   });
 }
 
@@ -454,6 +459,102 @@ async function addExposant() {
     toast(name + ' ajouté !');
   } catch (e) {
     console.error(e); toast('Erreur lors de la création.');
+  }
+  loader(false);
+}
+
+/* ── Modifier un exposant ─────────────────────────────────────── */
+
+const CATS = [
+  'Droit immobilier, architecture, aménagement',
+  'E-commerce, développement web',
+  'Marketing, communication, image',
+  'Stratégie et développement commercial',
+  'Droit des affaires et des sociétés',
+  'Conseil financier, expertise comptable, direction financière',
+  'Courtier, banque, assurance',
+];
+
+function openEditPanel(expId) {
+  const exp = DATA.exposants.find(e => e.id === expId);
+  if (!exp) return;
+  selId = expId;
+  renderExpList();
+
+  el('cal-panel').style.display  = 'none';
+  el('cal-empty').style.display  = 'none';
+  el('edit-panel').style.display = 'block';
+
+  el('edit-panel').innerHTML = `
+    <div class="edit-panel-inner">
+      <div class="edit-panel-title"><i class="ti ti-pencil"></i> Modifier — ${exp.name}</div>
+      <div class="edit-form">
+        <div class="field"><label>Nom</label><input id="e-name" value="${exp.name}" /></div>
+        <div class="field"><label>Catégorie</label>
+          <select id="e-cat">
+            ${CATS.map(c => `<option value="${c}" ${exp.cat === c ? 'selected' : ''}>${c}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label>Activité</label><input id="e-activite" value="${exp.activite || ''}" placeholder="ex: Avocat, Architecte…" /></div>
+        <div class="field"><label>Disponibilité</label>
+          <select id="e-period">
+            <option value="jour"  ${exp.period==='jour'  ? 'selected':''}>Journée complète (10h–17h)</option>
+            <option value="matin" ${exp.period==='matin' ? 'selected':''}>Matin uniquement (10h–13h)</option>
+            <option value="aprem" ${exp.period==='aprem' ? 'selected':''}>Après-midi uniquement (14h–17h)</option>
+          </select>
+        </div>
+        <div class="edit-actions">
+          <button id="edit-cancel" class="btn-ghost"><i class="ti ti-x"></i> Annuler</button>
+          <button id="edit-save"   class="btn-primary"><i class="ti ti-check"></i> Enregistrer</button>
+        </div>
+      </div>
+    </div>`;
+
+  el('edit-cancel').addEventListener('click', () => {
+    el('edit-panel').style.display = 'none';
+    el('cal-empty').style.display  = 'block';
+  });
+  el('edit-save').addEventListener('click', () => saveEditExposant(expId));
+}
+
+async function saveEditExposant(expId) {
+  const exp      = DATA.exposants.find(e => e.id === expId);
+  const name     = el('e-name').value.trim();
+  const cat      = el('e-cat').value;
+  const activite = el('e-activite').value.trim();
+  const period   = el('e-period').value;
+  if (!name) { toast('Merci de saisir un nom.'); return; }
+
+  loader(true);
+  try {
+    const periodChanged = period !== exp.period;
+    await updateDoc(doc(db, 'exposants', expId), { name, cat, activite, period });
+    exp.name     = name;
+    exp.cat      = cat;
+    exp.activite = activite;
+    exp.period   = period;
+
+    if (periodChanged) {
+      // Recréer les créneaux si la période a changé
+      const batch = writeBatch(db);
+      (DATA.slots[expId] || []).forEach(s => batch.delete(doc(db, 'slots', s.id)));
+      await batch.commit();
+      const created = [];
+      for (const s of slotsForPeriod(period)) {
+        const ref = await addDoc(collection(db, 'slots'), { exposantId: expId, start: s.start, end: s.end, period: s.period, enabled: true });
+        created.push({ id: ref.id, exposantId: expId, start: s.start, end: s.end, period: s.period, enabled: true });
+      }
+      DATA.slots[expId] = created;
+    }
+
+    el('edit-panel').style.display = 'none';
+    el('cal-empty').style.display  = 'block';
+    renderExpList();
+    renderStats();
+    toast(`${name} mis à jour !`);
+  } catch(e) {
+    console.error(e);
+    toast('Erreur lors de la modification.');
   }
   loader(false);
 }
