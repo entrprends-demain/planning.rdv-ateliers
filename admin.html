@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin · Rencontres Pro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- Écran de connexion -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo"><i class="ti ti-calendar-event"></i> Rencontres Pro</div>
+    <h2>Espace administrateur</h2>
+    <p>Accès réservé à l'organisateur.</p>
+    <div class="field">
+      <label for="pwd">Mot de passe</label>
+      <input type="password" id="pwd" placeholder="••••••••" />
+    </div>
+    <div id="pwd-error" class="pwd-error">Mot de passe incorrect.</div>
+    <button id="pwd-btn" class="btn-primary" style="width:100%;margin-top:.5rem;justify-content:center">
+      <i class="ti ti-arrow-right"></i> Accéder
+    </button>
+  </div>
+</div>
+
+<!-- Interface admin -->
+<div id="admin-app" style="display:none">
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="nav-brand">
+        <i class="ti ti-settings" style="color:#185FA5"></i>
+        <span>Administration <em style="color:#185FA5">· Espace privé</em></span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <a href="index.html" class="nav-link"><i class="ti ti-eye"></i> Vue visiteur</a>
+        <button id="logout-btn" class="nav-link" title="Déconnexion"><i class="ti ti-logout"></i></button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="admin-tabs">
+    <button class="atab active" data-tab="calendrier"><i class="ti ti-calendar"></i> Calendriers</button>
+    <button class="atab" data-tab="rdvs"><i class="ti ti-calendar-check"></i> Rendez-vous <span id="rdv-badge" class="rdv-badge"></span></button>
+  </div>
+
+  <div id="tab-calendrier" class="admin-layout">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <span>Exposants</span>
+        <button id="add-btn" class="icon-btn" title="Ajouter"><i class="ti ti-plus"></i></button>
+      </div>
+      <div id="add-form" class="add-form">
+        <input id="f-name" placeholder="Nom de l'exposant" />
+        <input id="f-cat"  placeholder="Catégorie" />
+        <select id="f-period">
+          <option value="jour">Journée complète (10h–17h)</option>
+          <option value="matin">Matin uniquement (10h–13h)</option>
+          <option value="aprem">Après-midi uniquement (14h–17h)</option>
+        </select>
+        <div class="form-actions">
+          <button id="form-cancel" class="btn-ghost">Annuler</button>
+          <button id="form-submit" class="btn-primary"><i class="ti ti-check"></i> Créer</button>
+        </div>
+      </div>
+      <div id="exp-list"></div>
+      <div id="stats" class="stats"></div>
+    </aside>
+
+    <main class="admin-main">
+      <div id="cal-empty" class="cal-empty">
+        <i class="ti ti-hand-click"></i>
+        <p>Sélectionnez un exposant pour gérer son calendrier</p>
+      </div>
+      <div id="cal-panel" style="display:none">
+        <div class="cal-top">
+          <div>
+            <div id="cal-name" class="cal-name"></div>
+            <div id="cal-meta" class="cal-meta"></div>
+          </div>
+          <div id="cal-periods" class="period-switcher"></div>
+        </div>
+        <div id="cal-body"></div>
+      </div>
+    </main>
+  </div>
+
+  <div id="tab-rdvs" style="display:none;padding:1.75rem;max-width:900px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px">
+      <div style="font-family:var(--font-d);font-size:20px;color:var(--ink)">Rendez-vous confirmés</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select id="rdv-filter-exp" class="rdv-filter"><option value="">Tous les exposants</option></select>
+        <select id="rdv-filter-period" class="rdv-filter">
+          <option value="">Tout moment</option>
+          <option value="matin">Matin</option>
+          <option value="aprem">Après-midi</option>
+        </select>
+        <button id="export-csv" class="btn-ghost"><i class="ti ti-download"></i> Export CSV</button>
+      </div>
+    </div>
+    <div id="rdv-list"></div>
+  </div>
+
+</div>
+
+<div id="toast" class="toast"></div>
+<div id="loader" class="loader"><div class="spinner"></div></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
