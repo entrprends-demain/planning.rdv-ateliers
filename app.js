@@ -161,7 +161,7 @@ function renderGrid() {
     return `<div class="exp-card" data-id="${exp.id}">
       <div class="exp-card-top">
         <div class="avatar">${initials(exp.name)}</div>
-        <div><div class="exp-name">${exp.name}</div><div class="exp-cat">${exp.cat}</div></div>
+        <div><div class="exp-name">${exp.name}</div><div class="exp-cat">${exp.cat}${exp.activite ? ' · <span style="color:var(--ink3)">' + exp.activite + '</span>' : ''}</div></div>
         <i class="ti ti-chevron-right exp-arrow"></i>
       </div>
       <div class="pills">${pills}</div>
@@ -181,7 +181,7 @@ function openDrawer(expId) {
   const pSlots = slots.filter(s => s.period === 'aprem');
 
   el('d-name').textContent = exp.name;
-  el('d-cat').textContent  = exp.cat;
+  el('d-cat').textContent  = exp.cat + (exp.activite ? ' · ' + exp.activite : '');
   el('d-confirm').innerHTML = '';
 
   function fillSlots(list, containerId, freeCls) {
@@ -223,7 +223,7 @@ function openModal(start, end) {
   pendingSlot = start;
   const exp = DATA.exposants.find(e => e.id === pendingExp);
   el('m-info').textContent = `${exp.name} · ${start}–${end} · ${start >= '14:00' ? 'Après-midi' : 'Matin'} · 22 sept. 2025`;
-  ['m-prenom','m-nom','m-email','m-societe'].forEach(id => el(id).value = '');
+  ['m-prenom','m-nom','m-email','m-societe','m-problematique'].forEach(id => { const e = el(id); if(e) e.value = ''; });
   el('modal').classList.add('open');
   setTimeout(() => el('m-prenom').focus(), 80);
 }
@@ -233,12 +233,14 @@ function closeModal() {
 }
 
 async function confirmBooking() {
-  const prenom  = el('m-prenom').value.trim();
-  const nom     = el('m-nom').value.trim();
-  const email   = el('m-email').value.trim();
-  const societe = el('m-societe').value.trim();
+  const prenom        = el('m-prenom').value.trim();
+  const nom           = el('m-nom').value.trim();
+  const email         = el('m-email').value.trim();
+  const societe       = el('m-societe').value.trim();
+  const problematique = el('m-problematique').value.trim();
   if (!prenom || !nom) { toast('Merci de renseigner votre prénom et nom.'); return; }
   if (!email) { toast('Merci de renseigner votre email.'); return; }
+  if (!problematique) { toast('Merci de décrire votre problématique.'); return; }
 
   // Vérification : même email + même exposant = doublon interdit
   const doublon = DATA.bookings.find(b =>
@@ -261,10 +263,10 @@ async function confirmBooking() {
       slotStart:  pendingSlot,
       slotEnd:    slot?.end || '',
       period:     slot?.period || '',
-      prenom, nom, email, societe,
+      prenom, nom, email, societe, problematique,
       createdAt:  Date.now(),
     });
-    DATA.bookings.push({ id: ref.id, exposantId: pendingExp, slotStart: pendingSlot, slotEnd: slot?.end, period: slot?.period, prenom, nom, email, societe });
+    DATA.bookings.push({ id: ref.id, exposantId: pendingExp, slotStart: pendingSlot, slotEnd: slot?.end, period: slot?.period, prenom, nom, email, societe, problematique });
     closeModal();
     el('d-confirm').innerHTML = `<div class="confirm-ok"><i class="ti ti-circle-check"></i><div>RDV confirmé — ${prenom} ${nom}<br><span style="font-weight:400;font-size:12px">${pendingSlot}–${slot?.end} chez ${exp?.name}</span></div></div>`;
     openDrawer(pendingExp);
@@ -428,14 +430,16 @@ function toggleForm() {
 }
 
 async function addExposant() {
-  const name   = el('f-name').value.trim();
-  const cat    = el('f-cat').value.trim() || 'Autre';
-  const period = el('f-period').value;
+  const name     = el('f-name').value.trim();
+  const cat      = el('f-cat').value || 'Autre';
+  const activite = el('f-activite') ? el('f-activite').value.trim() : '';
+  const period   = el('f-period').value;
   if (!name) { toast('Merci de saisir un nom.'); return; }
+  if (!cat || cat === 'Autre') { toast('Merci de choisir une catégorie.'); return; }
   loader(true);
   try {
-    const ref = await addDoc(collection(db, 'exposants'), { name, cat, period, createdAt: Date.now() });
-    const exp = { id: ref.id, name, cat, period };
+    const ref = await addDoc(collection(db, 'exposants'), { name, cat, activite, period, createdAt: Date.now() });
+    const exp = { id: ref.id, name, cat, activite, period };
     DATA.exposants.push(exp);
     const created = [];
     for (const s of slotsForPeriod(period)) {
@@ -444,7 +448,7 @@ async function addExposant() {
     }
     DATA.slots[exp.id] = created;
     el('f-name').value = '';
-    el('f-cat').value  = '';
+    if(el('f-activite')) el('f-activite').value = '';
     toggleForm();
     renderExpList(); renderStats();
     toast(name + ' ajouté !');
@@ -583,6 +587,7 @@ function renderRdvList() {
       <th>Visiteur</th>
       <th>Email</th>
       <th>Société</th>
+      <th>Problématique</th>
       <th></th>
     </tr></thead>
     <tbody>
@@ -599,6 +604,7 @@ function renderRdvList() {
           <td>${b.prenom} ${b.nom}</td>
           <td>${b.email || '–'}</td>
           <td>${b.societe || '–'}</td>
+          <td style="max-width:200px;font-size:12px;color:var(--ink2)">${b.problematique || '–'}</td>
           <td><button class="del-booking-btn" data-id="${b.id}" title="Désinscrire"><i class="ti ti-user-minus"></i></button></td>
         </tr>`;
       }).join('')}

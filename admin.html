@@ -56,7 +56,17 @@
       </div>
       <div id="add-form" class="add-form">
         <input id="f-name" placeholder="Nom de l'exposant" />
-        <input id="f-cat"  placeholder="Catégorie" />
+        <select id="f-cat">
+          <option value="">-- Choisir une catégorie --</option>
+          <option value="Droit immobilier, architecture, aménagement">Droit immobilier, architecture, aménagement</option>
+          <option value="E-commerce, développement web">E-commerce, développement web</option>
+          <option value="Marketing, communication, image">Marketing, communication, image</option>
+          <option value="Stratégie et développement commercial">Stratégie et développement commercial</option>
+          <option value="Droit des affaires et des sociétés">Droit des affaires et des sociétés</option>
+          <option value="Conseil financier, expertise comptable, direction financière">Conseil financier, expertise comptable, direction financière</option>
+          <option value="Courtier, banque, assurance">Courtier, banque, assurance</option>
+        </select>
+        <input id="f-activite" placeholder="Activité (ex: Avocat, Architecte…)" />
         <select id="f-period">
           <option value="jour">Journée complète (10h–17h)</option>
           <option value="matin">Matin uniquement (10h–13h)</option>

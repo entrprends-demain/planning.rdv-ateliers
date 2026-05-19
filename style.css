@@ -278,3 +278,12 @@ body { font-family: var(--font); background: var(--bg); color: var(--ink); -webk
 /* ── Loader amélioré ── */
 .loader-inner { display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .loader-msg { font-family: var(--font); font-size: 14px; color: var(--cyan); font-weight: 500; }
+
+/* ── Textarea problématique ── */
+#m-problematique {
+  width: 100%; padding: 8px 10px; border-radius: var(--r);
+  border: 1.5px solid var(--brd2); background: var(--white);
+  font-family: var(--font); font-size: 13px; color: var(--ink);
+  resize: vertical; min-height: 70px; transition: .15s;
+}
+#m-problematique:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(63,203,209,.1); }
