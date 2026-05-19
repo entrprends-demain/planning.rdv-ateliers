@@ -1,7 +1,7 @@
 /* RDV Événement · app.js · Firebase Firestore */
 
 import { initializeApp }   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, collection, doc, getDocs, addDoc, updateDoc, deleteDoc, writeBatch, query, orderBy, enableIndexedDbPersistence }
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, getDocs, addDoc, updateDoc, deleteDoc, writeBatch, query, orderBy }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 /* ── Firebase ─────────────────────────────────────────────────── */
@@ -14,10 +14,9 @@ const app = initializeApp({
   messagingSenderId: '303753000581',
   appId:             '1:303753000581:web:ef789f95513debcfac1bec',
 });
-const db = getFirestore(app);
-
-// Cache local pour accélerer les chargements suivants
-enableIndexedDbPersistence(db).catch(() => {});
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+});
 
 /* ── Créneaux ─────────────────────────────────────────────────── */
 
@@ -226,35 +225,64 @@ function closeDrawer() {
   document.body.style.overflow = '';
 }
 
-function applyQuickCode() {
+async function applyQuickCode() {
   const code   = (el('m-code-rapide')?.value || '').trim();
   const status = el('m-code-status');
   if (!/^\d{6}$/.test(code)) {
     if (status) { status.textContent = '⚠️ Le code doit contenir 6 chiffres.'; status.style.color = 'var(--red)'; }
     return;
   }
-  const visitor = DATA.visitors.find(v => v.code === code);
+
+  if (status) { status.textContent = 'Recherche en cours…'; status.style.color = 'var(--ink3)'; }
+
+  // Chercher d'abord dans le cache local
+  let visitor = DATA.visitors.find(v => v.code === code);
+
+  // Si pas trouvé localement, chercher directement dans Firebase
+  if (!visitor) {
+    try {
+      const snap = await getDocs(collection(db, 'visitors'));
+      const all  = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      DATA.visitors = all; // mettre à jour le cache
+      visitor = all.find(v => v.code === code);
+    } catch(e) { console.error(e); }
+  }
+
   if (!visitor) {
     if (status) { status.textContent = '❌ Code introuvable. Vérifiez votre code.'; status.style.color = 'var(--red)'; }
     return;
   }
-  // Trouver les infos du visiteur depuis ses bookings précédents
-  const prevBooking = DATA.bookings.find(b => (b.email||'').toLowerCase() === visitor.email);
-  if (prevBooking) {
-    if (el('m-prenom'))  el('m-prenom').value  = prevBooking.prenom  || '';
-    if (el('m-nom'))     el('m-nom').value      = prevBooking.nom     || '';
-    if (el('m-email'))   el('m-email').value    = prevBooking.email   || '';
-    if (el('m-societe')) el('m-societe').value  = prevBooking.societe || '';
-    // Verrouiller les champs pour éviter modification
+
+  // Chercher les infos depuis les bookings
+  let prevBooking = DATA.bookings.find(b => (b.email||'').toLowerCase() === visitor.email);
+
+  // Si pas trouvé en local, recharger les bookings
+  if (!prevBooking) {
+    try {
+      const snap = await getDocs(query(collection(db, 'bookings'), orderBy('slotStart')));
+      DATA.bookings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      prevBooking = DATA.bookings.find(b => (b.email||'').toLowerCase() === visitor.email);
+    } catch(e) { console.error(e); }
+  }
+
+  function fillAndLock(prenom, nom, email, societe) {
+    if (el('m-prenom'))  el('m-prenom').value  = prenom  || '';
+    if (el('m-nom'))     el('m-nom').value      = nom     || '';
+    if (el('m-email'))   el('m-email').value    = email   || '';
+    if (el('m-societe')) el('m-societe').value  = societe || '';
     ['m-prenom','m-nom','m-email','m-societe'].forEach(id => {
       const field = el(id);
-      if (field) { field.readOnly = true; field.style.background = 'var(--cyan-l)'; field.style.color = 'var(--cyan-d)'; }
+      if (field) { field.readOnly = true; field.style.background = 'var(--cyan-l)'; field.style.color = 'var(--cyan-d)'; field.style.fontWeight = '600'; }
     });
-    if (status) { status.textContent = '✓ Informations pré-remplies — il ne vous reste qu\'à décrire votre problématique.'; status.style.color = 'var(--green)'; }
+    if (status) { status.textContent = '✓ Informations pré-remplies — décrivez simplement votre problématique.'; status.style.color = '#2E6B12'; }
     setTimeout(() => el('m-problematique')?.focus(), 100);
+  }
+
+  if (prevBooking) {
+    fillAndLock(prevBooking.prenom, prevBooking.nom, prevBooking.email, prevBooking.societe);
   } else {
-    if (el('m-email')) el('m-email').value = visitor.email;
-    if (status) { status.textContent = '✓ Code reconnu. Complétez les champs manquants.'; status.style.color = 'var(--green)'; }
+    if (el('m-email')) { el('m-email').value = visitor.email; el('m-email').readOnly = true; }
+    if (status) { status.textContent = '✓ Code reconnu · email pré-rempli. Complétez les autres champs.'; status.style.color = '#2E6B12'; }
   }
 }
 
