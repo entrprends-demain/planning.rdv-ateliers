@@ -17,17 +17,18 @@
         <i class="ti ti-calendar-event"></i>
         <span>RDV Individuels · <em>Entreprends Demain !</em></span>
       </div>
-      <div class="nav-brand-sub">Lundi 22 septembre à la Cité des Sciences et de l'Industrie, Paris</div>
+      <div class="nav-brand-sub">Mardi 22 septembre 2026 à la Cité des Sciences et de l'Industrie, Paris</div>
     </div>
     <div class="vis-tabs">
-      <button class="vtab active" data-tab="prendre"><i class="ti ti-search"></i> Prendre RDV</button>
-      <button class="vtab vtab-yellow" data-tab="mesrdvs"><i class="ti ti-calendar-check"></i> Mes RDV</button>
+      <button class="vtab active" data-tab="rdvs"><i class="ti ti-users"></i> RDV Experts</button>
+      <button class="vtab" data-tab="ateliers"><i class="ti ti-school"></i> Ateliers</button>
+      <button class="vtab vtab-yellow" data-tab="planning"><i class="ti ti-calendar-check"></i> Mon Planning</button>
     </div>
   </div>
 </nav>
 
-<!-- Onglet : Prendre RDV -->
-<div id="tab-prendre">
+<!-- ── RDV Experts ── -->
+<div id="tab-rdvs">
   <header class="hero">
     <div class="hero-inner">
       <img src="logo.png" alt="Entreprends Demain !" class="hero-logo" />
@@ -42,7 +43,6 @@
       <span class="badge-dur"><i class="ti ti-clock"></i> 20 min / RDV</span>
     </div>
   </header>
-
   <div class="container">
     <div class="filter-bar">
       <div class="search-wrap">
@@ -61,34 +61,77 @@
   </div>
 </div>
 
-<!-- Onglet : Mes RDV -->
-<div id="tab-mesrdvs" style="display:none">
-  <div class="container" style="max-width:680px">
+<!-- ── Ateliers ── -->
+<div id="tab-ateliers" style="display:none">
+  <div class="container">
+    <div class="atelier-hero">
+      <i class="ti ti-school"></i>
+      <h2>Ateliers thématiques</h2>
+      <p>Des sessions de 45 minutes animées par nos experts. Inscrivez-vous librement.</p>
+    </div>
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <i class="ti ti-search"></i>
+        <input type="text" id="at-search" placeholder="Rechercher un atelier…" />
+      </div>
+      <select id="at-cat"><option value="">Toutes catégories</option></select>
+      <div class="period-filter">
+        <button class="at-pf active" data-p="">Tout</button>
+        <button class="at-pf" data-p="matin">Matin</button>
+        <button class="at-pf" data-p="aprem">Après-midi</button>
+      </div>
+    </div>
+    <div id="ateliers-grid"></div>
+  </div>
+</div>
+
+<!-- ── Mon Planning ── -->
+<div id="tab-planning" style="display:none">
+  <div class="container" style="max-width:700px">
     <div class="mesrdvs-hero">
       <i class="ti ti-calendar-user"></i>
-      <h2>Mes rendez-vous</h2>
-      <p>Retrouvez votre planning du 22 septembre 2026 avec votre code ou votre email.</p>
+      <h2>Mon planning</h2>
+      <p>RDV experts + ateliers — avec votre code ou votre email.</p>
     </div>
     <div class="mesrdvs-search">
       <div class="search-wrap" style="flex:1">
         <i class="ti ti-id-badge"></i>
-        <input type="text" id="mes-search-input" placeholder="Votre code à 6 chiffres ou votre email…" />
+        <input type="text" id="mes-search-input" placeholder="Code à 6 chiffres ou email…" />
       </div>
-      <button id="mes-search-btn" class="btn-primary"><i class="ti ti-search"></i> Rechercher</button>
+      <button id="mes-search-btn" class="btn-primary"><i class="ti ti-search"></i> Voir mon planning</button>
     </div>
     <div style="font-size:12px;color:var(--ink3);text-align:center;margin-top:-1rem;margin-bottom:.5rem">
-      Avec votre <strong>code</strong> : accès complet + possibilité d'annuler · Avec votre <strong>email</strong> : consultation uniquement
+      <strong>Code</strong> : accès complet + annulation · <strong>Email</strong> : consultation uniquement
     </div>
     <div id="mes-result"></div>
   </div>
 </div>
 
-<!-- Drawer -->
+<!-- Profil exposant public -->
+<div id="tab-exposant" style="display:none">
+  <div class="container" style="max-width:700px">
+    <div class="mesrdvs-hero">
+      <i class="ti ti-building"></i>
+      <h2>Planning exposant</h2>
+      <p>Consultez le planning d'un exposant en saisissant son email.</p>
+    </div>
+    <div class="mesrdvs-search">
+      <div class="search-wrap" style="flex:1">
+        <i class="ti ti-mail"></i>
+        <input type="text" id="exp-email-input" placeholder="Email de l'exposant…" />
+      </div>
+      <button id="exp-search-btn" class="btn-primary"><i class="ti ti-search"></i> Voir</button>
+    </div>
+    <div id="exp-result"></div>
+  </div>
+</div>
+
+<!-- Drawer RDV -->
 <div id="overlay" class="overlay"></div>
 <aside id="drawer" class="drawer">
   <div class="drawer-head">
     <div>
-      <div class="drawer-label">Réservation</div>
+      <div class="drawer-label">Réservation RDV</div>
       <div class="drawer-title" id="d-name"></div>
       <div class="drawer-cat" id="d-cat"></div>
     </div>
@@ -107,7 +150,7 @@
   <div id="d-confirm"></div>
 </aside>
 
-<!-- Modal -->
+<!-- Modal RDV -->
 <div id="modal" class="modal-wrap">
   <div class="modal-box">
     <div class="modal-head">
@@ -118,7 +161,6 @@
       <button id="modal-close" class="icon-btn"><i class="ti ti-x"></i></button>
     </div>
     <div class="modal-body">
-      <!-- Bloc code rapide -->
       <div id="code-quick-block" style="background:var(--cyan-l);border:1.5px solid var(--brd2);border-radius:10px;padding:.9rem;margin-bottom:.5rem">
         <div style="font-size:12px;font-weight:700;color:var(--cyan-d);margin-bottom:.4rem"><i class="ti ti-key" style="font-size:13px"></i> Déjà inscrit ? Utilisez votre code</div>
         <div style="display:flex;gap:8px">
@@ -127,7 +169,6 @@
         </div>
         <div id="m-code-status" style="font-size:11px;margin-top:5px;color:var(--ink3)">Vos informations seront pré-remplies automatiquement.</div>
       </div>
-
       <div id="m-fields">
         <div class="field"><label>Prénom *</label><input id="m-prenom" placeholder="Votre prénom" /></div>
         <div class="field"><label>Nom *</label><input id="m-nom" placeholder="Votre nom" /></div>
@@ -143,13 +184,41 @@
   </div>
 </div>
 
-<div id="toast" class="toast"></div>
-<div id="loader" class="loader">
-  <div class="loader-inner">
-    <div class="spinner"></div>
-    <div class="loader-msg">Vos experts arrivent dans quelques secondes...</div>
+<!-- Modal Atelier -->
+<div id="modal-atelier" class="modal-wrap">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">S'inscrire à l'atelier</div>
+        <div id="ma-info" class="modal-info"></div>
+      </div>
+      <button id="ma-close" class="icon-btn"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div id="ma-code-block" style="background:var(--cyan-l);border:1.5px solid var(--brd2);border-radius:10px;padding:.9rem;margin-bottom:.5rem">
+        <div style="font-size:12px;font-weight:700;color:var(--cyan-d);margin-bottom:.4rem"><i class="ti ti-key" style="font-size:13px"></i> Déjà inscrit ? Utilisez votre code</div>
+        <div style="display:flex;gap:8px">
+          <input id="ma-code-rapide" type="text" maxlength="6" placeholder="Code à 6 chiffres" style="flex:1;padding:7px 10px;border-radius:7px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:14px;letter-spacing:.15em;font-weight:600;color:var(--cyan)" />
+          <button id="ma-code-apply" class="btn-primary" style="padding:7px 14px;font-size:13px"><i class="ti ti-arrow-right"></i> Appliquer</button>
+        </div>
+        <div id="ma-code-status" style="font-size:11px;margin-top:5px;color:var(--ink3)">Vos informations seront pré-remplies automatiquement.</div>
+      </div>
+      <div id="ma-fields">
+        <div class="field"><label>Prénom *</label><input id="ma-prenom" placeholder="Votre prénom" /></div>
+        <div class="field"><label>Nom *</label><input id="ma-nom" placeholder="Votre nom" /></div>
+        <div class="field"><label>Email *</label><input id="ma-email" type="email" placeholder="vous@exemple.fr" /></div>
+        <div class="field"><label>Société</label><input id="ma-societe" placeholder="Votre société (optionnel)" /></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button id="ma-cancel" class="btn-ghost">Annuler</button>
+      <button id="ma-confirm" class="btn-primary"><i class="ti ti-check"></i> Confirmer l'inscription</button>
+    </div>
   </div>
 </div>
+
+<div id="toast" class="toast"></div>
+<div id="loader" class="loader"><div class="loader-inner"><div class="spinner"></div><div class="loader-msg">Vos experts arrivent dans quelques secondes...</div></div></div>
 
 <script type="module" src="app.js"></script>
 </body>

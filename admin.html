@@ -3,75 +3,71 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin · Rencontres Pro</title>
+  <title>Admin · Entreprends Demain !</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<!-- Écran de connexion -->
 <div id="login-screen" class="login-screen">
   <div class="login-card">
-    <div class="login-logo"><i class="ti ti-calendar-event"></i> Rencontres Pro</div>
+    <div class="login-logo"><i class="ti ti-calendar-event"></i> Entreprends Demain !</div>
     <h2>Espace administrateur</h2>
     <p>Accès réservé à l'organisateur.</p>
-    <div class="field">
-      <label for="pwd">Mot de passe</label>
-      <input type="password" id="pwd" placeholder="••••••••" />
-    </div>
+    <div class="field"><label for="pwd">Mot de passe</label><input type="password" id="pwd" placeholder="••••••••" /></div>
     <div id="pwd-error" class="pwd-error">Mot de passe incorrect.</div>
-    <button id="pwd-btn" class="btn-primary" style="width:100%;margin-top:.5rem;justify-content:center">
-      <i class="ti ti-arrow-right"></i> Accéder
-    </button>
+    <button id="pwd-btn" class="btn-primary" style="width:100%;margin-top:.5rem;justify-content:center"><i class="ti ti-arrow-right"></i> Accéder</button>
   </div>
 </div>
 
-<!-- Interface admin -->
 <div id="admin-app" style="display:none">
-
-  <nav class="nav">
-    <div class="nav-inner">
-      <div class="nav-brand">
-        <i class="ti ti-settings" style="color:#185FA5"></i>
-        <span>Administration <em style="color:#185FA5">· Espace privé</em></span>
+  <nav class="nav" style="background:var(--cyan)">
+    <div class="nav-inner" style="height:60px">
+      <div class="nav-brand" style="font-size:16px;flex-direction:row;gap:8px">
+        <i class="ti ti-settings" style="color:#fff;font-size:18px"></i>
+        <span style="color:#fff">Administration <em style="color:var(--yellow)">· Entreprends Demain !</em></span>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <a href="index.html" class="nav-link"><i class="ti ti-eye"></i> Vue visiteur</a>
-        <button id="logout-btn" class="nav-link" title="Déconnexion"><i class="ti ti-logout"></i></button>
+        <button id="logout-btn" class="nav-link"><i class="ti ti-logout"></i></button>
       </div>
     </div>
   </nav>
 
   <div class="admin-tabs">
-    <button class="atab active" data-tab="calendrier"><i class="ti ti-calendar"></i> Calendriers</button>
-    <button class="atab" data-tab="rdvs"><i class="ti ti-calendar-check"></i> Rendez-vous <span id="rdv-badge" class="rdv-badge"></span></button>
-    <button class="atab" data-tab="visiteurs"><i class="ti ti-users"></i> Visiteurs <span id="vis-badge" class="rdv-badge"></span></button>
+    <button class="atab active" data-tab="exposants"><i class="ti ti-users"></i> Exposants</button>
+    <button class="atab" data-tab="ateliers-admin"><i class="ti ti-school"></i> Ateliers <span id="at-badge" class="rdv-badge"></span></button>
+    <button class="atab" data-tab="rdvs"><i class="ti ti-calendar-check"></i> RDV <span id="rdv-badge" class="rdv-badge"></span></button>
+    <button class="atab" data-tab="visiteurs"><i class="ti ti-id-badge"></i> Visiteurs <span id="vis-badge" class="rdv-badge"></span></button>
   </div>
 
-  <div id="tab-calendrier" class="admin-layout">
+  <!-- Onglet Exposants -->
+  <div id="tab-exposants" class="admin-layout">
     <aside class="sidebar">
       <div class="sidebar-head">
         <span>Exposants</span>
-        <button id="add-btn" class="icon-btn" title="Ajouter"><i class="ti ti-plus"></i></button>
+        <button id="add-btn" class="icon-btn"><i class="ti ti-plus"></i></button>
       </div>
       <div id="add-form" class="add-form">
         <input id="f-name" placeholder="Nom de l'exposant" />
+        <input id="f-email" type="email" placeholder="Email de l'exposant" />
+        <input id="f-adresse" placeholder="Adresse (optionnel)" />
         <select id="f-cat">
-          <option value="">-- Choisir une catégorie --</option>
-          <option value="Droit immobilier, architecture, aménagement">Droit immobilier, architecture, aménagement</option>
-          <option value="E-commerce, développement web">E-commerce, développement web</option>
-          <option value="Marketing, communication, image">Marketing, communication, image</option>
-          <option value="Stratégie et développement commercial">Stratégie et développement commercial</option>
-          <option value="Droit des affaires et des sociétés">Droit des affaires et des sociétés</option>
-          <option value="Conseil financier, expertise comptable, direction financière">Conseil financier, expertise comptable, direction financière</option>
-          <option value="Courtier, banque, assurance">Courtier, banque, assurance</option>
+          <option value="">-- Catégorie --</option>
+          <option>Droit immobilier, architecture, aménagement</option>
+          <option>E-commerce, développement web</option>
+          <option>Marketing, communication, image</option>
+          <option>Stratégie et développement commercial</option>
+          <option>Droit des affaires et des sociétés</option>
+          <option>Conseil financier, expertise comptable, direction financière</option>
+          <option>Courtier, banque, assurance</option>
         </select>
-        <input id="f-expertise" placeholder="Expertise (ex: Avocat, Architecte…)" />
+        <input id="f-expertise" placeholder="Expertise (ex: Avocat…)" />
         <select id="f-period">
-          <option value="jour">Journée complète (10h–17h)</option>
-          <option value="matin">Matin uniquement (10h–13h)</option>
-          <option value="aprem">Après-midi uniquement (14h–17h)</option>
+          <option value="jour">Journée complète</option>
+          <option value="matin">Matin uniquement</option>
+          <option value="aprem">Après-midi uniquement</option>
         </select>
         <div class="form-actions">
           <button id="form-cancel" class="btn-ghost">Annuler</button>
@@ -81,19 +77,12 @@
       <div id="exp-list"></div>
       <div id="stats" class="stats"></div>
     </aside>
-
     <main class="admin-main">
-      <div id="cal-empty" class="cal-empty">
-        <i class="ti ti-hand-click"></i>
-        <p>Sélectionnez un exposant pour gérer son calendrier</p>
-      </div>
+      <div id="cal-empty" class="cal-empty"><i class="ti ti-hand-click"></i><p>Sélectionnez un exposant</p></div>
       <div id="edit-panel" style="display:none"></div>
       <div id="cal-panel" style="display:none">
         <div class="cal-top">
-          <div>
-            <div id="cal-name" class="cal-name"></div>
-            <div id="cal-meta" class="cal-meta"></div>
-          </div>
+          <div><div id="cal-name" class="cal-name"></div><div id="cal-meta" class="cal-meta"></div></div>
           <div id="cal-periods" class="period-switcher"></div>
         </div>
         <div id="cal-body"></div>
@@ -101,32 +90,82 @@
     </main>
   </div>
 
-  <div id="tab-rdvs" style="display:none;padding:1.75rem;max-width:900px;margin:0 auto">
+  <!-- Onglet Ateliers admin -->
+  <div id="tab-ateliers-admin" style="display:none;padding:1.75rem;max-width:1000px;margin:0 auto">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px">
-      <div style="font-family:var(--font-d);font-size:20px;color:var(--ink)">Rendez-vous confirmés</div>
+      <div style="font-family:var(--font);font-size:20px;font-weight:700;color:var(--ink)">Gestion des ateliers</div>
+      <button id="add-atelier-btn" class="btn-primary"><i class="ti ti-plus"></i> Créer un atelier</button>
+    </div>
+
+    <!-- Formulaire création atelier -->
+    <div id="atelier-form" class="add-form" style="border-radius:12px;margin-bottom:1.5rem;padding:1.25rem">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="field"><label>Titre de l'atelier *</label><input id="at-titre" placeholder="Ex: Créer son site e-commerce" /></div>
+        <div class="field"><label>Salle *</label><input id="at-salle" placeholder="Ex: Salle A, Amphi…" /></div>
+      </div>
+      <div class="field"><label>Description</label><textarea id="at-desc" placeholder="Décrivez l'atelier…" rows="2" style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px;resize:vertical"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div class="field"><label>Créneau horaire *</label>
+          <select id="at-creneau">
+            <option value="">-- Choisir --</option>
+            <optgroup label="Matin">
+              <option value="10:00-10:45">10h00 – 10h45</option>
+              <option value="11:00-11:45">11h00 – 11h45</option>
+              <option value="12:00-12:45">12h00 – 12h45</option>
+            </optgroup>
+            <optgroup label="Après-midi">
+              <option value="14:00-14:45">14h00 – 14h45</option>
+              <option value="15:00-15:45">15h00 – 15h45</option>
+              <option value="16:00-16:45">16h00 – 16h45</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="field"><label>Places max *</label><input id="at-places" type="number" min="1" max="500" placeholder="Ex: 30" /></div>
+      </div>
+      <div class="field"><label>Catégories (plusieurs possibles)</label>
+        <div id="at-cats-check" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
+          <label class="cat-check"><input type="checkbox" value="Droit immobilier, architecture, aménagement" /> Droit immobilier</label>
+          <label class="cat-check"><input type="checkbox" value="E-commerce, développement web" /> E-commerce</label>
+          <label class="cat-check"><input type="checkbox" value="Marketing, communication, image" /> Marketing</label>
+          <label class="cat-check"><input type="checkbox" value="Stratégie et développement commercial" /> Stratégie</label>
+          <label class="cat-check"><input type="checkbox" value="Droit des affaires et des sociétés" /> Droit des affaires</label>
+          <label class="cat-check"><input type="checkbox" value="Conseil financier, expertise comptable, direction financière" /> Finance</label>
+          <label class="cat-check"><input type="checkbox" value="Courtier, banque, assurance" /> Banque/Assurance</label>
+          <label class="cat-check"><input type="checkbox" value="Développement personnel de l'entrepreneur" /> Développement personnel</label>
+        </div>
+      </div>
+      <div class="field"><label>Animateurs (exposants inscrits)</label>
+        <div id="at-animateurs-check" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;max-height:120px;overflow-y:auto"></div>
+      </div>
+      <div class="form-actions">
+        <button id="atelier-form-cancel" class="btn-ghost">Annuler</button>
+        <button id="atelier-form-submit" class="btn-primary"><i class="ti ti-check"></i> Enregistrer</button>
+      </div>
+    </div>
+
+    <div id="ateliers-admin-list"></div>
+  </div>
+
+  <!-- Onglet RDV -->
+  <div id="tab-rdvs" style="display:none;padding:1.75rem;max-width:1000px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px">
+      <div style="font-family:var(--font);font-size:20px;font-weight:700;color:var(--ink)">Rendez-vous confirmés</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <select id="rdv-filter-exp" class="rdv-filter"><option value="">Tous les exposants</option></select>
-        <select id="rdv-filter-period" class="rdv-filter">
-          <option value="">Tout moment</option>
-          <option value="matin">Matin</option>
-          <option value="aprem">Après-midi</option>
-        </select>
+        <select id="rdv-filter-period" class="rdv-filter"><option value="">Tout moment</option><option value="matin">Matin</option><option value="aprem">Après-midi</option></select>
         <button id="export-csv" class="btn-ghost"><i class="ti ti-download"></i> Export CSV</button>
       </div>
     </div>
     <div id="rdv-list"></div>
   </div>
 
-  <div id="tab-visiteurs" style="display:none;padding:1.75rem;max-width:900px;margin:0 auto">
+  <!-- Onglet Visiteurs -->
+  <div id="tab-visiteurs" style="display:none;padding:1.75rem;max-width:1000px;margin:0 auto">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px">
       <div style="font-family:var(--font);font-size:20px;font-weight:700;color:var(--ink)">Visiteurs inscrits</div>
-      <div style="display:flex;gap:8px">
-        <input id="vis-admin-search" type="text" placeholder="Rechercher un visiteur…" style="padding:7px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px;min-width:220px" />
-      </div>
+      <input id="vis-admin-search" type="text" placeholder="Rechercher…" style="padding:7px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px;min-width:220px" />
     </div>
     <div id="visiteurs-list"></div>
-
-    <!-- Panneau détail visiteur -->
     <div id="visiteur-detail" style="display:none;margin-top:1.5rem;background:#fff;border:1.5px solid var(--brd2);border-radius:16px;padding:1.5rem">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
         <div id="vd-title" style="font-size:16px;font-weight:700;color:var(--ink)"></div>
@@ -139,12 +178,7 @@
 </div>
 
 <div id="toast" class="toast"></div>
-<div id="loader" class="loader">
-  <div class="loader-inner">
-    <div class="spinner"></div>
-    <div class="loader-msg">Vos experts arrivent dans quelques secondes...</div>
-  </div>
-</div>
+<div id="loader" class="loader"><div class="loader-inner"><div class="spinner"></div><div class="loader-msg">Chargement...</div></div></div>
 
 <script type="module" src="app.js"></script>
 </body>
