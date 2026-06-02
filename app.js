@@ -1,4 +1,4 @@
-/* ── RDV Entreprends Demain · app.js ── */
+/* â”€â”€ RDV Entreprends Demain Â· app.js â”€â”€ */
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
@@ -19,7 +19,7 @@ try {
   db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
 } catch(e) { db = getFirestore(fbApp); }
 
-/* ── Créneaux RDV ─────────────────────────────────────────────── */
+/* â”€â”€ CrÃ©neaux RDV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function fmt(h, m) { return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'); }
 function buildRdvSlots(sh, sm, eh, em) {
   const list = []; let h=sh, m=sm;
@@ -37,7 +37,7 @@ function slotsForPeriod(period) {
   return [...ms,...ps];
 }
 
-/* ── Créneaux Ateliers ────────────────────────────────────────── */
+/* â”€â”€ CrÃ©neaux Ateliers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const ATELIERS_SLOTS = [
   {value:'10:00-10:45', start:'10:00', end:'10:45', period:'matin'},
   {value:'11:00-11:45', start:'11:00', end:'11:45', period:'matin'},
@@ -48,17 +48,17 @@ const ATELIERS_SLOTS = [
 ];
 
 const ALL_CATS = [
-  'Droit immobilier, architecture, aménagement',
-  'E-commerce, développement web',
+  'Droit immobilier, architecture, amÃ©nagement',
+  'E-commerce, dÃ©veloppement web',
   'Marketing, communication, image',
-  'Stratégie et développement commercial',
-  'Droit des affaires et des sociétés',
-  'Conseil financier, expertise comptable, direction financière',
+  'StratÃ©gie et dÃ©veloppement commercial',
+  'Droit des affaires et des sociÃ©tÃ©s',
+  'Conseil financier, expertise comptable, direction financiÃ¨re',
   'Courtier, banque, assurance',
-  "Développement personnel de l'entrepreneur",
+  "DÃ©veloppement personnel de l'entrepreneur",
 ];
 
-/* ── État ─────────────────────────────────────────────────────── */
+/* â”€â”€ Ã‰tat â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const DATA = {
   exposants: [], slots: {}, bookings: [],
   visitors: [], ateliers: [], inscriptions: [],
@@ -79,7 +79,7 @@ function toast(msg) {
   clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2800);
 }
 
-/* ── Chargement Firebase ──────────────────────────────────────── */
+/* â”€â”€ Chargement Firebase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 async function loadAll() {
   loader(true);
   try {
@@ -102,7 +102,7 @@ async function loadAll() {
   loader(false);
 }
 
-/* ── Auth admin ───────────────────────────────────────────────── */
+/* â”€â”€ Auth admin â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const PWD='Fredtunousmanques', SK='rdv-admin-ok';
 function initLogin() {
   async function doUnlock() {
@@ -127,17 +127,17 @@ function updateBadges() {
   const vb=el('vis-badge'); if(vb)vb.textContent=DATA.visitors.length||'';
 }
 
-/* ── Stats sidebar ────────────────────────────────────────────── */
+/* â”€â”€ Stats sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function renderStats() {
   const e=el('stats'); if(!e)return;
   const total=Object.values(DATA.slots).flat().filter(s=>s.enabled).length;
   e.innerHTML=
     `<div class="stat"><div class="stat-v">${DATA.exposants.length}</div><div class="stat-l">Experts</div></div>`+
-    `<div class="stat"><div class="stat-v">${total}</div><div class="stat-l">Créneaux</div></div>`+
+    `<div class="stat"><div class="stat-v">${total}</div><div class="stat-l">CrÃ©neaux</div></div>`+
     `<div class="stat"><div class="stat-v">${DATA.bookings.length}</div><div class="stat-l">RDV</div></div>`;
 }
 
-/* ── Admin tabs ───────────────────────────────────────────────── */
+/* â”€â”€ Admin tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function switchAdminTab(tab) {
   document.querySelectorAll('.atab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   ['exposants','ateliers-admin','rdvs','visiteurs'].forEach(t=>{
@@ -148,7 +148,7 @@ function switchAdminTab(tab) {
   if(tab==='ateliers-admin') renderAteliersAdmin();
 }
 
-/* ── Admin exposants ──────────────────────────────────────────── */
+/* â”€â”€ Admin exposants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function renderAdminExpList() {
   const listEl=el('exp-list'); if(!listEl)return;
   if(!DATA.exposants.length){listEl.innerHTML='<div style="padding:1rem;font-size:12px;color:var(--ink3);text-align:center">Aucun exposant. Cliquez + pour ajouter.</div>';return;}
@@ -191,7 +191,7 @@ async function addExposant() {
     DATA.slots[exp.id]=created;
     ['f-name','f-email','f-adresse','f-expertise'].forEach(id=>{if(el(id))el(id).value='';});
     toggleAddForm(); renderAdminExpList(); renderStats();
-    toast(name+' ajouté !');
+    toast(name+' ajoutÃ© !');
   } catch(e){console.error(e);toast('Erreur.');}
   loader(false);
 }
@@ -209,7 +209,7 @@ async function deleteExposant(expId) {
     DATA.bookings=DATA.bookings.filter(b=>b.exposantId!==expId);
     delete DATA.slots[expId];
     if(selId===expId){selId=null;el('cal-empty').style.display='block';el('cal-panel').style.display='none';}
-    renderAdminExpList();renderStats();toast('Exposant supprimé.');
+    renderAdminExpList();renderStats();toast('Exposant supprimÃ©.');
   } catch(e){console.error(e);toast('Erreur.');}
   loader(false);
 }
@@ -219,17 +219,17 @@ function openEditPanel(expId) {
   selId=expId; renderAdminExpList();
   el('cal-panel').style.display='none'; el('cal-empty').style.display='none'; el('edit-panel').style.display='block';
   el('edit-panel').innerHTML=`<div class="edit-panel-inner">
-    <div class="edit-panel-title"><i class="ti ti-pencil"></i> Modifier — ${exp.name}</div>
+    <div class="edit-panel-title"><i class="ti ti-pencil"></i> Modifier â€” ${exp.name}</div>
     <div class="edit-form">
       <div class="field"><label>Nom</label><input id="e-name" value="${exp.name||''}" /></div>
       <div class="field"><label>Email</label><input id="e-email" type="email" value="${exp.email||''}" /></div>
       <div class="field"><label>Adresse</label><input id="e-adresse" value="${exp.adresse||''}" /></div>
-      <div class="field"><label>Catégorie</label><select id="e-cat">${ALL_CATS.slice(0,7).map(c=>`<option value="${c}"${exp.cat===c?' selected':''}>${c}</option>`).join('')}</select></div>
+      <div class="field"><label>CatÃ©gorie</label><select id="e-cat">${ALL_CATS.slice(0,7).map(c=>`<option value="${c}"${exp.cat===c?' selected':''}>${c}</option>`).join('')}</select></div>
       <div class="field"><label>Expertise</label><input id="e-expertise" value="${exp.expertise||''}" /></div>
-      <div class="field"><label>Disponibilité</label><select id="e-period">
-        <option value="jour"${exp.period==='jour'?' selected':''}>Journée complète</option>
+      <div class="field"><label>DisponibilitÃ©</label><select id="e-period">
+        <option value="jour"${exp.period==='jour'?' selected':''}>JournÃ©e complÃ¨te</option>
         <option value="matin"${exp.period==='matin'?' selected':''}>Matin uniquement</option>
-        <option value="aprem"${exp.period==='aprem'?' selected':''}>Après-midi uniquement</option>
+        <option value="aprem"${exp.period==='aprem'?' selected':''}>AprÃ¨s-midi uniquement</option>
       </select></div>
       <div class="edit-actions">
         <button id="edit-cancel" class="btn-ghost"><i class="ti ti-x"></i> Annuler</button>
@@ -263,35 +263,35 @@ async function saveEditExposant(expId) {
       DATA.slots[expId]=created;
     }
     el('edit-panel').style.display='none';el('cal-empty').style.display='block';
-    renderAdminExpList();renderStats();toast(name+' mis à jour !');
+    renderAdminExpList();renderStats();toast(name+' mis Ã  jour !');
   } catch(e){console.error(e);toast('Erreur.');}
   loader(false);
 }
 
-/* ── Calendrier admin ─────────────────────────────────────────── */
+/* â”€â”€ Calendrier admin â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function renderCal() {
   const exp=DATA.exposants.find(e=>e.id===selId); if(!exp)return;
   el('cal-name').textContent=exp.name;
-  el('cal-meta').textContent=exp.cat+(exp.expertise?' · '+exp.expertise:'')+'  · 22 sept. 2026';
-  const opts=[{val:'matin',label:'Matin',cls:'active-matin'},{val:'aprem',label:'Après-midi',cls:'active-aprem'},{val:'jour',label:'Journée',cls:'active-jour'}];
+  el('cal-meta').textContent=exp.cat+(exp.expertise?' Â· '+exp.expertise:'')+'  Â· 22 sept. 2026';
+  const opts=[{val:'matin',label:'Matin',cls:'active-matin'},{val:'aprem',label:'AprÃ¨s-midi',cls:'active-aprem'},{val:'jour',label:'JournÃ©e',cls:'active-jour'}];
   el('cal-periods').innerHTML=opts.map(o=>`<button class="psw${exp.period===o.val?' '+o.cls:''}" data-p="${o.val}">${o.label}</button>`).join('');
   el('cal-periods').querySelectorAll('.psw').forEach(b=>b.addEventListener('click',()=>setPeriod(b.dataset.p)));
   const slots=getSlots(exp.id), ms=slots.filter(s=>s.period==='matin'), ps=slots.filter(s=>s.period==='aprem');
   function block(list,cls){
     if(!list.length)return '';
     const free=list.filter(s=>s.enabled&&!getBooking(exp.id,s.start)).length;
-    const head=cls==='am'?'Matin · 10h–13h':'Après-midi · 14h–17h';
+    const head=cls==='am'?'Matin Â· 10hâ€“13h':'AprÃ¨s-midi Â· 14hâ€“17h';
     const btns=list.map(s=>{
       const b=getBooking(exp.id,s.start); let c,icon='';
       if(b){c='aslot aslot-booked'+(cls==='pm'?' pm':'');icon='<i class="ti ti-user" style="font-size:10px"></i> ';}
       else if(s.enabled){c='aslot aslot-on-'+cls;}
       else{c='aslot aslot-off';icon='<i class="ti ti-minus" style="font-size:10px"></i> ';}
-      const label=b?`${icon}${b.prenom} ${b.nom}`:`${icon}${s.start}–${s.end}`;
-      return`<button class="${c}" data-sid="${s.id}" data-start="${s.start}" data-bid="${b?b.id:''}" title="${b?b.prenom+' '+b.nom+(b.email?' · '+b.email:''):(s.enabled?'Désactiver':'Activer')}">${label}</button>`;
+      const label=b?`${icon}${b.prenom} ${b.nom}`:`${icon}${s.start}â€“${s.end}`;
+      return`<button class="${c}" data-sid="${s.id}" data-start="${s.start}" data-bid="${b?b.id:''}" title="${b?b.prenom+' '+b.nom+(b.email?' Â· '+b.email:''):(s.enabled?'DÃ©sactiver':'Activer')}">${label}</button>`;
     }).join('');
     return`<div class="cal-block"><div class="cal-block-head ${cls}">${head}<span class="hcount">${free} libre${free>1?'s':''}</span></div><div class="cal-slots">${btns}</div></div>`;
   }
-  el('cal-body').innerHTML=block(ms,'am')+block(ps,'pm')||'<div style="padding:1rem;font-size:13px;color:var(--ink3)">Aucun créneau.</div>';
+  el('cal-body').innerHTML=block(ms,'am')+block(ps,'pm')||'<div style="padding:1rem;font-size:13px;color:var(--ink3)">Aucun crÃ©neau.</div>';
   el('cal-body').querySelectorAll('.aslot').forEach(btn=>{
     btn.addEventListener('click',()=>{if(btn.dataset.bid)deleteBooking(btn.dataset.bid);else toggleSlot(btn.dataset.sid,btn.dataset.start);});
   });
@@ -316,20 +316,20 @@ async function setPeriod(period){
       const r=await addDoc(collection(db,'slots'),{exposantId:exp.id,start:s.start,end:s.end,period:s.period,enabled:true});
       created.push({id:r.id,exposantId:exp.id,...s,enabled:true});
     }
-    DATA.slots[exp.id]=created; renderCal();renderStats();toast('Disponibilité mise à jour');
+    DATA.slots[exp.id]=created; renderCal();renderStats();toast('DisponibilitÃ© mise Ã  jour');
   }catch(e){console.error(e);toast('Erreur.');}
   loader(false);
 }
 
 async function deleteBooking(bookingId){
-  if(!confirm('Désinscrire ce visiteur ?'))return;
+  if(!confirm('DÃ©sinscrire ce visiteur ?'))return;
   loader(true);
-  try{await deleteDoc(doc(db,'bookings',bookingId));DATA.bookings=DATA.bookings.filter(b=>b.id!==bookingId);renderCal();renderRdvList();renderStats();toast('Visiteur désinscrit.');}
+  try{await deleteDoc(doc(db,'bookings',bookingId));DATA.bookings=DATA.bookings.filter(b=>b.id!==bookingId);renderCal();renderRdvList();renderStats();toast('Visiteur dÃ©sinscrit.');}
   catch(e){console.error(e);toast('Erreur.');}
   loader(false);
 }
 
-/* ── Admin RDV list ───────────────────────────────────────────── */
+/* â”€â”€ Admin RDV list â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function renderRdvList(){
   const expF=el('rdv-filter-exp')?.value||'', perF=el('rdv-filter-period')?.value||'';
   const expSel=el('rdv-filter-exp');
@@ -340,21 +340,21 @@ function renderRdvList(){
   if(perF)list=list.filter(b=>b.period===perF);
   const listEl=el('rdv-list');if(!listEl)return;
   if(!list.length){listEl.innerHTML='<div class="empty-state"><i class="ti ti-calendar-off"></i><p>Aucun RDV.</p></div>';return;}
-  listEl.innerHTML=`<table class="rdv-table"><thead><tr><th>Horaire</th><th>Période</th><th>Exposant</th><th>Visiteur</th><th>Email</th><th>Société</th><th>Problématique</th><th></th></tr></thead><tbody>
+  listEl.innerHTML=`<table class="rdv-table"><thead><tr><th>Horaire</th><th>PÃ©riode</th><th>Exposant</th><th>Visiteur</th><th>Email</th><th>SociÃ©tÃ©</th><th>ProblÃ©matique</th><th></th></tr></thead><tbody>
   ${list.map(b=>{const exp=DATA.exposants.find(e=>e.id===b.exposantId);const pm=b.period==='aprem';
-    return`<tr><td><strong>${b.slotStart}–${b.slotEnd}</strong></td><td><span class="${pm?'tag-pm':'tag-am'}">${pm?'Ap-m':'Matin'}</span></td><td>${exp?.name||'–'}</td><td>${b.prenom} ${b.nom}</td><td>${b.email||'–'}</td><td>${b.societe||'–'}</td><td style="font-size:12px;max-width:160px">${b.problematique||'–'}</td><td><button class="del-booking-btn" data-id="${b.id}"><i class="ti ti-user-minus"></i></button></td></tr>`;
+    return`<tr><td><strong>${b.slotStart}â€“${b.slotEnd}</strong></td><td><span class="${pm?'tag-pm':'tag-am'}">${pm?'Ap-m':'Matin'}</span></td><td>${exp?.name||'â€“'}</td><td>${b.prenom} ${b.nom}</td><td>${b.email||'â€“'}</td><td>${b.societe||'â€“'}</td><td style="font-size:12px;max-width:160px">${b.problematique||'â€“'}</td><td><button class="del-booking-btn" data-id="${b.id}"><i class="ti ti-user-minus"></i></button></td></tr>`;
   }).join('')}</tbody></table>`;
   listEl.querySelectorAll('.del-booking-btn').forEach(btn=>btn.addEventListener('click',()=>deleteBooking(btn.dataset.id)));
 }
 
 function exportCsv(){
-  const rows=[['Horaire','Période','Exposant','Prénom','Nom','Email','Société','Problématique']];
-  DATA.bookings.forEach(b=>{const exp=DATA.exposants.find(e=>e.id===b.exposantId);rows.push([`${b.slotStart}–${b.slotEnd}`,b.period==='aprem'?'Après-midi':'Matin',exp?.name||'',b.prenom,b.nom,b.email||'',b.societe||'',b.problematique||'']);});
+  const rows=[['Horaire','PÃ©riode','Exposant','PrÃ©nom','Nom','Email','SociÃ©tÃ©','ProblÃ©matique']];
+  DATA.bookings.forEach(b=>{const exp=DATA.exposants.find(e=>e.id===b.exposantId);rows.push([`${b.slotStart}â€“${b.slotEnd}`,b.period==='aprem'?'AprÃ¨s-midi':'Matin',exp?.name||'',b.prenom,b.nom,b.email||'',b.societe||'',b.problematique||'']);});
   const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='rdv.csv';a.click();
 }
 
-/* ── Ateliers admin ───────────────────────────────────────────── */
+/* â”€â”€ Ateliers admin â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function renderAteliersAdmin(){
   // Populate animateurs checkboxes
   const animDiv=el('at-animateurs-check');
@@ -365,7 +365,7 @@ function renderAteliersAdmin(){
 
 function renderAteliersAdminList(){
   const listEl=el('ateliers-admin-list');if(!listEl)return;
-  if(!DATA.ateliers.length){listEl.innerHTML='<div class="empty-state"><i class="ti ti-school"></i><p>Aucun atelier. Créez-en un.</p></div>';return;}
+  if(!DATA.ateliers.length){listEl.innerHTML='<div class="empty-state"><i class="ti ti-school"></i><p>Aucun atelier. CrÃ©ez-en un.</p></div>';return;}
   const sorted=[...DATA.ateliers].sort((a,b)=>a.start.localeCompare(b.start));
   listEl.innerHTML=sorted.map(at=>{
     const inscrits=DATA.inscriptions.filter(i=>i.atelierId===at.id).length;
@@ -374,7 +374,7 @@ function renderAteliersAdminList(){
     const cats=(at.categories||[]).map(c=>`<span class="at-cat-tag">${c.split(',')[0].trim()}</span>`).join(' ');
     return`<div class="atelier-card">
       <div class="at-header">
-        <div class="at-time-badge${at.start>='14:00'?' pm':''}">${at.start}–${at.end}</div>
+        <div class="at-time-badge${at.start>='14:00'?' pm':''}">${at.start}â€“${at.end}</div>
         <div style="flex:1">
           <div class="at-title">${at.titre}</div>
           <div class="at-salle"><i class="ti ti-map-pin" style="font-size:11px"></i> ${at.salle}</div>
@@ -387,7 +387,7 @@ function renderAteliersAdminList(){
       <div class="at-cats">${cats}</div>
       <div class="at-footer">
         <div class="at-places${full?' full':''}">
-          <strong>${inscrits}</strong> / ${at.places||'∞'} inscrits${full?' · COMPLET':''}
+          <strong>${inscrits}</strong> / ${at.places||'âˆž'} inscrits${full?' Â· COMPLET':''}
         </div>
         <div style="display:flex;gap:6px">
           <button class="btn-ghost" style="padding:4px 10px;font-size:12px" data-atid-view="${at.id}"><i class="ti ti-users"></i> Inscrits</button>
@@ -404,7 +404,7 @@ function showAtelierInscrits(atId){
   const at=DATA.ateliers.find(a=>a.id===atId);if(!at)return;
   const ins=DATA.inscriptions.filter(i=>i.atelierId===atId);
   if(!ins.length){toast('Aucun inscrit pour cet atelier.');return;}
-  alert(`Inscrits — ${at.titre}\n\n${ins.map(i=>`• ${i.prenom} ${i.nom} (${i.email||'–'})`).join('\n')}`);
+  alert(`Inscrits â€” ${at.titre}\n\n${ins.map(i=>`â€¢ ${i.prenom} ${i.nom} (${i.email||'â€“'})`).join('\n')}`);
 }
 
 function openAtelierForm(atId=null){
@@ -427,8 +427,8 @@ function openAtelierForm(atId=null){
 
 async function saveAtelier(){
   const titre=el('at-titre').value.trim(),salle=el('at-salle').value.trim(),creneau=el('at-creneau').value,places=parseInt(el('at-places').value)||0;
-  if(!titre||!salle||!creneau){toast('Merci de remplir titre, salle et créneau.');return;}
-  const slotDef=ATELIERS_SLOTS.find(s=>s.value===creneau);if(!slotDef){toast('Créneau invalide.');return;}
+  if(!titre||!salle||!creneau){toast('Merci de remplir titre, salle et crÃ©neau.');return;}
+  const slotDef=ATELIERS_SLOTS.find(s=>s.value===creneau);if(!slotDef){toast('CrÃ©neau invalide.');return;}
   const categories=[...document.querySelectorAll('#at-cats-check input:checked')].map(c=>c.value);
   const animateurs=[...document.querySelectorAll('#at-animateurs-check input:checked')].map(c=>c.value);
   const description=el('at-desc').value.trim();
@@ -439,11 +439,11 @@ async function saveAtelier(){
       await updateDoc(doc(db,'ateliers',editAtelier),data);
       const idx=DATA.ateliers.findIndex(a=>a.id===editAtelier);
       if(idx>=0)DATA.ateliers[idx]={id:editAtelier,...data};
-      toast('Atelier mis à jour !');
+      toast('Atelier mis Ã  jour !');
     } else {
       const ref=await addDoc(collection(db,'ateliers'),data);
       DATA.ateliers.push({id:ref.id,...data});
-      toast('Atelier créé !');
+      toast('Atelier crÃ©Ã© !');
     }
     el('atelier-form').classList.remove('open');editAtelier=null;
     renderAteliersAdminList();updateBadges();
@@ -460,12 +460,12 @@ async function deleteAtelier(atId){
     batch.delete(doc(db,'ateliers',atId));await batch.commit();
     DATA.ateliers=DATA.ateliers.filter(a=>a.id!==atId);
     DATA.inscriptions=DATA.inscriptions.filter(i=>i.atelierId!==atId);
-    renderAteliersAdminList();updateBadges();toast('Atelier supprimé.');
+    renderAteliersAdminList();updateBadges();toast('Atelier supprimÃ©.');
   }catch(e){console.error(e);toast('Erreur.');}
   loader(false);
 }
 
-/* ── Visiteurs admin ──────────────────────────────────────────── */
+/* â”€â”€ Visiteurs admin â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function renderVisiteursList(){
   const search=(el('vis-admin-search')?.value||'').toLowerCase();
   const vb=el('vis-badge');if(vb)vb.textContent=DATA.visitors.length||'';
@@ -478,9 +478,9 @@ function renderVisiteursList(){
   }).filter(v=>!search||(v.prenom+' '+v.nom+' '+v.email).toLowerCase().includes(search))
     .sort((a,b)=>(a.nom||'').localeCompare(b.nom||''));
   if(!visiteurs.length){listEl.innerHTML='<div class="empty-state"><i class="ti ti-users"></i><p>Aucun visiteur.</p></div>';return;}
-  listEl.innerHTML=`<table class="rdv-table"><thead><tr><th>Visiteur</th><th>Email</th><th>Société</th><th>Code</th><th>RDV</th><th>Ateliers</th><th></th></tr></thead><tbody>
+  listEl.innerHTML=`<table class="rdv-table"><thead><tr><th>Visiteur</th><th>Email</th><th>SociÃ©tÃ©</th><th>Code</th><th>RDV</th><th>Ateliers</th><th></th></tr></thead><tbody>
   ${visiteurs.map(v=>`<tr>
-    <td><strong>${v.prenom} ${v.nom}</strong></td><td>${v.email}</td><td>${v.societe||'–'}</td>
+    <td><strong>${v.prenom} ${v.nom}</strong></td><td>${v.email}</td><td>${v.societe||'â€“'}</td>
     <td><span style="font-family:monospace;font-size:15px;font-weight:700;color:var(--cyan);background:var(--cyan-l);padding:3px 10px;border-radius:6px;letter-spacing:.1em">${v.code}</span></td>
     <td><strong style="color:var(--cyan)">${v.bookings.length}</strong></td>
     <td><strong style="color:#3B6D11">${v.inscriptions.length}</strong></td>
@@ -496,24 +496,24 @@ function openVisiteurDetail(v){
   const detail=el('visiteur-detail');if(!detail)return;
   el('vd-title').innerHTML=`<i class="ti ti-user-circle" style="color:var(--cyan);font-size:20px;vertical-align:-3px;margin-right:6px"></i>${v.prenom} ${v.nom}`;
   const allItems=[
-    ...v.bookings.map(b=>{const exp=DATA.exposants.find(e=>e.id===b.exposantId);return{time:b.slotStart,end:b.slotEnd,title:exp?.name||'–',sub:exp?.cat||'',prob:b.problematique||'',type:'rdv',period:b.period};}),
-    ...v.inscriptions.map(i=>{const at=DATA.ateliers.find(a=>a.id===i.atelierId);return{time:at?.start||'',end:at?.end||'',title:at?.titre||'–',sub:at?.salle||'',type:'atelier',period:at?.period||''};}),
+    ...v.bookings.map(b=>{const exp=DATA.exposants.find(e=>e.id===b.exposantId);return{time:b.slotStart,end:b.slotEnd,title:exp?.name||'â€“',sub:exp?.cat||'',prob:b.problematique||'',type:'rdv',period:b.period};}),
+    ...v.inscriptions.map(i=>{const at=DATA.ateliers.find(a=>a.id===i.atelierId);return{time:at?.start||'',end:at?.end||'',title:at?.titre||'â€“',sub:at?.salle||'',type:'atelier',period:at?.period||''};}),
   ].sort((a,b)=>a.time.localeCompare(b.time));
   el('vd-body').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.25rem">
       <div style="background:var(--surf2);border-radius:10px;padding:.9rem">
         <div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;margin-bottom:.4rem">Informations</div>
         <div style="font-size:13px;margin-bottom:3px"><strong>Email :</strong> ${v.email}</div>
-        <div style="font-size:13px;margin-bottom:3px"><strong>Société :</strong> ${v.societe||'–'}</div>
-        <div style="font-size:13px"><strong>RDV :</strong> ${v.bookings.length} · <strong>Ateliers :</strong> ${v.inscriptions.length}</div>
+        <div style="font-size:13px;margin-bottom:3px"><strong>SociÃ©tÃ© :</strong> ${v.societe||'â€“'}</div>
+        <div style="font-size:13px"><strong>RDV :</strong> ${v.bookings.length} Â· <strong>Ateliers :</strong> ${v.inscriptions.length}</div>
       </div>
       <div style="background:var(--cyan-l);border:1.5px solid var(--brd2);border-radius:10px;padding:.9rem;text-align:center">
         <div style="font-size:11px;font-weight:600;color:var(--cyan-d);text-transform:uppercase;margin-bottom:.4rem">Code personnel</div>
         <div style="font-size:36px;font-weight:700;color:var(--cyan);font-family:monospace;letter-spacing:.15em">${v.code}</div>
       </div>
     </div>
-    <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:.6rem">Planning complet — 22 septembre 2026</div>
-    ${buildPlanningHTML(allItems)||'<div style="font-size:13px;color:var(--ink3);text-align:center;padding:1rem">Aucun élément.</div>'}`;
+    <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:.6rem">Planning complet â€” 22 septembre 2026</div>
+    ${buildPlanningHTML(allItems)||'<div style="font-size:13px;color:var(--ink3);text-align:center;padding:1rem">Aucun Ã©lÃ©ment.</div>'}`;
   detail.style.display='block';detail.scrollIntoView({behavior:'smooth',block:'nearest'});
   el('vd-close').onclick=()=>{detail.style.display='none';};
 }
@@ -524,22 +524,22 @@ function buildPlanningHTML(items){
     const cls=isAt?(isPm?'at-pm':'at-am'):(isPm?'rdv-pm':'rdv-am');
     const typeTag=isAt?'<span class="pi-type type-at">Atelier</span>':'<span class="pi-type type-rdv">RDV</span>';
     return`<div class="planning-item ${cls}">
-      <div class="pi-time" style="color:${isAt?'#3B6D11':(isPm?'#B8940A':'var(--cyan)')}">${item.time}–${item.end}</div>
+      <div class="pi-time" style="color:${isAt?'#3B6D11':(isPm?'#B8940A':'var(--cyan)')}">${item.time}â€“${item.end}</div>
       <div class="pi-info">
         <div class="pi-title">${item.title}</div>
-        <div class="pi-sub">${item.sub}${item.prob?` · "${item.prob}"`:''}</div>
+        <div class="pi-sub">${item.sub}${item.prob?` Â· "${item.prob}"`:''}</div>
       </div>
       ${typeTag}
     </div>`;
   }).join('');
 }
 
-/* ── Visiteur : grille exposants ──────────────────────────────── */
+/* â”€â”€ Visiteur : grille exposants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function renderGrid(){
   const search=(el('vis-search')?.value||'').toLowerCase();
   const catF=el('vis-cat')?.value||'', expertF=el('vis-expertise')?.value||'';
   const catSel=el('vis-cat');
-  if(catSel){const cur=catSel.value;const cats=[...new Set(DATA.exposants.map(e=>e.cat))].sort();catSel.innerHTML='<option value="">Toutes catégories</option>'+cats.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');}
+  if(catSel){const cur=catSel.value;const cats=[...new Set(DATA.exposants.map(e=>e.cat))].sort();catSel.innerHTML='<option value="">Toutes catÃ©gories</option>'+cats.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');}
   const expSel=el('vis-expertise');
   if(expSel){const cur=expSel.value;const xs=[...new Set(DATA.exposants.map(e=>e.expertise).filter(Boolean))].sort();expSel.innerHTML='<option value="">Toutes expertises</option>'+xs.map(x=>`<option value="${x}"${x===cur?' selected':''}>${x}</option>`).join('');}
   const grid=el('grid');if(!grid)return;
@@ -550,7 +550,7 @@ function renderGrid(){
     const mp=!periodFilter||exp.period===periodFilter||exp.period==='jour';
     return ms&&mc&&me&&mp;
   });
-  if(!list.length){grid.innerHTML='<div class="empty-state"><i class="ti ti-search"></i><p>Aucun expert trouvé.</p></div>';return;}
+  if(!list.length){grid.innerHTML='<div class="empty-state"><i class="ti ti-search"></i><p>Aucun expert trouvÃ©.</p></div>';return;}
   grid.innerHTML=list.map(exp=>{
     const slots=getSlots(exp.id);
     const amFree=slots.filter(s=>s.period==='matin'&&s.enabled&&!getBooking(exp.id,s.start)).length;
@@ -559,7 +559,7 @@ function renderGrid(){
     return`<div class="exp-card" data-id="${exp.id}">
       <div class="exp-card-top">
         <div class="avatar">${initials(exp.name)}</div>
-        <div><div class="exp-name">${exp.name}</div><div class="exp-cat">${exp.cat}${exp.expertise?' · '+exp.expertise:''}</div></div>
+        <div><div class="exp-name">${exp.name}</div><div class="exp-cat">${exp.cat}${exp.expertise?' Â· '+exp.expertise:''}</div></div>
         <i class="ti ti-chevron-right exp-arrow"></i>
       </div>
       <div class="pills">${pills}</div>
@@ -568,17 +568,17 @@ function renderGrid(){
   grid.querySelectorAll('.exp-card').forEach(c=>c.addEventListener('click',()=>openDrawer(c.dataset.id)));
 }
 
-/* ── Drawer RDV ───────────────────────────────────────────────── */
+/* â”€â”€ Drawer RDV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function openDrawer(expId){
   pendingExp=expId;
   const exp=DATA.exposants.find(e=>e.id===expId);
   const slots=getSlots(expId), ms=slots.filter(s=>s.period==='matin'), ps=slots.filter(s=>s.period==='aprem');
-  el('d-name').textContent=exp.name; el('d-cat').textContent=exp.cat+(exp.expertise?' · '+exp.expertise:'');
+  el('d-name').textContent=exp.name; el('d-cat').textContent=exp.cat+(exp.expertise?' Â· '+exp.expertise:'');
   el('d-confirm').innerHTML='';
   function fillSlots(list,cid,fcls){
     const c=el(cid);if(!list.length){c.innerHTML='<span style="font-size:12px;color:var(--ink3)">Non disponible</span>';return;}
     c.innerHTML=list.map(s=>{const b=getBooking(expId,s.start);const free=s.enabled&&!b;const icon=b?'<i class="ti ti-lock" style="font-size:10px"></i>':'';
-      return`<button class="slot-btn ${free?fcls:'slot-taken'}" data-start="${s.start}" data-end="${s.end}" ${!free?'disabled':''}>${s.start}–${s.end}${icon}</button>`;
+      return`<button class="slot-btn ${free?fcls:'slot-taken'}" data-start="${s.start}" data-end="${s.end}" ${!free?'disabled':''}>${s.start}â€“${s.end}${icon}</button>`;
     }).join('');
     c.querySelectorAll('.slot-btn:not([disabled])').forEach(btn=>btn.addEventListener('click',()=>openModal(btn.dataset.start,btn.dataset.end)));
   }
@@ -593,7 +593,7 @@ function openDrawer(expId){
 }
 function closeDrawer(){el('overlay')?.classList.remove('open');el('drawer')?.classList.remove('open');document.body.style.overflow='';}
 
-/* ── Code visiteur ────────────────────────────────────────────── */
+/* â”€â”€ Code visiteur â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function genCode(){return String(Math.floor(100000+Math.random()*900000));}
 async function getOrCreateVisitorCode(email){
   const emailLow=email.toLowerCase();
@@ -612,21 +612,21 @@ function showCodeModal(code,prenom,expName,start,end){
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:800;display:flex;align-items:center;justify-content:center;padding:1rem';
   overlay.innerHTML=`<div style="background:#fff;border-radius:20px;padding:2rem;max-width:440px;width:100%;text-align:center;border:2px solid var(--cyan);box-shadow:0 20px 60px rgba(0,0,0,.2)">
     <i class="ti ti-circle-check" style="font-size:40px;color:var(--cyan);display:block;margin-bottom:.75rem"></i>
-    <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:.25rem">Inscription confirmée !</div>
-    <div style="font-size:13px;color:var(--ink3);margin-bottom:1.5rem">${start}–${end} chez ${expName}</div>
+    <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:.25rem">Inscription confirmÃ©e !</div>
+    <div style="font-size:13px;color:var(--ink3);margin-bottom:1.5rem">${start}â€“${end} chez ${expName}</div>
     <div style="background:var(--cyan-l);border:2px solid var(--cyan);border-radius:14px;padding:1.25rem;margin-bottom:1rem">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--cyan-d);margin-bottom:.5rem">🔑 Votre code personnel</div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--cyan-d);margin-bottom:.5rem">ðŸ”‘ Votre code personnel</div>
       <div style="font-size:52px;font-weight:700;color:var(--cyan);letter-spacing:.2em;font-family:monospace">${code}</div>
-      <div style="font-size:12px;color:#2E6B12;margin-top:.5rem;font-weight:600">✓ Copié automatiquement dans votre presse-papier</div>
+      <div style="font-size:12px;color:#2E6B12;margin-top:.5rem;font-weight:600">âœ“ CopiÃ© automatiquement dans votre presse-papier</div>
     </div>
     <div style="background:#FFF8E6;border:2px solid #FFD82B;border-radius:12px;padding:1rem;margin-bottom:1.25rem;text-align:left">
-      <div style="font-size:12px;font-weight:700;color:#B8940A;margin-bottom:.5rem">⚠️ Notez ce code — il ne pourra pas être modifié</div>
+      <div style="font-size:12px;font-weight:700;color:#B8940A;margin-bottom:.5rem">âš ï¸ Notez ce code â€” il ne pourra pas Ãªtre modifiÃ©</div>
       <div style="font-size:12px;color:#5A4A00;line-height:1.6">
-        Avec ce code, vous pouvez :<br>• Accéder rapidement à votre planning<br>• <strong>Annuler vos RDV et inscriptions</strong><br>• <strong>Pré-remplir vos informations</strong> lors de vos prochaines réservations<br><br>
-        <strong>Sans ce code</strong> : consultation uniquement. Pour modification, contactez l'équipe PIE.
+        Avec ce code, vous pouvez :<br>â€¢ AccÃ©der rapidement Ã  votre planning<br>â€¢ <strong>Annuler vos RDV et inscriptions</strong><br>â€¢ <strong>PrÃ©-remplir vos informations</strong> lors de vos prochaines rÃ©servations<br><br>
+        <strong>Sans ce code</strong> : consultation uniquement. Pour modification, contactez l'Ã©quipe PIE.
       </div>
     </div>
-    <button id="code-ok-btn" style="background:var(--cyan);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;width:100%">J'ai noté mon code → Continuer</button>
+    <button id="code-ok-btn" style="background:var(--cyan);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;width:100%">J'ai notÃ© mon code â†’ Continuer</button>
   </div>`;
   document.body.appendChild(overlay);
   document.getElementById('code-ok-btn').addEventListener('click',()=>{overlay.remove();if(pendingExp)openDrawer(pendingExp);});
@@ -635,36 +635,36 @@ function showCodeModal(code,prenom,expName,start,end){
 async function applyQuickCode(codeInputId,statusId,fieldPrefix){
   const code=(el(codeInputId)?.value||'').trim();
   const status=el(statusId);
-  if(!/^\d{6}$/.test(code)){if(status){status.textContent='⚠️ Le code doit contenir 6 chiffres.';status.style.color='var(--red)';}return;}
-  if(status){status.textContent='Recherche…';status.style.color='var(--ink3)';}
+  if(!/^\d{6}$/.test(code)){if(status){status.textContent='âš ï¸ Le code doit contenir 6 chiffres.';status.style.color='var(--red)';}return;}
+  if(status){status.textContent='Rechercheâ€¦';status.style.color='var(--ink3)';}
   let visitor=DATA.visitors.find(v=>v.code===code);
   if(!visitor){
     try{const snap=await getDocs(collection(db,'visitors'));DATA.visitors=snap.docs.map(d=>({id:d.id,...d.data()}));visitor=DATA.visitors.find(v=>v.code===code);}catch(e){console.error(e);}
   }
-  if(!visitor){if(status){status.textContent='❌ Code introuvable.';status.style.color='var(--red)';}return;}
+  if(!visitor){if(status){status.textContent='âŒ Code introuvable.';status.style.color='var(--red)';}return;}
   let prev=DATA.bookings.find(b=>(b.email||'').toLowerCase()===visitor.email);
   if(!prev){try{const snap=await getDocs(query(collection(db,'bookings'),orderBy('slotStart')));DATA.bookings=snap.docs.map(d=>({id:d.id,...d.data()}));prev=DATA.bookings.find(b=>(b.email||'').toLowerCase()===visitor.email);}catch(e){console.error(e);}}
   if(!prev){const ins=DATA.inscriptions.find(i=>(i.email||'').toLowerCase()===visitor.email);if(ins)prev=ins;}
   function fillLock(prenom,nom,email,societe){
     ['prenom','nom','email','societe'].forEach(f=>{const e=el(fieldPrefix+'-'+f);if(e){e.value=f==='prenom'?prenom:f==='nom'?nom:f==='email'?email:societe;e.readOnly=true;e.style.background='var(--cyan-l)';e.style.color='var(--cyan-d)';e.style.fontWeight='600';}});
-    if(status){status.textContent='✓ Informations pré-remplies.';status.style.color='#2E6B12';}
+    if(status){status.textContent='âœ“ Informations prÃ©-remplies.';status.style.color='#2E6B12';}
   }
   if(prev){fillLock(prev.prenom||'',prev.nom||'',prev.email||visitor.email,prev.societe||'');}
-  else{const e=el(fieldPrefix+'-email');if(e){e.value=visitor.email;e.readOnly=true;}if(status){status.textContent='✓ Code reconnu.';status.style.color='#2E6B12';}}
+  else{const e=el(fieldPrefix+'-email');if(e){e.value=visitor.email;e.readOnly=true;}if(status){status.textContent='âœ“ Code reconnu.';status.style.color='#2E6B12';}}
   setTimeout(()=>el(fieldPrefix==='m'?'m-problematique':fieldPrefix+'-prenom')?.focus(),100);
 }
 
-/* ── Modal RDV ────────────────────────────────────────────────── */
+/* â”€â”€ Modal RDV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function openModal(start,end){
   pendingSlot=start;
   const exp=DATA.exposants.find(e=>e.id===pendingExp);
-  el('m-info').textContent=`${exp.name} · ${start}–${end} · ${start>='14:00'?'Après-midi':'Matin'} · 22 sept. 2026`;
+  el('m-info').textContent=`${exp.name} Â· ${start}â€“${end} Â· ${start>='14:00'?'AprÃ¨s-midi':'Matin'} Â· 22 sept. 2026`;
   ['m-prenom','m-nom','m-email','m-societe','m-problematique','m-code-rapide'].forEach(id=>{const e=el(id);if(e){e.value='';e.readOnly=false;e.style.background='';e.style.color='';e.style.fontWeight='';}});
   if(el('m-rgpd'))el('m-rgpd').checked=false;
   if(el('m-structure-search'))el('m-structure-search').value='';
   if(el('m-structure'))el('m-structure').value='';
   if(el('m-structure-wrap'))el('m-structure-wrap').style.display='none';
-  if(el('m-code-status')){el('m-code-status').textContent='Vos informations seront pré-remplies automatiquement.';el('m-code-status').style.color='var(--ink3)';}
+  if(el('m-code-status')){el('m-code-status').textContent='Vos informations seront prÃ©-remplies automatiquement.';el('m-code-status').style.color='var(--ink3)';}
   el('modal').classList.add('open');
   el('m-code-apply').onclick=()=>applyQuickCode('m-code-rapide','m-code-status','m');
   el('m-code-rapide').onkeydown=e=>{if(e.key==='Enter')applyQuickCode('m-code-rapide','m-code-status','m');};
@@ -675,18 +675,18 @@ function closeModal(){el('modal')?.classList.remove('open');}
 async function confirmBooking(){
   const prenom=el('m-prenom').value.trim(),nom=el('m-nom').value.trim(),email=el('m-email').value.trim();
   const societe=el('m-societe').value.trim(),problematique=el('m-problematique').value.trim();
-  if(!prenom||!nom){toast('Merci de renseigner prénom et nom.');return;}
+  if(!prenom||!nom){toast('Merci de renseigner prÃ©nom et nom.');return;}
   if(!email){toast('Merci de renseigner votre email.');return;}
-  if(!problematique){toast('Merci de décrire votre problématique.');return;}
-  if(!el('m-rgpd')?.checked){toast('Merci d\'accepter la politique de confidentialité.');return;}
+  if(!problematique){toast('Merci de dÃ©crire votre problÃ©matique.');return;}
+  if(!el('m-rgpd')?.checked){toast('Merci d\'accepter la politique de confidentialitÃ©.');return;}
   const structure = el('m-structure')?.value || '';
-  if(el('m-societe')?.value.trim() && !structure){ toast('Merci de sélectionner le type de structure.'); return; }
+  if(el('m-societe')?.value.trim() && !structure){ toast('Merci de sÃ©lectionner le type de structure.'); return; }
   const doublon=DATA.bookings.find(b=>b.exposantId===pendingExp&&(b.email||'').toLowerCase()===email.toLowerCase());
-  if(doublon){toast(`Vous avez déjà un RDV avec cet expert à ${doublon.slotStart}.`);closeModal();return;}
-  // Vérif conflits ateliers
+  if(doublon){toast(`Vous avez dÃ©jÃ  un RDV avec cet expert Ã  ${doublon.slotStart}.`);closeModal();return;}
+  // VÃ©rif conflits ateliers
   const slot=getSlots(pendingExp).find(s=>s.start===pendingSlot);
   const conflict=DATA.inscriptions.find(i=>(i.email||'').toLowerCase()===email.toLowerCase()&&checkTimeConflict(pendingSlot,slot?.end,i.atelierId));
-  if(conflict){const at=DATA.ateliers.find(a=>a.id===conflict.atelierId);toast(`Conflit d'horaire avec l'atelier "${at?.titre}" à ${at?.start}.`);return;}
+  if(conflict){const at=DATA.ateliers.find(a=>a.id===conflict.atelierId);toast(`Conflit d'horaire avec l'atelier "${at?.titre}" Ã  ${at?.start}.`);return;}
   loader(true);
   try{
     const{code,isNew}=await getOrCreateVisitorCode(email);
@@ -694,8 +694,8 @@ async function confirmBooking(){
     DATA.bookings.push({id:ref.id,exposantId:pendingExp,slotStart:pendingSlot,slotEnd:slot?.end,period:slot?.period,prenom,nom,email,societe,problematique});
     closeModal();
     if(isNew){showCodeModal(code,prenom,DATA.exposants.find(e=>e.id===pendingExp)?.name,pendingSlot,slot?.end);}
-    else{el('d-confirm').innerHTML=`<div class="confirm-ok"><i class="ti ti-circle-check"></i><div>RDV confirmé — ${prenom} ${nom}<br><span style="font-weight:400;font-size:12px">${pendingSlot}–${slot?.end}</span></div></div>`;openDrawer(pendingExp);}
-    toast('RDV confirmé !');
+    else{el('d-confirm').innerHTML=`<div class="confirm-ok"><i class="ti ti-circle-check"></i><div>RDV confirmÃ© â€” ${prenom} ${nom}<br><span style="font-weight:400;font-size:12px">${pendingSlot}â€“${slot?.end}</span></div></div>`;openDrawer(pendingExp);}
+    toast('RDV confirmÃ© !');
   }catch(e){console.error(e);toast('Erreur.');}
   loader(false);
 }
@@ -707,12 +707,12 @@ function checkTimeConflict(start,end,atelierId){
   return s1<e2&&s2<e1;
 }
 
-/* ── Ateliers visiteur ────────────────────────────────────────── */
+/* â”€â”€ Ateliers visiteur â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function renderAteliersGrid(){
   const search=(el('at-search')?.value||'').toLowerCase();
   const catF=el('at-cat')?.value||'';
   const catSel=el('at-cat');
-  if(catSel){const cur=catSel.value;catSel.innerHTML='<option value="">Toutes catégories</option>'+ALL_CATS.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');}
+  if(catSel){const cur=catSel.value;catSel.innerHTML='<option value="">Toutes catÃ©gories</option>'+ALL_CATS.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');}
   const grid=el('ateliers-grid');if(!grid)return;
   if(!DATA.ateliers.length){grid.innerHTML='<div class="empty-state"><i class="ti ti-school"></i><p>Aucun atelier disponible pour le moment.</p></div>';return;}
   const list=DATA.ateliers.filter(at=>{
@@ -721,7 +721,7 @@ function renderAteliersGrid(){
     const mp=!atPeriodFilter||at.period===atPeriodFilter;
     return ms&&mc&&mp;
   }).sort((a,b)=>a.start.localeCompare(b.start));
-  if(!list.length){grid.innerHTML='<div class="empty-state"><i class="ti ti-search"></i><p>Aucun atelier trouvé.</p></div>';return;}
+  if(!list.length){grid.innerHTML='<div class="empty-state"><i class="ti ti-search"></i><p>Aucun atelier trouvÃ©.</p></div>';return;}
   grid.innerHTML=list.map(at=>{
     const inscrits=DATA.inscriptions.filter(i=>i.atelierId===at.id).length;
     const full=at.places>0&&inscrits>=at.places;
@@ -730,14 +730,14 @@ function renderAteliersGrid(){
     const isPm=at.period==='aprem';
     return`<div class="atelier-card">
       <div class="at-header">
-        <div class="at-time-badge${isPm?' pm':''}">${at.start}–${at.end}</div>
+        <div class="at-time-badge${isPm?' pm':''}">${at.start}â€“${at.end}</div>
         <div style="flex:1"><div class="at-title">${at.titre}</div><div class="at-salle"><i class="ti ti-map-pin" style="font-size:11px"></i> ${at.salle}</div></div>
       </div>
       ${at.description?`<div class="at-desc">${at.description}</div>`:''}
       ${animNames?`<div class="at-animateurs"><i class="ti ti-user-star" style="font-size:12px"></i> ${animNames}</div>`:''}
       <div class="at-cats">${cats}</div>
       <div class="at-footer">
-        <div class="at-places${full?' full':`}`}"><strong>${inscrits}</strong>${at.places>0?` / ${at.places} places`:' inscrits'}${full?' · COMPLET':''}</div>
+        <div class="at-places${full?' full':`}`}"><strong>${inscrits}</strong>${at.places>0?` / ${at.places} places`:' inscrits'}${full?' Â· COMPLET':''}</div>
         ${full?'<span style="font-size:12px;color:var(--red);font-weight:600">Complet</span>':
           `<button class="btn-primary" style="padding:6px 14px;font-size:12px" data-atid="${at.id}"><i class="ti ti-plus"></i> S'inscrire</button>`}
       </div>
@@ -749,13 +749,13 @@ function renderAteliersGrid(){
 function openModalAtelier(atId){
   pendingAtelierId=atId;
   const at=DATA.ateliers.find(a=>a.id===atId);if(!at)return;
-  el('ma-info').textContent=`${at.titre} · ${at.start}–${at.end} · ${at.salle} · 22 sept. 2026`;
+  el('ma-info').textContent=`${at.titre} Â· ${at.start}â€“${at.end} Â· ${at.salle} Â· 22 sept. 2026`;
   ['ma-prenom','ma-nom','ma-email','ma-societe','ma-code-rapide'].forEach(id=>{const e=el(id);if(e){e.value='';e.readOnly=false;e.style.background='';e.style.color='';e.style.fontWeight='';}});
   if(el('ma-rgpd'))el('ma-rgpd').checked=false;
   if(el('ma-structure-search'))el('ma-structure-search').value='';
   if(el('ma-structure'))el('ma-structure').value='';
   if(el('ma-structure-wrap'))el('ma-structure-wrap').style.display='none';
-  if(el('ma-code-status')){el('ma-code-status').textContent='Vos informations seront pré-remplies automatiquement.';el('ma-code-status').style.color='var(--ink3)';}
+  if(el('ma-code-status')){el('ma-code-status').textContent='Vos informations seront prÃ©-remplies automatiquement.';el('ma-code-status').style.color='var(--ink3)';}
   el('modal-atelier').classList.add('open');
   el('ma-code-apply').onclick=()=>applyQuickCode('ma-code-rapide','ma-code-status','ma');
   el('ma-code-rapide').onkeydown=e=>{if(e.key==='Enter')applyQuickCode('ma-code-rapide','ma-code-status','ma');};
@@ -764,25 +764,25 @@ function openModalAtelier(atId){
 
 async function confirmAtelier(){
   const prenom=el('ma-prenom').value.trim(),nom=el('ma-nom').value.trim(),email=el('ma-email').value.trim(),societe=el('ma-societe').value.trim();
-  if(!prenom||!nom){toast('Merci de renseigner prénom et nom.');return;}
+  if(!prenom||!nom){toast('Merci de renseigner prÃ©nom et nom.');return;}
   if(!email){toast('Merci de renseigner votre email.');return;}
-  if(!el('ma-rgpd')?.checked){toast('Merci d\'accepter la politique de confidentialité.');return;}
+  if(!el('ma-rgpd')?.checked){toast('Merci d\'accepter la politique de confidentialitÃ©.');return;}
   const structureAt = el('ma-structure')?.value || '';
-  if(el('ma-societe')?.value.trim() && !structureAt){ toast('Merci de sélectionner le type de structure.'); return; }
+  if(el('ma-societe')?.value.trim() && !structureAt){ toast('Merci de sÃ©lectionner le type de structure.'); return; }
   const at=DATA.ateliers.find(a=>a.id===pendingAtelierId);
   const alreadyIn=DATA.inscriptions.find(i=>i.atelierId===pendingAtelierId&&(i.email||'').toLowerCase()===email.toLowerCase());
-  if(alreadyIn){toast('Vous êtes déjà inscrit à cet atelier.');return;}
+  if(alreadyIn){toast('Vous Ãªtes dÃ©jÃ  inscrit Ã  cet atelier.');return;}
   const inscrits=DATA.inscriptions.filter(i=>i.atelierId===pendingAtelierId).length;
   if(at.places>0&&inscrits>=at.places){toast('Cet atelier est complet.');return;}
-  // Vérif conflits RDV
+  // VÃ©rif conflits RDV
   const conflictRdv=DATA.bookings.find(b=>(b.email||'').toLowerCase()===email.toLowerCase()&&checkTimeConflict(at.start,at.end,null));
   // check manual for RDV
   const toMin=t=>{const[h,m]=t.split(':').map(Number);return h*60+m;};
   const s2=toMin(at.start),e2=toMin(at.end);
   const rdvConflict=DATA.bookings.find(b=>{if((b.email||'').toLowerCase()!==email.toLowerCase())return false;const s1=toMin(b.slotStart),e1=toMin(b.slotEnd||b.slotStart);return s1<e2&&s2<e1;});
-  if(rdvConflict){const exp=DATA.exposants.find(e=>e.id===rdvConflict.exposantId);toast(`Conflit avec votre RDV chez ${exp?.name} à ${rdvConflict.slotStart}.`);return;}
+  if(rdvConflict){const exp=DATA.exposants.find(e=>e.id===rdvConflict.exposantId);toast(`Conflit avec votre RDV chez ${exp?.name} Ã  ${rdvConflict.slotStart}.`);return;}
   const atConflict=DATA.inscriptions.find(i=>{if((i.email||'').toLowerCase()!==email.toLowerCase())return false;const oa=DATA.ateliers.find(a=>a.id===i.atelierId);if(!oa)return false;const s1=toMin(oa.start),e1=toMin(oa.end);return s1<e2&&s2<e1;});
-  if(atConflict){const oa=DATA.ateliers.find(a=>a.id===atConflict.atelierId);toast(`Conflit avec l'atelier "${oa?.titre}" à ${oa?.start}.`);return;}
+  if(atConflict){const oa=DATA.ateliers.find(a=>a.id===atConflict.atelierId);toast(`Conflit avec l'atelier "${oa?.titre}" Ã  ${oa?.start}.`);return;}
   loader(true);
   try{
     const{code,isNew}=await getOrCreateVisitorCode(email);
@@ -790,13 +790,13 @@ async function confirmAtelier(){
     DATA.inscriptions.push({id:ref.id,atelierId:pendingAtelierId,prenom,nom,email,societe});
     el('modal-atelier').classList.remove('open');
     if(isNew)showCodeModal(code,prenom,at.titre,at.start,at.end);
-    else toast(`Inscription confirmée — ${at.titre} !`);
+    else toast(`Inscription confirmÃ©e â€” ${at.titre} !`);
     renderAteliersGrid();
   }catch(e){console.error(e);toast('Erreur.');}
   loader(false);
 }
 
-/* ── Mon planning ─────────────────────────────────────────────── */
+/* â”€â”€ Mon planning â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 async function searchMonPlanning(){
   const input=(el('mes-search-input')?.value||'').trim();
   const result=el('mes-result');if(!result||!input)return;
@@ -812,29 +812,29 @@ async function searchMonPlanning(){
   } else {email=emailLow;}
   const bk=DATA.bookings.filter(b=>(b.email||'').toLowerCase()===email);
   const ins=DATA.inscriptions.filter(i=>(i.email||'').toLowerCase()===email);
-  if(!bk.length&&!ins.length){result.innerHTML='<div class="rdv-empty"><i class="ti ti-calendar-off"></i><p>Aucun élément trouvé.</p></div>';return;}
+  if(!bk.length&&!ins.length){result.innerHTML='<div class="rdv-empty"><i class="ti ti-calendar-off"></i><p>Aucun Ã©lÃ©ment trouvÃ©.</p></div>';return;}
   const first=bk[0]||ins[0];
   const allItems=[
-    ...bk.map(b=>{const exp=DATA.exposants.find(e=>e.id===b.exposantId);return{id:b.id,time:b.slotStart,end:b.slotEnd,title:exp?.name||'–',sub:exp?.cat||'',prob:b.problematique||'',type:'rdv',period:b.period,canCancel:hasCode};}),
-    ...ins.map(i=>{const at=DATA.ateliers.find(a=>a.id===i.atelierId);return{id:i.id,time:at?.start||'',end:at?.end||'',title:at?.titre||'–',sub:at?.salle||'',type:'atelier',period:at?.period||'',canCancel:hasCode};}),
+    ...bk.map(b=>{const exp=DATA.exposants.find(e=>e.id===b.exposantId);return{id:b.id,time:b.slotStart,end:b.slotEnd,title:exp?.name||'â€“',sub:exp?.cat||'',prob:b.problematique||'',type:'rdv',period:b.period,canCancel:hasCode};}),
+    ...ins.map(i=>{const at=DATA.ateliers.find(a=>a.id===i.atelierId);return{id:i.id,time:at?.start||'',end:at?.end||'',title:at?.titre||'â€“',sub:at?.salle||'',type:'atelier',period:at?.period||'',canCancel:hasCode};}),
   ].sort((a,b)=>a.time.localeCompare(b.time));
   result.innerHTML=`<div class="mes-rdv-header">
     <div style="font-size:14px;font-weight:600">${first?.prenom||''} ${first?.nom||''}</div>
-    <div style="font-size:13px;color:var(--ink3);margin-top:2px">${bk.length} RDV · ${ins.length} atelier${ins.length>1?'s':''} · 22 sept. 2026</div>
-    ${!hasCode?'<div style="font-size:12px;color:#B8940A;background:#FFF8E6;border:1px solid #FFD82B;border-radius:6px;padding:6px 10px;margin-top:8px"><i class="ti ti-lock"></i> Mode lecture seule — saisissez votre code pour annuler.</div>':
-    '<div style="font-size:12px;color:#2E6B12;background:#EAF3DE;border:1px solid #6BAA38;border-radius:6px;padding:6px 10px;margin-top:8px"><i class="ti ti-lock-open"></i> Accès complet — vous pouvez annuler.</div>'}
+    <div style="font-size:13px;color:var(--ink3);margin-top:2px">${bk.length} RDV Â· ${ins.length} atelier${ins.length>1?'s':''} Â· 22 sept. 2026</div>
+    ${!hasCode?'<div style="font-size:12px;color:#B8940A;background:#FFF8E6;border:1px solid #FFD82B;border-radius:6px;padding:6px 10px;margin-top:8px"><i class="ti ti-lock"></i> Mode lecture seule â€” saisissez votre code pour annuler.</div>':
+    '<div style="font-size:12px;color:#2E6B12;background:#EAF3DE;border:1px solid #6BAA38;border-radius:6px;padding:6px 10px;margin-top:8px"><i class="ti ti-lock-open"></i> AccÃ¨s complet â€” vous pouvez annuler.</div>'}
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--brd);font-size:11px;color:var(--ink3)">
-      Conformément au RGPD, vous pouvez demander la suppression de vos données en contactant
-      <a href="mailto:communication@paris-initiative.org" style="color:var(--cyan)">communication@paris-initiative.org</a> ·
-      <a href="rgpd.html" style="color:var(--cyan)">Politique de confidentialité</a>
+      ConformÃ©ment au RGPD, vous pouvez demander la suppression de vos donnÃ©es en contactant
+      <a href="mailto:communication@paris-initiative.org" style="color:var(--cyan)">communication@paris-initiative.org</a> Â·
+      <a href="rgpd.html" style="color:var(--cyan)">Politique de confidentialitÃ©</a>
     </div>
   </div>`+
   allItems.map(item=>{
     const isPm=item.period==='aprem';const isAt=item.type==='atelier';
     const cls=isAt?(isPm?'at-pm':'at-am'):(isPm?'rdv-pm':'rdv-am');
     return`<div class="planning-item ${cls}" data-iid="${item.id}" data-itype="${item.type}">
-      <div class="pi-time" style="color:${isAt?'#3B6D11':(isPm?'#B8940A':'var(--cyan)')}">${item.time}–${item.end}</div>
-      <div class="pi-info"><div class="pi-title">${item.title}</div><div class="pi-sub">${item.sub}${item.prob?' · "'+item.prob+'"':''}</div></div>
+      <div class="pi-time" style="color:${isAt?'#3B6D11':(isPm?'#B8940A':'var(--cyan)')}">${item.time}â€“${item.end}</div>
+      <div class="pi-info"><div class="pi-title">${item.title}</div><div class="pi-sub">${item.sub}${item.prob?' Â· "'+item.prob+'"':''}</div></div>
       <span class="pi-type ${isAt?'type-at':'type-rdv'}">${isAt?'Atelier':'RDV'}</span>
       ${item.canCancel?`<button class="cancel-rdv-btn" data-id="${item.id}" data-type="${item.type}" data-title="${item.title}" data-time="${item.time}"><i class="ti ti-trash"></i></button>`:''}
     </div>`;
@@ -845,18 +845,18 @@ async function searchMonPlanning(){
 }
 
 async function cancelItem(id,type,title,time){
-  if(!confirm(`Annuler ${type==='rdv'?'votre RDV':'votre inscription à l\'atelier'} "${title}" à ${time} ?`))return;
+  if(!confirm(`Annuler ${type==='rdv'?'votre RDV':'votre inscription Ã  l\'atelier'} "${title}" Ã  ${time} ?`))return;
   loader(true);
   try{
     await deleteDoc(doc(db,type==='rdv'?'bookings':'inscriptions',id));
     if(type==='rdv')DATA.bookings=DATA.bookings.filter(b=>b.id!==id);
     else DATA.inscriptions=DATA.inscriptions.filter(i=>i.id!==id);
-    toast('Annulé.');searchMonPlanning();renderAteliersGrid();
+    toast('AnnulÃ©.');searchMonPlanning();renderAteliersGrid();
   }catch(e){console.error(e);toast('Erreur.');}
   loader(false);
 }
 
-/* ── Profil exposant public ───────────────────────────────────── */
+/* â”€â”€ Profil exposant public â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 async function searchExposantPlanning(){
   const emailInput=(el('exp-email-input')?.value||'').trim().toLowerCase();
   const result=el('exp-result');if(!result||!emailInput)return;
@@ -869,21 +869,21 @@ async function searchExposantPlanning(){
     DATA.inscriptions=iS.docs.map(d=>({id:d.id,...d.data()}));
   }catch(e){console.error(e);}
   const exp=DATA.exposants.find(e=>(e.email||'').toLowerCase()===emailInput);
-  if(!exp){result.innerHTML='<div class="rdv-empty"><i class="ti ti-search"></i><p>Aucun exposant trouvé avec cet email.</p></div>';loader(false);return;}
+  if(!exp){result.innerHTML='<div class="rdv-empty"><i class="ti ti-search"></i><p>Aucun exposant trouvÃ© avec cet email.</p></div>';loader(false);return;}
   const rdvs=DATA.bookings.filter(b=>b.exposantId===exp.id).sort((a,b)=>a.slotStart.localeCompare(b.slotStart));
   const ateliers=DATA.ateliers.filter(at=>(at.animateurs||[]).includes(exp.id)).sort((a,b)=>a.start.localeCompare(b.start));
   result.innerHTML=`<div class="mes-rdv-header" style="margin-bottom:1rem">
     <div style="font-size:16px;font-weight:700;color:var(--cyan)">${exp.name}</div>
-    <div style="font-size:13px;color:var(--ink3)">${exp.cat}${exp.expertise?' · '+exp.expertise:''}</div>
+    <div style="font-size:13px;color:var(--ink3)">${exp.cat}${exp.expertise?' Â· '+exp.expertise:''}</div>
     ${exp.adresse?`<div style="font-size:12px;color:var(--ink3);margin-top:4px"><i class="ti ti-map-pin" style="font-size:12px"></i> ${exp.adresse}</div>`:''}
-    <div style="font-size:13px;margin-top:8px"><strong>${rdvs.length}</strong> RDV · <strong>${ateliers.length}</strong> atelier${ateliers.length>1?'s':''} animé${ateliers.length>1?'s':''}</div>
+    <div style="font-size:13px;margin-top:8px"><strong>${rdvs.length}</strong> RDV Â· <strong>${ateliers.length}</strong> atelier${ateliers.length>1?'s':''} animÃ©${ateliers.length>1?'s':''}</div>
   </div>
-  ${rdvs.length?`<div class="planning-section-title">RDV individuels</div>`+rdvs.map(b=>{const isPm=b.period==='aprem';return`<div class="planning-item ${isPm?'rdv-pm':'rdv-am'}"><div class="pi-time" style="color:${isPm?'#B8940A':'var(--cyan)'}">${b.slotStart}–${b.slotEnd}</div><div class="pi-info"><div class="pi-title">${b.prenom} ${b.nom}</div><div class="pi-sub">${b.email||''}</div></div><span class="pi-type type-rdv">${isPm?'Ap-m':'Matin'}</span></div>`;}).join(''):''}
-  ${ateliers.length?`<div class="planning-section-title">Ateliers animés</div>`+ateliers.map(at=>{const isPm=at.period==='aprem';const inscrits=DATA.inscriptions.filter(i=>i.atelierId===at.id).length;return`<div class="planning-item ${isPm?'at-pm':'at-am'}"><div class="pi-time" style="color:${isPm?'#B8940A':'#3B6D11'}">${at.start}–${at.end}</div><div class="pi-info"><div class="pi-title">${at.titre}</div><div class="pi-sub">${at.salle} · ${inscrits} inscrit${inscrits>1?'s':''}</div></div><span class="pi-type type-at">Atelier</span></div>`;}).join(''):''}`;
+  ${rdvs.length?`<div class="planning-section-title">RDV individuels</div>`+rdvs.map(b=>{const isPm=b.period==='aprem';return`<div class="planning-item ${isPm?'rdv-pm':'rdv-am'}"><div class="pi-time" style="color:${isPm?'#B8940A':'var(--cyan)'}">${b.slotStart}â€“${b.slotEnd}</div><div class="pi-info"><div class="pi-title">${b.prenom} ${b.nom}</div><div class="pi-sub">${b.email||''}</div></div><span class="pi-type type-rdv">${isPm?'Ap-m':'Matin'}</span></div>`;}).join(''):''}
+  ${ateliers.length?`<div class="planning-section-title">Ateliers animÃ©s</div>`+ateliers.map(at=>{const isPm=at.period==='aprem';const inscrits=DATA.inscriptions.filter(i=>i.atelierId===at.id).length;return`<div class="planning-item ${isPm?'at-pm':'at-am'}"><div class="pi-time" style="color:${isPm?'#B8940A':'#3B6D11'}">${at.start}â€“${at.end}</div><div class="pi-info"><div class="pi-title">${at.titre}</div><div class="pi-sub">${at.salle} Â· ${inscrits} inscrit${inscrits>1?'s':''}</div></div><span class="pi-type type-at">Atelier</span></div>`;}).join(''):''}`;
   loader(false);
 }
 
-/* ── Navigation visiteur ──────────────────────────────────────── */
+/* â”€â”€ Navigation visiteur â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function switchVisitorTab(tab){
   ['accueil','rdvs','ateliers','planning','exposant'].forEach(t=>{const e=el('tab-'+t);if(e)e.style.display=t===tab?'block':'none';});
   document.querySelectorAll('.vtab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
@@ -892,7 +892,7 @@ function switchVisitorTab(tab){
   if(tab==='accueil')renderAccueil();
 }
 
-/* ── Page d'accueil ─────────────────────────────────────────────── */
+/* â”€â”€ Page d'accueil â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function renderAccueil(){
   const rdvNum=el('rdv-count-num'), atNum=el('at-count-num');
   if(rdvNum) rdvNum.textContent=DATA.exposants.length;
@@ -903,37 +903,37 @@ function renderAccueil(){
   });
 }
 
-/* ── Init ─────────────────────────────────────────────────────── */
-/* ── Statuts juridiques ───────────────────────────────────────── */
+/* â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€ Statuts juridiques â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const STATUTS = [
   { label: 'Auto-entrepreneur / Micro-entreprise',   cat: 'Entreprise individuelle' },
   { label: 'Entreprise Individuelle (EI)',            cat: 'Entreprise individuelle' },
   { label: 'EIRL',                                    cat: 'Entreprise individuelle' },
-  { label: 'EURL',                                    cat: 'Société unipersonnelle' },
-  { label: 'SASU',                                    cat: 'Société unipersonnelle' },
-  { label: 'SARL',                                    cat: 'Société à responsabilité limitée' },
-  { label: 'SAS',                                     cat: 'Société par actions' },
-  { label: 'SA',                                      cat: 'Société par actions' },
-  { label: 'SNC',                                     cat: 'Société en nom collectif' },
-  { label: 'SCS',                                     cat: 'Société en commandite' },
-  { label: 'SCA',                                     cat: 'Société en commandite' },
-  { label: 'SCOP (Société Coopérative)',              cat: 'Coopérative' },
-  { label: "SCIC (Société Coopérative d'Intérêt Collectif)", cat: 'Coopérative' },
-  { label: "CAE (Coopérative d'Activité et d'Emploi)", cat: 'Coopérative' },
+  { label: 'EURL',                                    cat: 'SociÃ©tÃ© unipersonnelle' },
+  { label: 'SASU',                                    cat: 'SociÃ©tÃ© unipersonnelle' },
+  { label: 'SARL',                                    cat: 'SociÃ©tÃ© Ã  responsabilitÃ© limitÃ©e' },
+  { label: 'SAS',                                     cat: 'SociÃ©tÃ© par actions' },
+  { label: 'SA',                                      cat: 'SociÃ©tÃ© par actions' },
+  { label: 'SNC',                                     cat: 'SociÃ©tÃ© en nom collectif' },
+  { label: 'SCS',                                     cat: 'SociÃ©tÃ© en commandite' },
+  { label: 'SCA',                                     cat: 'SociÃ©tÃ© en commandite' },
+  { label: 'SCOP (SociÃ©tÃ© CoopÃ©rative)',              cat: 'CoopÃ©rative' },
+  { label: "SCIC (SociÃ©tÃ© CoopÃ©rative d'IntÃ©rÃªt Collectif)", cat: 'CoopÃ©rative' },
+  { label: "CAE (CoopÃ©rative d'ActivitÃ© et d'Emploi)", cat: 'CoopÃ©rative' },
   { label: 'Association loi 1901',                    cat: 'Association' },
-  { label: 'Association reconnue d'utilité publique',cat: 'Association' },
+  { label: 'Association reconnue d'utilitÃ© publique',cat: 'Association' },
   { label: 'Fondation',                               cat: 'Association' },
-  { label: 'TPE (Très Petite Entreprise)',            cat: 'Taille d'entreprise' },
+  { label: 'TPE (TrÃ¨s Petite Entreprise)',            cat: 'Taille d'entreprise' },
   { label: 'PME (Petite et Moyenne Entreprise)',      cat: 'Taille d'entreprise' },
-  { label: 'ETI (Entreprise de Taille Intermédiaire)',cat: 'Taille d'entreprise' },
-  { label: "GIE (Groupement d'Intérêt Économique)", cat: 'Groupement' },
+  { label: 'ETI (Entreprise de Taille IntermÃ©diaire)',cat: 'Taille d'entreprise' },
+  { label: "GIE (Groupement d'IntÃ©rÃªt Ã‰conomique)", cat: 'Groupement' },
   { label: 'GEIE',                                    cat: 'Groupement' },
-  { label: 'SCI (Société Civile Immobilière)',        cat: 'Société civile' },
-  { label: 'SCM',                                     cat: 'Société civile' },
-  { label: 'SCP',                                     cat: 'Société civile' },
-  { label: 'Établissement public',                    cat: 'Secteur public' },
-  { label: 'Collectivité territoriale',               cat: 'Secteur public' },
-  { label: 'Projet en cours de création',             cat: 'Projet' },
+  { label: 'SCI (SociÃ©tÃ© Civile ImmobiliÃ¨re)',        cat: 'SociÃ©tÃ© civile' },
+  { label: 'SCM',                                     cat: 'SociÃ©tÃ© civile' },
+  { label: 'SCP',                                     cat: 'SociÃ©tÃ© civile' },
+  { label: 'Ã‰tablissement public',                    cat: 'Secteur public' },
+  { label: 'CollectivitÃ© territoriale',               cat: 'Secteur public' },
+  { label: 'Projet en cours de crÃ©ation',             cat: 'Projet' },
   { label: 'Autre',                                   cat: 'Autre' },
 ];
 
@@ -948,7 +948,7 @@ function initStructureField(searchId, dropdownId, hiddenId, wrapId, societyId) {
   function renderDropdown(filter) {
     const q = filter.toLowerCase();
     const filtered = STATUTS.filter(s => !q || s.label.toLowerCase().includes(q) || s.cat.toLowerCase().includes(q));
-    if (!filtered.length) { dropEl.innerHTML = '<div class="structure-opt">Aucun résultat</div>'; }
+    if (!filtered.length) { dropEl.innerHTML = '<div class="structure-opt">Aucun rÃ©sultat</div>'; }
     else {
       dropEl.innerHTML = filtered.map(s =>
         `<div class="structure-opt" data-val="${s.label}">${s.label}<span class="opt-cat">${s.cat}</span></div>`
@@ -969,7 +969,7 @@ function initStructureField(searchId, dropdownId, hiddenId, wrapId, societyId) {
   searchEl.addEventListener('focus', () => renderDropdown(searchEl.value));
   searchEl.addEventListener('blur',  () => setTimeout(() => dropEl.classList.remove('open'), 150));
 
-  // Afficher/masquer le champ structure selon si société est remplie
+  // Afficher/masquer le champ structure selon si sociÃ©tÃ© est remplie
   if (societyEl) {
     societyEl.addEventListener('input', () => {
       if (wrapEl) wrapEl.style.display = societyEl.value.trim() ? 'block' : 'none';
@@ -997,7 +997,7 @@ if(IS_ADMIN){
 
 if(IS_VISITOR){
   document.querySelectorAll('.vtab').forEach(btn=>btn.addEventListener('click',()=>switchVisitorTab(btn.dataset.tab)));
-  // Accueil actif par défaut
+  // Accueil actif par dÃ©faut
   switchVisitorTab('accueil');
   el('vis-search').addEventListener('input',renderGrid);
   el('vis-cat').addEventListener('change',renderGrid);
@@ -1016,7 +1016,7 @@ if(IS_VISITOR){
   el('ma-cancel').addEventListener('click',()=>el('modal-atelier').classList.remove('open'));
   el('ma-confirm').addEventListener('click',confirmAtelier);
   el('modal-atelier').addEventListener('click',e=>{if(e.target===el('modal-atelier'))el('modal-atelier').classList.remove('open');});
-  // Sélecteurs de structure
+  // SÃ©lecteurs de structure
   initStructureField('m-structure-search',  'm-structure-dropdown',  'm-structure',  'm-structure-wrap',  'm-societe');
   initStructureField('ma-structure-search', 'ma-structure-dropdown', 'ma-structure', 'ma-structure-wrap', 'ma-societe');
 
