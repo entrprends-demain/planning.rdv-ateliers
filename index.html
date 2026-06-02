@@ -226,6 +226,14 @@
         <div class="field"><label>Nom *</label><input id="m-nom" placeholder="Votre nom" /></div>
         <div class="field"><label>Email *</label><input id="m-email" type="email" placeholder="vous@exemple.fr" /></div>
         <div class="field"><label>Société</label><input id="m-societe" placeholder="Votre société (optionnel)" /></div>
+        <div id="m-structure-wrap" class="field" style="display:none">
+          <label>Type de structure *</label>
+          <div style="position:relative">
+            <input id="m-structure-search" placeholder="Tapez pour filtrer (ex: SAS, SARL…)" autocomplete="off" />
+            <div id="m-structure-dropdown" class="structure-dropdown"></div>
+          </div>
+          <input type="hidden" id="m-structure" />
+        </div>
       </div>
       <div class="field"><label>Votre problématique *</label><textarea id="m-problematique" placeholder="Décrivez brièvement votre problématique…" rows="3"></textarea></div>
     </div>
@@ -266,6 +274,14 @@
         <div class="field"><label>Nom *</label><input id="ma-nom" placeholder="Votre nom" /></div>
         <div class="field"><label>Email *</label><input id="ma-email" type="email" placeholder="vous@exemple.fr" /></div>
         <div class="field"><label>Société</label><input id="ma-societe" placeholder="Votre société (optionnel)" /></div>
+        <div id="ma-structure-wrap" class="field" style="display:none">
+          <label>Type de structure *</label>
+          <div style="position:relative">
+            <input id="ma-structure-search" placeholder="Tapez pour filtrer (ex: SAS, SARL…)" autocomplete="off" />
+            <div id="ma-structure-dropdown" class="structure-dropdown"></div>
+          </div>
+          <input type="hidden" id="ma-structure" />
+        </div>
       </div>
     </div>
     <div style="padding:0 1.25rem .5rem">

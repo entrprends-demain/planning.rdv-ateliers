@@ -661,6 +661,9 @@ function openModal(start,end){
   el('m-info').textContent=`${exp.name} · ${start}–${end} · ${start>='14:00'?'Après-midi':'Matin'} · 22 sept. 2026`;
   ['m-prenom','m-nom','m-email','m-societe','m-problematique','m-code-rapide'].forEach(id=>{const e=el(id);if(e){e.value='';e.readOnly=false;e.style.background='';e.style.color='';e.style.fontWeight='';}});
   if(el('m-rgpd'))el('m-rgpd').checked=false;
+  if(el('m-structure-search'))el('m-structure-search').value='';
+  if(el('m-structure'))el('m-structure').value='';
+  if(el('m-structure-wrap'))el('m-structure-wrap').style.display='none';
   if(el('m-code-status')){el('m-code-status').textContent='Vos informations seront pré-remplies automatiquement.';el('m-code-status').style.color='var(--ink3)';}
   el('modal').classList.add('open');
   el('m-code-apply').onclick=()=>applyQuickCode('m-code-rapide','m-code-status','m');
@@ -676,6 +679,8 @@ async function confirmBooking(){
   if(!email){toast('Merci de renseigner votre email.');return;}
   if(!problematique){toast('Merci de décrire votre problématique.');return;}
   if(!el('m-rgpd')?.checked){toast('Merci d\'accepter la politique de confidentialité.');return;}
+  const structure = el('m-structure')?.value || '';
+  if(el('m-societe')?.value.trim() && !structure){ toast('Merci de sélectionner le type de structure.'); return; }
   const doublon=DATA.bookings.find(b=>b.exposantId===pendingExp&&(b.email||'').toLowerCase()===email.toLowerCase());
   if(doublon){toast(`Vous avez déjà un RDV avec cet expert à ${doublon.slotStart}.`);closeModal();return;}
   // Vérif conflits ateliers
@@ -685,7 +690,7 @@ async function confirmBooking(){
   loader(true);
   try{
     const{code,isNew}=await getOrCreateVisitorCode(email);
-    const ref=await addDoc(collection(db,'bookings'),{exposantId:pendingExp,slotStart:pendingSlot,slotEnd:slot?.end||'',period:slot?.period||'',prenom,nom,email,societe,problematique,consentRgpd:true,consentDate:new Date().toISOString(),createdAt:Date.now()});
+    const ref=await addDoc(collection(db,'bookings'),{exposantId:pendingExp,slotStart:pendingSlot,slotEnd:slot?.end||'',period:slot?.period||'',prenom,nom,email,societe,structure,problematique,consentRgpd:true,consentDate:new Date().toISOString(),createdAt:Date.now()});
     DATA.bookings.push({id:ref.id,exposantId:pendingExp,slotStart:pendingSlot,slotEnd:slot?.end,period:slot?.period,prenom,nom,email,societe,problematique});
     closeModal();
     if(isNew){showCodeModal(code,prenom,DATA.exposants.find(e=>e.id===pendingExp)?.name,pendingSlot,slot?.end);}
@@ -747,6 +752,9 @@ function openModalAtelier(atId){
   el('ma-info').textContent=`${at.titre} · ${at.start}–${at.end} · ${at.salle} · 22 sept. 2026`;
   ['ma-prenom','ma-nom','ma-email','ma-societe','ma-code-rapide'].forEach(id=>{const e=el(id);if(e){e.value='';e.readOnly=false;e.style.background='';e.style.color='';e.style.fontWeight='';}});
   if(el('ma-rgpd'))el('ma-rgpd').checked=false;
+  if(el('ma-structure-search'))el('ma-structure-search').value='';
+  if(el('ma-structure'))el('ma-structure').value='';
+  if(el('ma-structure-wrap'))el('ma-structure-wrap').style.display='none';
   if(el('ma-code-status')){el('ma-code-status').textContent='Vos informations seront pré-remplies automatiquement.';el('ma-code-status').style.color='var(--ink3)';}
   el('modal-atelier').classList.add('open');
   el('ma-code-apply').onclick=()=>applyQuickCode('ma-code-rapide','ma-code-status','ma');
@@ -759,6 +767,8 @@ async function confirmAtelier(){
   if(!prenom||!nom){toast('Merci de renseigner prénom et nom.');return;}
   if(!email){toast('Merci de renseigner votre email.');return;}
   if(!el('ma-rgpd')?.checked){toast('Merci d\'accepter la politique de confidentialité.');return;}
+  const structureAt = el('ma-structure')?.value || '';
+  if(el('ma-societe')?.value.trim() && !structureAt){ toast('Merci de sélectionner le type de structure.'); return; }
   const at=DATA.ateliers.find(a=>a.id===pendingAtelierId);
   const alreadyIn=DATA.inscriptions.find(i=>i.atelierId===pendingAtelierId&&(i.email||'').toLowerCase()===email.toLowerCase());
   if(alreadyIn){toast('Vous êtes déjà inscrit à cet atelier.');return;}
@@ -776,7 +786,7 @@ async function confirmAtelier(){
   loader(true);
   try{
     const{code,isNew}=await getOrCreateVisitorCode(email);
-    const ref=await addDoc(collection(db,'inscriptions'),{atelierId:pendingAtelierId,prenom,nom,email,societe,consentRgpd:true,consentDate:new Date().toISOString(),createdAt:Date.now()});
+    const ref=await addDoc(collection(db,'inscriptions'),{atelierId:pendingAtelierId,prenom,nom,email,societe,structure:structureAt,consentRgpd:true,consentDate:new Date().toISOString(),createdAt:Date.now()});
     DATA.inscriptions.push({id:ref.id,atelierId:pendingAtelierId,prenom,nom,email,societe});
     el('modal-atelier').classList.remove('open');
     if(isNew)showCodeModal(code,prenom,at.titre,at.start,at.end);
@@ -894,6 +904,80 @@ function renderAccueil(){
 }
 
 /* ── Init ─────────────────────────────────────────────────────── */
+/* ── Statuts juridiques ───────────────────────────────────────── */
+const STATUTS = [
+  { label: 'Auto-entrepreneur / Micro-entreprise',   cat: 'Entreprise individuelle' },
+  { label: 'Entreprise Individuelle (EI)',            cat: 'Entreprise individuelle' },
+  { label: 'EIRL',                                    cat: 'Entreprise individuelle' },
+  { label: 'EURL',                                    cat: 'Société unipersonnelle' },
+  { label: 'SASU',                                    cat: 'Société unipersonnelle' },
+  { label: 'SARL',                                    cat: 'Société à responsabilité limitée' },
+  { label: 'SAS',                                     cat: 'Société par actions' },
+  { label: 'SA',                                      cat: 'Société par actions' },
+  { label: 'SNC',                                     cat: 'Société en nom collectif' },
+  { label: 'SCS',                                     cat: 'Société en commandite' },
+  { label: 'SCA',                                     cat: 'Société en commandite' },
+  { label: 'SCOP (Société Coopérative)',              cat: 'Coopérative' },
+  { label: 'SCIC (Société Coopérative d'Intérêt Collectif)', cat: 'Coopérative' },
+  { label: 'CAE (Coopérative d'Activité et d'Emploi)', cat: 'Coopérative' },
+  { label: 'Association loi 1901',                    cat: 'Association' },
+  { label: 'Association reconnue d'utilité publique',cat: 'Association' },
+  { label: 'Fondation',                               cat: 'Association' },
+  { label: 'TPE (Très Petite Entreprise)',            cat: 'Taille d'entreprise' },
+  { label: 'PME (Petite et Moyenne Entreprise)',      cat: 'Taille d'entreprise' },
+  { label: 'ETI (Entreprise de Taille Intermédiaire)',cat: 'Taille d'entreprise' },
+  { label: 'GIE (Groupement d'Intérêt Économique)', cat: 'Groupement' },
+  { label: 'GEIE',                                    cat: 'Groupement' },
+  { label: 'SCI (Société Civile Immobilière)',        cat: 'Société civile' },
+  { label: 'SCM',                                     cat: 'Société civile' },
+  { label: 'SCP',                                     cat: 'Société civile' },
+  { label: 'Établissement public',                    cat: 'Secteur public' },
+  { label: 'Collectivité territoriale',               cat: 'Secteur public' },
+  { label: 'Projet en cours de création',             cat: 'Projet' },
+  { label: 'Autre',                                   cat: 'Autre' },
+];
+
+function initStructureField(searchId, dropdownId, hiddenId, wrapId, societyId) {
+  const searchEl   = el(searchId);
+  const dropEl     = el(dropdownId);
+  const hiddenEl   = el(hiddenId);
+  const wrapEl     = el(wrapId);
+  const societyEl  = el(societyId);
+  if (!searchEl || !dropEl || !hiddenEl) return;
+
+  function renderDropdown(filter) {
+    const q = filter.toLowerCase();
+    const filtered = STATUTS.filter(s => !q || s.label.toLowerCase().includes(q) || s.cat.toLowerCase().includes(q));
+    if (!filtered.length) { dropEl.innerHTML = '<div class="structure-opt">Aucun résultat</div>'; }
+    else {
+      dropEl.innerHTML = filtered.map(s =>
+        `<div class="structure-opt" data-val="${s.label}">${s.label}<span class="opt-cat">${s.cat}</span></div>`
+      ).join('');
+      dropEl.querySelectorAll('.structure-opt').forEach(opt => {
+        opt.addEventListener('mousedown', e => {
+          e.preventDefault();
+          searchEl.value  = opt.dataset.val;
+          hiddenEl.value  = opt.dataset.val;
+          dropEl.classList.remove('open');
+        });
+      });
+    }
+    dropEl.classList.add('open');
+  }
+
+  searchEl.addEventListener('input', () => renderDropdown(searchEl.value));
+  searchEl.addEventListener('focus', () => renderDropdown(searchEl.value));
+  searchEl.addEventListener('blur',  () => setTimeout(() => dropEl.classList.remove('open'), 150));
+
+  // Afficher/masquer le champ structure selon si société est remplie
+  if (societyEl) {
+    societyEl.addEventListener('input', () => {
+      if (wrapEl) wrapEl.style.display = societyEl.value.trim() ? 'block' : 'none';
+      if (!societyEl.value.trim()) { searchEl.value = ''; hiddenEl.value = ''; }
+    });
+  }
+}
+
 const IS_ADMIN=!!el('admin-app'), IS_VISITOR=!!el('grid');
 
 if(IS_ADMIN){
@@ -932,6 +1016,10 @@ if(IS_VISITOR){
   el('ma-cancel').addEventListener('click',()=>el('modal-atelier').classList.remove('open'));
   el('ma-confirm').addEventListener('click',confirmAtelier);
   el('modal-atelier').addEventListener('click',e=>{if(e.target===el('modal-atelier'))el('modal-atelier').classList.remove('open');});
+  // Sélecteurs de structure
+  initStructureField('m-structure-search',  'm-structure-dropdown',  'm-structure',  'm-structure-wrap',  'm-societe');
+  initStructureField('ma-structure-search', 'ma-structure-dropdown', 'ma-structure', 'ma-structure-wrap', 'ma-societe');
+
   el('mes-search-btn').addEventListener('click',searchMonPlanning);
   el('mes-search-input').addEventListener('keydown',e=>{if(e.key==='Enter')searchMonPlanning();});
   el('exp-search-btn')?.addEventListener('click',searchExposantPlanning);
