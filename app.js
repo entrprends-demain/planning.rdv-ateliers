@@ -327,7 +327,7 @@ async function setPeriod(period){
 }
 
 async function deleteBooking(bookingId){
-  if(!confirm(`Supprimer ce RDV et promouvoir le premier en liste d'attente si applicable ?`))return;
+  if(!confirm(`Supprimer ce RDV et promouvoir le premier en liste d/'attente si applicable ?`))return;
   loader(true);
   try{
     const item=DATA.bookings.find(b=>b.id===bookingId);
