@@ -327,9 +327,17 @@ async function setPeriod(period){
 }
 
 async function deleteBooking(bookingId){
-  if(!confirm('Désinscrire ce visiteur ?'))return;
+  if(!confirm('Supprimer ce RDV et promouvoir le premier en liste d'attente si applicable ?'))return;
   loader(true);
-  try{await deleteDoc(doc(db,'bookings',bookingId));DATA.bookings=DATA.bookings.filter(b=>b.id!==bookingId);renderCal();renderRdvList();renderStats();toast('Visiteur désinscrit.');}
+  try{
+    const item=DATA.bookings.find(b=>b.id===bookingId);
+    await deleteDoc(doc(db,'bookings',bookingId));
+    DATA.bookings=DATA.bookings.filter(b=>b.id!==bookingId);
+    // Supprimer aussi les entrées de liste d'attente liées à ce visiteur pour ce créneau ? Non — on promeut
+    if(item) await promoteWaitlistRdv(item.exposantId, item.slotStart);
+    renderCal();renderRdvList();renderStats();updateWaitBadges();
+    toast('RDV supprimé.');
+  }
   catch(e){console.error(e);toast('Erreur.');}
   loader(false);
 }
@@ -402,14 +410,71 @@ function renderAteliersAdminList(){
   }).join('');
   listEl.querySelectorAll('[data-atid-view]').forEach(btn=>btn.addEventListener('click',()=>showAtelierInscrits(btn.dataset.atidView)));
   listEl.querySelectorAll('.del-exp-btn[data-atid]').forEach(btn=>btn.addEventListener('click',()=>deleteAtelier(btn.dataset.atid)));
+  listEl.querySelectorAll('.del-exp-btn[data-atid]').forEach(btn=>btn.addEventListener('click',()=>deleteAtelier(btn.dataset.atid)));
   listEl.querySelectorAll('.edit-exp-btn[data-atid]').forEach(btn=>btn.addEventListener('click',()=>openAtelierForm(btn.dataset.atid)));
 }
 
 function showAtelierInscrits(atId){
   const at=DATA.ateliers.find(a=>a.id===atId);if(!at)return;
   const ins=DATA.inscriptions.filter(i=>i.atelierId===atId);
-  if(!ins.length){toast('Aucun inscrit pour cet atelier.');return;}
-  alert(`Inscrits — ${at.titre}\n\n${ins.map(i=>`• ${i.prenom} ${i.nom} (${i.email||'–'})`).join('\n')}`);
+
+  // Créer une modal d'affichage
+  const existing=document.getElementById('inscrits-modal');
+  if(existing)existing.remove();
+
+  const overlay=document.createElement('div');
+  overlay.id='inscrits-modal';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:800;display:flex;align-items:center;justify-content:center;padding:1rem';
+
+  const rows = ins.length
+    ? ins.map((i,idx)=>`<tr>
+        <td>${idx+1}</td>
+        <td><strong>${i.prenom} ${i.nom}</strong></td>
+        <td>${i.email||'–'}</td>
+        <td>${i.societe||'–'}</td>
+        <td><button class="del-booking-btn del-inscrit-btn" data-iid="${i.id}" data-atid="${atId}" title="Supprimer"><i class="ti ti-user-minus"></i></button></td>
+      </tr>`).join('')
+    : `<tr><td colspan="5" style="text-align:center;color:var(--ink3);padding:1rem">Aucun inscrit</td></tr>`;
+
+  overlay.innerHTML=`<div style="background:#fff;border-radius:16px;width:100%;max-width:600px;max-height:80vh;display:flex;flex-direction:column;border:2px solid var(--brd2);overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.25rem;background:var(--cyan-l);border-bottom:1.5px solid var(--brd2)">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--ink)">${at.titre}</div>
+        <div style="font-size:12px;color:var(--ink3)">${at.start}–${at.end} · ${at.salle} · ${ins.length}/${at.places||'∞'} inscrits</div>
+      </div>
+      <button onclick="document.getElementById('inscrits-modal').remove()" class="icon-btn"><i class="ti ti-x"></i></button>
+    </div>
+    <div style="overflow-y:auto;flex:1;padding:1rem">
+      <table class="rdv-table">
+        <thead><tr><th>#</th><th>Visiteur</th><th>Email</th><th>Société</th><th></th></tr></thead>
+        <tbody id="inscrits-tbody">${rows}</tbody>
+      </table>
+    </div>
+  </div>`;
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+
+  // Brancher les boutons supprimer
+  overlay.querySelectorAll('.del-inscrit-btn').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      if(!confirm('Supprimer cette inscription ?'))return;
+      loader(true);
+      try{
+        const iid=btn.dataset.iid, aid=btn.dataset.atid;
+        await deleteDoc(doc(db,'inscriptions',iid));
+        DATA.inscriptions=DATA.inscriptions.filter(i=>i.id!==iid);
+        // Promouvoir le 1er en liste d'attente
+        await promoteWaitlistAtelier(aid);
+        toast('Inscription supprimée.');
+        overlay.remove();
+        renderAteliersAdmin();
+        renderWaitlistAteliers();
+        updateWaitBadges();
+      }catch(e){console.error(e);toast('Erreur.');}
+      loader(false);
+    });
+  });
 }
 
 function openAtelierForm(atId=null){
