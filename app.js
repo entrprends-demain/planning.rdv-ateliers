@@ -875,10 +875,22 @@ async function searchExposantPlanning(){
 
 /* ── Navigation visiteur ──────────────────────────────────────── */
 function switchVisitorTab(tab){
-  ['rdvs','ateliers','planning','exposant'].forEach(t=>{const e=el('tab-'+t);if(e)e.style.display=t===tab?'block':'none';});
+  ['accueil','rdvs','ateliers','planning','exposant'].forEach(t=>{const e=el('tab-'+t);if(e)e.style.display=t===tab?'block':'none';});
   document.querySelectorAll('.vtab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   if(tab==='ateliers')renderAteliersGrid();
   if(tab==='rdvs')renderGrid();
+  if(tab==='accueil')renderAccueil();
+}
+
+/* ── Page d'accueil ─────────────────────────────────────────────── */
+function renderAccueil(){
+  const rdvNum=el('rdv-count-num'), atNum=el('at-count-num');
+  if(rdvNum) rdvNum.textContent=DATA.exposants.length;
+  if(atNum)  atNum.textContent=DATA.ateliers.length;
+  // Brancher les boutons des cartes
+  document.querySelectorAll('.accueil-card-btn').forEach(btn=>{
+    btn.onclick=()=>switchVisitorTab(btn.dataset.goto);
+  });
 }
 
 /* ── Init ─────────────────────────────────────────────────────── */
@@ -901,6 +913,8 @@ if(IS_ADMIN){
 
 if(IS_VISITOR){
   document.querySelectorAll('.vtab').forEach(btn=>btn.addEventListener('click',()=>switchVisitorTab(btn.dataset.tab)));
+  // Accueil actif par défaut
+  switchVisitorTab('accueil');
   el('vis-search').addEventListener('input',renderGrid);
   el('vis-cat').addEventListener('change',renderGrid);
   el('vis-expertise')?.addEventListener('change',renderGrid);
@@ -923,5 +937,5 @@ if(IS_VISITOR){
   el('exp-search-btn')?.addEventListener('click',searchExposantPlanning);
   el('exp-email-input')?.addEventListener('keydown',e=>{if(e.key==='Enter')searchExposantPlanning();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeDrawer();el('modal-atelier')?.classList.remove('open');}});
-  loadAll().then(()=>{renderGrid();});
+  loadAll().then(()=>{renderAccueil();renderGrid();renderAteliersGrid();});
 }

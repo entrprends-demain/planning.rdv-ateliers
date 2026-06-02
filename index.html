@@ -17,18 +17,70 @@
         <i class="ti ti-calendar-event"></i>
         <span>RDV Individuels · <em>Entreprends Demain !</em></span>
       </div>
-      <div class="nav-brand-sub">Mardi 22 septembre 2026 à la Cité des Sciences et de l'Industrie, Paris</div>
+      <div class="nav-brand-sub">Mardi 22 septembre 2026 à la Cité des Métiers de Paris</div>
     </div>
     <div class="vis-tabs">
-      <button class="vtab active" data-tab="rdvs"><i class="ti ti-users"></i> RDV Experts</button>
+      <button class="vtab active" data-tab="accueil"><i class="ti ti-home"></i> Accueil</button>
+      <button class="vtab" data-tab="rdvs"><i class="ti ti-users"></i> RDV Experts</button>
       <button class="vtab" data-tab="ateliers"><i class="ti ti-school"></i> Ateliers</button>
       <button class="vtab vtab-yellow" data-tab="planning"><i class="ti ti-calendar-check"></i> Mon Planning</button>
     </div>
   </div>
 </nav>
 
+<!-- ── Accueil ── -->
+<div id="tab-accueil">
+  <div class="accueil-hero">
+    <div class="accueil-hero-inner">
+      <img src="logo.png" alt="Entreprends Demain !" class="accueil-logo" />
+      <div class="accueil-text">
+        <h1>Entreprends <em>Demain !</em></h1>
+        <p class="accueil-sub">Le premier salon de l'entrepreneuriat durable parisien</p>
+        <p class="accueil-date"><i class="ti ti-map-pin"></i> Mardi 22 septembre 2026 · Cité des Métiers de Paris</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="accueil-desc">
+      <p><strong>Entreprends Demain !</strong> est le premier salon de l'entrepreneuriat durable parisien. Le pôle Créer son Activité de la Cité des Métiers et le groupement d'associations <strong>Le Projecteur — Carrefour de l'entrepreneuriat parisien</strong> vous invitent à venir découvrir leurs partenaires experts (comptables, communicants, avocats, architectes, banques…) ainsi que toutes les institutions jouant un rôle dans l'environnement entrepreneurial parisien.</p>
+      <p>Vous pouvez dès à présent vous inscrire à des <strong>RDV individuels</strong> avec des experts en renseignant votre problématique, ainsi qu'à des <strong>ateliers</strong> sur divers sujets autour des besoins d'un entrepreneur.</p>
+    </div>
+
+    <div class="accueil-cards" id="accueil-cards">
+      <div class="accueil-card" id="card-rdvs">
+        <div class="accueil-card-icon" style="background:var(--cyan-l);color:var(--cyan)">
+          <i class="ti ti-users"></i>
+        </div>
+        <div class="accueil-card-title">RDV Individuels</div>
+        <div class="accueil-card-desc">Rencontrez un expert de votre choix en tête-à-tête pendant 20 minutes. Posez vos questions, obtenez des conseils personnalisés.</div>
+        <div class="accueil-card-count" id="rdv-count-home">
+          <span id="rdv-count-num">—</span> experts disponibles
+        </div>
+        <button class="btn-primary accueil-card-btn" data-goto="rdvs">
+          Prendre un RDV <i class="ti ti-arrow-right"></i>
+        </button>
+      </div>
+
+      <div class="accueil-card" id="card-ateliers">
+        <div class="accueil-card-icon" style="background:#EAF3DE;color:#3B6D11">
+          <i class="ti ti-school"></i>
+        </div>
+        <div class="accueil-card-title">Ateliers thématiques</div>
+        <div class="accueil-card-desc">Participez à des sessions collectives de 45 minutes animées par des experts. Matin et après-midi, sur des thèmes variés.</div>
+        <div class="accueil-card-count" id="at-count-home">
+          <span id="at-count-num">—</span> ateliers proposés
+        </div>
+        <button class="btn-primary accueil-card-btn" style="background:#3B6D11" data-goto="ateliers">
+          Voir les ateliers <i class="ti ti-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ── RDV Experts ── -->
-<div id="tab-rdvs">
+<div id="tab-rdvs" style="display:none">
   <header class="hero">
     <div class="hero-inner">
       <img src="logo.png" alt="Entreprends Demain !" class="hero-logo" />
@@ -229,10 +281,15 @@
   </div>
 </div>
 
-<footer style="background:var(--ink);color:rgba(255,255,255,.5);text-align:center;padding:1.25rem;font-size:12px;margin-top:3rem">
-  © 2026 Paris Initiative Entreprise ·
-  <a href="rgpd.html" style="color:var(--cyan);text-decoration:none;font-weight:500">Politique de confidentialité</a> ·
-  <a href="mailto:communication@paris-initiative.org" style="color:rgba(255,255,255,.5);text-decoration:none">communication@paris-initiative.org</a>
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <span>© 2026 Paris Initiative Entreprise</span>
+    <div class="footer-links">
+      <a href="https://www.pie.paris/contact/" target="_blank" rel="noopener">Contact</a>
+      <span class="footer-sep">|</span>
+      <a href="https://www.pie.paris/mentions-legales/" target="_blank" rel="noopener">Mentions légales et politique de confidentialité</a>
+    </div>
+  </div>
 </footer>
 <div id="toast" class="toast"></div>
 <div id="loader" class="loader"><div class="loader-inner"><div class="spinner"></div><div class="loader-msg">Vos experts arrivent dans quelques secondes...</div></div></div>
