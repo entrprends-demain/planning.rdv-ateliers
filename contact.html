@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact · Entreprends Demain !</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .page-wrap { max-width: 760px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+    .page-wrap h1 { font-family: var(--font); font-size: 24px; font-weight: 700; color: var(--cyan); margin-bottom: .4rem; }
+    .page-wrap .sub { font-size: 13px; color: var(--ink3); margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 2px solid var(--cyan-l); }
+    .page-wrap h2 { font-size: 15px; font-weight: 700; color: var(--ink); margin: 2rem 0 .75rem; padding-left: 12px; border-left: 3px solid var(--cyan); }
+    .page-wrap p { font-size: 14px; color: var(--ink2); line-height: 1.75; margin-bottom: .5rem; }
+    .info-box { background: var(--cyan-l); border: 1.5px solid var(--brd2); border-radius: 12px; padding: 1.25rem; margin: 1rem 0; }
+    .info-box p { margin: 0; font-size: 14px; color: var(--cyan-d); line-height: 1.7; }
+    .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+    .contact-card { background: var(--white); border: 1.5px solid var(--brd2); border-radius: var(--rl); padding: 1.25rem; }
+    .contact-card i { font-size: 24px; color: var(--cyan); display: block; margin-bottom: .6rem; }
+    .contact-card h3 { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: .4rem; }
+    .contact-card p { font-size: 13px; color: var(--ink2); margin: 0; }
+    .contact-card a { color: var(--cyan); text-decoration: none; font-weight: 600; }
+    .contact-card a:hover { color: var(--cyan-d); }
+    .back-btn { display: inline-flex; align-items: center; gap: 6px; color: var(--cyan); font-size: 13px; font-weight: 600; text-decoration: none; margin-bottom: 1.5rem; }
+    @media(max-width:600px){ .contact-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner" style="height:60px">
+    <div class="nav-brand" style="font-size:15px;flex-direction:row;gap:8px">
+      <i class="ti ti-calendar-event" style="color:var(--yellow)"></i>
+      <span>Inscriptions · <em>Entreprends Demain !</em></span>
+    </div>
+    <a href="index.html" class="nav-link"><i class="ti ti-home"></i> Accueil</a>
+  </div>
+</nav>
+
+<div class="page-wrap">
+  <a href="index.html" class="back-btn"><i class="ti ti-arrow-left"></i> Retour à l'accueil</a>
+
+  <h1>Contact</h1>
+  <p class="sub">Événement du 22 septembre 2026 · Cité des Métiers de Paris</p>
+
+  <p>Pour toute question concernant l'événement <strong>Entreprends Demain !</strong>, les inscriptions, ou pour exercer vos droits relatifs à vos données personnelles, vous pouvez nous contacter via les coordonnées ci-dessous.</p>
+
+  <div class="contact-grid">
+    <div class="contact-card">
+      <i class="ti ti-building"></i>
+      <h3>Paris Initiative Entreprise</h3>
+      <p>Association loi 1901<br>
+      68 Boulevard Malesherbes<br>
+      75008 Paris</p>
+    </div>
+    <div class="contact-card">
+      <i class="ti ti-mail"></i>
+      <h3>Email</h3>
+      <p>Pour toute demande générale ou relative à vos données :<br>
+      <a href="mailto:communication@paris-initiative.org">communication@paris-initiative.org</a></p>
+    </div>
+    <div class="contact-card">
+      <i class="ti ti-world"></i>
+      <h3>Site web</h3>
+      <p>Retrouvez toutes les informations sur Paris Initiative Entreprise :<br>
+      <a href="https://www.pie.paris" target="_blank" rel="noopener">www.pie.paris</a></p>
+    </div>
+    <div class="contact-card">
+      <i class="ti ti-shield-check"></i>
+      <h3>Données personnelles</h3>
+      <p>Responsable de traitement : <strong>Dy Titouan</strong><br>
+      <a href="mailto:communication@paris-initiative.org">communication@paris-initiative.org</a></p>
+    </div>
+  </div>
+
+  <h2>Questions fréquentes</h2>
+
+  <div style="display:flex;flex-direction:column;gap:10px;margin-top:.5rem">
+    <div style="background:var(--white);border:1.5px solid var(--brd2);border-radius:10px;padding:1rem">
+      <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:.4rem">J'ai perdu mon code d'accès personnel</div>
+      <p style="font-size:13px;margin:0">Vous pouvez toujours consulter votre planning en saisissant votre email dans l'onglet "Mon Planning". Pour toute annulation, contactez-nous à <a href="mailto:communication@paris-initiative.org" style="color:var(--cyan)">communication@paris-initiative.org</a></p>
+    </div>
+    <div style="background:var(--white);border:1.5px solid var(--brd2);border-radius:10px;padding:1rem">
+      <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:.4rem">Je souhaite modifier ou annuler mon inscription</div>
+      <p style="font-size:13px;margin:0">Si vous avez votre code personnel, rendez-vous dans "Mon Planning" et cliquez sur "Annuler" à côté du RDV ou atelier concerné. Sinon, contactez-nous par email.</p>
+    </div>
+    <div style="background:var(--white);border:1.5px solid var(--brd2);border-radius:10px;padding:1rem">
+      <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:.4rem">Comment accéder au lieu de l'événement ?</div>
+      <p style="font-size:13px;margin:0">L'événement se déroule à la <strong>Cité des Métiers de Paris</strong>, Mardi 22 septembre 2026. Les informations d'accès détaillées seront communiquées prochainement.</p>
+    </div>
+  </div>
+
+</div>
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <span>© 2026 Paris Initiative Entreprise</span>
+    <div class="footer-links">
+      <a href="contact.html">Contact</a>
+      <span class="footer-sep">|</span>
+      <a href="mentions.html">Mentions légales et politique de confidentialité</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
