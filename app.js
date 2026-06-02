@@ -327,7 +327,7 @@ async function setPeriod(period){
 }
 
 async function deleteBooking(bookingId){
-  if(!confirm(`Supprimer ce RDV et promouvoir le premier en liste d/'attente si applicable ?`))return;
+  if(!confirm(`Supprimer ce RDV et promouvoir le premier en liste d'attente si applicable ?`))return;
   loader(true);
   try{
     const item=DATA.bookings.find(b=>b.id===bookingId);
@@ -554,12 +554,54 @@ function renderVisiteursList(){
     <td><span style="font-family:monospace;font-size:15px;font-weight:700;color:var(--cyan);background:var(--cyan-l);padding:3px 10px;border-radius:6px;letter-spacing:.1em">${v.code}</span></td>
     <td><strong style="color:var(--cyan)">${v.bookings.length}</strong></td>
     <td><strong style="color:#3B6D11">${v.inscriptions.length}</strong></td>
-    <td><button class="btn-primary" style="padding:5px 12px;font-size:12px" data-vid="${v.id}"><i class="ti ti-eye"></i> Planning</button></td>
+    <td style="display:flex;gap:6px">
+      <button class="btn-primary" style="padding:5px 12px;font-size:12px" data-vid="${v.id}"><i class="ti ti-eye"></i> Planning</button>
+      <button class="del-booking-btn" style="padding:5px 10px" data-del-vid="${v.id}" data-del-email="${v.email}" title="Supprimer ce visiteur et toutes ses données"><i class="ti ti-trash"></i></button>
+    </td>
   </tr>`).join('')}</tbody></table>`;
   listEl.querySelectorAll('[data-vid]').forEach(btn=>{
     const v=visiteurs.find(x=>x.id===btn.dataset.vid);
     if(v)btn.addEventListener('click',()=>openVisiteurDetail(v));
   });
+  listEl.querySelectorAll('[data-del-vid]').forEach(btn=>{
+    btn.addEventListener('click',()=>deleteVisiteur(btn.dataset.delVid, btn.dataset.delEmail));
+  });
+}
+
+async function deleteVisiteur(visitorId, email) {
+  const emailLow = (email||'').toLowerCase();
+  const bkCount  = DATA.bookings.filter(b=>(b.email||'').toLowerCase()===emailLow).length;
+  const insCount = DATA.inscriptions.filter(i=>(i.email||'').toLowerCase()===emailLow).length;
+  const wCount   = DATA.waitlist.filter(w=>(w.email||'').toLowerCase()===emailLow).length;
+  if(!confirm(`Supprimer ce visiteur et toutes ses données ?
+
+• ${bkCount} RDV
+• ${insCount} inscription${insCount>1?'s':''} atelier
+• ${wCount} liste${wCount>1?'s':''} d'attente
+
+Cette action est irréversible.`))return;
+  loader(true);
+  try{
+    const batch=writeBatch(db);
+    // Supprimer bookings
+    DATA.bookings.filter(b=>(b.email||'').toLowerCase()===emailLow).forEach(b=>batch.delete(doc(db,'bookings',b.id)));
+    // Supprimer inscriptions
+    DATA.inscriptions.filter(i=>(i.email||'').toLowerCase()===emailLow).forEach(i=>batch.delete(doc(db,'inscriptions',i.id)));
+    // Supprimer waitlist
+    DATA.waitlist.filter(w=>(w.email||'').toLowerCase()===emailLow).forEach(w=>batch.delete(doc(db,'waitlist',w.id)));
+    // Supprimer visitor
+    batch.delete(doc(db,'visitors',visitorId));
+    await batch.commit();
+    // Mettre à jour DATA
+    DATA.bookings     = DATA.bookings.filter(b=>(b.email||'').toLowerCase()!==emailLow);
+    DATA.inscriptions = DATA.inscriptions.filter(i=>(i.email||'').toLowerCase()!==emailLow);
+    DATA.waitlist     = DATA.waitlist.filter(w=>(w.email||'').toLowerCase()!==emailLow);
+    DATA.visitors     = DATA.visitors.filter(v=>v.id!==visitorId);
+    el('visiteur-detail')?.style && (el('visiteur-detail').style.display='none');
+    renderVisiteursList();renderStats();updateBadges();
+    toast('Visiteur et toutes ses données supprimés.');
+  }catch(e){console.error(e);toast('Erreur lors de la suppression.');}
+  loader(false);
 }
 
 function openVisiteurDetail(v){
@@ -704,7 +746,14 @@ async function promoteWaitlistAtelier(atId) {
 }
 
 /* ── Drawer RDV ───────────────────────────────────────────────── */
-function openDrawer(expId){
+async function openDrawer(expId){
+  // Recharger les bookings pour avoir l'état le plus récent
+  try{
+    const bS=await getDocs(query(collection(db,'bookings'),orderBy('slotStart')));
+    DATA.bookings=bS.docs.map(d=>({id:d.id,...d.data()}));
+    const wS=await getDocs(query(collection(db,'waitlist'),orderBy('createdAt')));
+    DATA.waitlist=wS.docs.map(d=>({id:d.id,...d.data()}));
+  }catch(e){console.error(e);}
   pendingExp=expId;
   const exp=DATA.exposants.find(e=>e.id===expId);
   const slots=getSlots(expId), ms=slots.filter(s=>s.period==='matin'), ps=slots.filter(s=>s.period==='aprem');
@@ -859,13 +908,13 @@ async function confirmWaitlist(type, expId, atId, slotStart, slotEnd) {
   const structure=el('m-structure')?.value||'';
   if(!prenom||!nom){toast('Merci de renseigner prénom et nom.');return;}
   if(!email){toast('Merci de renseigner votre email.');return;}
-  if(!el('m-rgpd')?.checked){toast(`Merci d/'accepter la politique de confidentialité.`);return;}
+  if(!el('m-rgpd')?.checked){toast(`Merci d'accepter la politique de confidentialité.`);return;}
 
   // Vérifier pas déjà en liste d'attente
   const alreadyWait = type==='rdv'
     ? getWaitRdv(expId, slotStart, email)
     : getWaitAtelier(atId, email);
-  if(alreadyWait){toast(`Vous êtes déjà sur la liste d/'attente pour ce créneau.`);closeModal();return;}
+  if(alreadyWait){toast(`Vous êtes déjà sur la liste d'attente pour ce créneau.`);closeModal();return;}
 
   // Vérifier pas déjà inscrit
   if(type==='rdv'){
@@ -1082,6 +1131,10 @@ async function searchMonPlanning(){
   const ins=DATA.inscriptions.filter(i=>(i.email||'').toLowerCase()===email);
   if(!bk.length&&!ins.length){result.innerHTML='<div class="rdv-empty"><i class="ti ti-calendar-off"></i><p>Aucun élément trouvé.</p></div>';return;}
   const first=bk[0]||ins[0];
+  // Recharger waitlist depuis Firebase si vide (données fraîches)
+  if(!DATA.waitlist.length){
+    try{const ws=await getDocs(query(collection(db,'waitlist'),orderBy('createdAt')));DATA.waitlist=ws.docs.map(d=>({id:d.id,...d.data()}));}catch(e){console.error(e);}
+  }
   const waits=DATA.waitlist.filter(w=>(w.email||'').toLowerCase()===email);
   const allItems=[
     ...bk.map(b=>{const exp=DATA.exposants.find(e=>e.id===b.exposantId);return{id:b.id,time:b.slotStart,end:b.slotEnd,title:exp?.name||'–',sub:exp?.cat||'',prob:b.problematique||'',type:'rdv',period:b.period,canCancel:hasCode,isWait:false};}),
