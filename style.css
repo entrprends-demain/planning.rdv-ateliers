@@ -119,12 +119,12 @@ body { font-family: var(--font); background: var(--bg); color: var(--ink); -webk
 /* ── Modal ── */
 .modal-wrap { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 400; align-items: center; justify-content: center; padding: 1rem; }
 .modal-wrap.open { display: flex; }
-.modal-box { background: var(--white); border-radius: var(--rxl); width: 100%; max-width: 400px; animation: pop .2s ease; border: 2px solid var(--brd2); }
+.modal-box { background: var(--white); border-radius: var(--rxl); width: 100%; max-width: 400px; animation: pop .2s ease; border: 2px solid var(--brd2); max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; }
 @keyframes pop { from { opacity:0; transform: scale(.96); } to { opacity:1; transform: scale(1); } }
 .modal-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 1.25rem 1.25rem .75rem; border-bottom: 1.5px solid var(--brd); background: var(--cyan-l); border-radius: var(--rxl) var(--rxl) 0 0; }
 .modal-title { font-family: var(--font); font-size: 16px; font-weight: 700; color: var(--cyan-d); }
 .modal-info  { font-size: 12px; color: var(--ink2); margin-top: 3px; }
-.modal-body  { display: flex; flex-direction: column; gap: 10px; padding: 1rem 1.25rem; }
+.modal-body  { display: flex; flex-direction: column; gap: 10px; padding: 1rem 1.25rem; flex: 1; overflow-y: auto; }
 .modal-foot  { display: flex; gap: 8px; justify-content: flex-end; padding: .75rem 1.25rem 1.25rem; border-top: 1px solid var(--brd); }
 
 /* ── Forms ── */
@@ -464,3 +464,6 @@ body { font-family: var(--font); background: var(--bg); color: var(--ink); -webk
 
 /* Planning attente */
 .planning-item.wait-item { background: #FEF3EB; border: 1.5px solid var(--am-brd); border-style: dashed; }
+
+/* ── Modal footer toujours visible ── */
+.modal-foot { flex-shrink: 0; position: sticky; bottom: 0; background: var(--white); border-top: 1px solid var(--brd); padding: .75rem 1.25rem 1.25rem; display: flex; gap: 8px; justify-content: flex-end; }

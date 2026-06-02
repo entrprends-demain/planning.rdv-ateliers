@@ -764,8 +764,11 @@ function openModalWait(type, slotStart, slotEnd, expId, atId) {
 
   el('m-info').innerHTML = `<span style="color:var(--am);font-weight:600"><i class="ti ti-clock" style="font-size:12px"></i> Liste d'attente — position ${waitQueue.length+1}</span><br><span style="font-size:11px">${infoText}</span>`;
   document.querySelector('#modal .modal-title').textContent = "S'inscrire en liste d'attente";
-  document.querySelector('#modal-confirm').innerHTML = '<i class="ti ti-clock"></i> Rejoindre la liste';
-  document.querySelector('#modal-confirm').style.background = 'var(--am)';
+  document.querySelector('#modal-confirm').innerHTML = '<i class="ti ti-clock"></i> Rejoindre la liste d\'attente';
+  document.querySelector('#modal-confirm').style.background = '#B85C1A';
+  document.querySelector('#modal-confirm').style.border = 'none';
+  document.querySelector('#modal-confirm').style.fontSize = '14px';
+  document.querySelector('#modal-confirm').style.padding = '12px 20px';
 
   ['m-prenom','m-nom','m-email','m-societe','m-problematique','m-code-rapide'].forEach(id=>{const e=el(id);if(e){e.value='';e.readOnly=false;e.style.background='';e.style.color='';e.style.fontWeight='';}});
   if(el('m-rgpd'))el('m-rgpd').checked=false;
@@ -852,7 +855,14 @@ function closeModal(){
   el('modal')?.classList.remove('open');
   // Remettre le bouton confirm à son état normal
   const btn=el('modal-confirm');
-  if(btn){btn.onclick=confirmBooking;btn.innerHTML='<i class="ti ti-calendar-check"></i> Confirmer';btn.style.background='';}
+  if(btn){
+    btn.onclick=confirmBooking;
+    btn.innerHTML='<i class="ti ti-calendar-check"></i> Confirmer';
+    btn.style.background='';
+    btn.style.border='';
+    btn.style.fontSize='';
+    btn.style.padding='';
+  }
   const title=document.querySelector('#modal .modal-title');
   if(title)title.textContent='Confirmer votre RDV';
 }
