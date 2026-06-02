@@ -534,7 +534,7 @@ function buildPlanningHTML(items){
         ${item.time}–${item.end}
       </div>
       <div class="pi-info">
-        <div class="pi-title">${item.title}${isWait?' <span style="font-size:11px;color:var(--am)">(liste d'attente)</span>':''}</div>
+        <div class="pi-title">${item.title}${isWait?' <span style="font-size:11px;color:var(--am)">(liste d\'attente)</span>':''}</div>
         <div class="pi-sub">${item.sub}${item.prob?` · "${item.prob}"`:''}</div>
       </div>
       ${typeTag}
