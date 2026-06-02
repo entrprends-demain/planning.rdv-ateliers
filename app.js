@@ -788,13 +788,13 @@ async function confirmWaitlist(type, expId, atId, slotStart, slotEnd) {
   const structure=el('m-structure')?.value||'';
   if(!prenom||!nom){toast('Merci de renseigner prénom et nom.');return;}
   if(!email){toast('Merci de renseigner votre email.');return;}
-  if(!el('m-rgpd')?.checked){toast(`Merci d'accepter la politique de confidentialité.`);return;}
+  if(!el('m-rgpd')?.checked){toast(`Merci d/'accepter la politique de confidentialité.`);return;}
 
   // Vérifier pas déjà en liste d'attente
   const alreadyWait = type==='rdv'
     ? getWaitRdv(expId, slotStart, email)
     : getWaitAtelier(atId, email);
-  if(alreadyWait){toast(`Vous êtes déjà sur la liste d'attente pour ce créneau.`);closeModal();return;}
+  if(alreadyWait){toast(`Vous êtes déjà sur la liste d/'attente pour ce créneau.`);closeModal();return;}
 
   // Vérifier pas déjà inscrit
   if(type==='rdv'){
