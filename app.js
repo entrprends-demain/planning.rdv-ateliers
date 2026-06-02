@@ -127,6 +127,7 @@ function updateBadges() {
   const rb=el('rdv-badge'); if(rb)rb.textContent=DATA.bookings.length||'';
   const ab=el('at-badge');  if(ab)ab.textContent=DATA.ateliers.length||'';
   const vb=el('vis-badge'); if(vb)vb.textContent=DATA.visitors.length||'';
+  updateWaitBadges();
 }
 
 /* ── Stats sidebar ────────────────────────────────────────────── */
@@ -142,12 +143,14 @@ function renderStats() {
 /* ── Admin tabs ───────────────────────────────────────────────── */
 function switchAdminTab(tab) {
   document.querySelectorAll('.atab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
-  ['exposants','ateliers-admin','rdvs','visiteurs'].forEach(t=>{
+  ['exposants','ateliers-admin','rdvs','visiteurs','waitlist-rdvs','waitlist-ateliers'].forEach(t=>{
     const el2=el('tab-'+t); if(el2)el2.style.display=t===tab?(t==='exposants'?'flex':'block'):'none';
   });
-  if(tab==='rdvs')      renderRdvList();
-  if(tab==='visiteurs') renderVisiteursList();
-  if(tab==='ateliers-admin') renderAteliersAdmin();
+  if(tab==='rdvs')             renderRdvList();
+  if(tab==='visiteurs')        renderVisiteursList();
+  if(tab==='ateliers-admin')   renderAteliersAdmin();
+  if(tab==='waitlist-rdvs')    renderWaitlistRdvs();
+  if(tab==='waitlist-ateliers')renderWaitlistAteliers();
 }
 
 /* ── Admin exposants ──────────────────────────────────────────── */
@@ -524,7 +527,7 @@ function buildPlanningHTML(items){
   return items.map(item=>{
     const isAt=item.type==='atelier', isPm=item.period==='aprem';
     const isWait=item.isWait||false;
-    const cls=isWait?'wait-item':(isAt?(isPm?'at-pm':'at-am'):(isPm?'rdv-pm':'rdv-am'));
+    const cls=isWait?'wait-item-red':(isAt?(isPm?'at-pm':'at-am'):(isPm?'rdv-pm':'rdv-am'));
     const typeTag=isWait
       ?`<span class="pi-type" style="background:var(--am);color:#fff">Attente #${item.waitPos}</span>`
       :(isAt?'<span class="pi-type type-at">Atelier</span>':'<span class="pi-type type-rdv">RDV</span>');

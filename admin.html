@@ -38,7 +38,9 @@
   <div class="admin-tabs">
     <button class="atab active" data-tab="exposants"><i class="ti ti-users"></i> Exposants</button>
     <button class="atab" data-tab="ateliers-admin"><i class="ti ti-school"></i> Ateliers <span id="at-badge" class="rdv-badge"></span></button>
+    <button class="atab" data-tab="waitlist-ateliers"><i class="ti ti-clock" style="color:#B85C1A"></i> Attente ateliers <span id="wat-badge" class="rdv-badge" style="background:#B85C1A"></span></button>
     <button class="atab" data-tab="rdvs"><i class="ti ti-calendar-check"></i> RDV <span id="rdv-badge" class="rdv-badge"></span></button>
+    <button class="atab" data-tab="waitlist-rdvs"><i class="ti ti-clock" style="color:#B85C1A"></i> Attente RDV <span id="wrdv-badge" class="rdv-badge" style="background:#B85C1A"></span></button>
     <button class="atab" data-tab="visiteurs"><i class="ti ti-id-badge"></i> Visiteurs <span id="vis-badge" class="rdv-badge"></span></button>
   </div>
 
@@ -157,6 +159,24 @@
       </div>
     </div>
     <div id="rdv-list"></div>
+  </div>
+
+  <!-- Onglet Attente RDV -->
+  <div id="tab-waitlist-rdvs" style="display:none;padding:1.75rem;max-width:1000px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px">
+      <div style="font-family:var(--font);font-size:20px;font-weight:700;color:#B85C1A"><i class="ti ti-clock"></i> Liste d'attente — RDV individuels</div>
+      <div style="font-size:13px;color:var(--ink3)">Par ordre d'inscription · Attribution automatique en cas de désistement</div>
+    </div>
+    <div id="waitlist-rdvs-list"></div>
+  </div>
+
+  <!-- Onglet Attente Ateliers -->
+  <div id="tab-waitlist-ateliers" style="display:none;padding:1.75rem;max-width:1000px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px">
+      <div style="font-family:var(--font);font-size:20px;font-weight:700;color:#B85C1A"><i class="ti ti-clock"></i> Liste d'attente — Ateliers</div>
+      <div style="font-size:13px;color:var(--ink3)">Par ordre d'inscription · Attribution automatique en cas de désistement</div>
+    </div>
+    <div id="waitlist-ateliers-list"></div>
   </div>
 
   <!-- Onglet Visiteurs -->

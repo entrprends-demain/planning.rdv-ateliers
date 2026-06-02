@@ -467,3 +467,12 @@ body { font-family: var(--font); background: var(--bg); color: var(--ink); -webk
 
 /* ── Modal footer toujours visible ── */
 .modal-foot { flex-shrink: 0; position: sticky; bottom: 0; background: var(--white); border-top: 1px solid var(--brd); padding: .75rem 1.25rem 1.25rem; display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ── Liste d'attente rouge dans Mon Planning ── */
+.planning-item.wait-item-red {
+  background: #FEF3EB;
+  border: 2px dashed #B85C1A;
+}
+.planning-item.wait-item-red .pi-time {
+  color: #B85C1A !important;
+}
