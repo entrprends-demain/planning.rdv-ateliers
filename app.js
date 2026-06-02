@@ -536,17 +536,44 @@ async function deleteAtelier(atId){
 }
 
 /* ── Visiteurs admin ──────────────────────────────────────────── */
-function renderVisiteursList(){
+async function renderVisiteursList(){
+  const listEl=el('visiteurs-list');if(!listEl)return;
+  // Recharger visitors depuis Firebase à chaque fois
+  try{
+    const vS=await getDocs(collection(db,'visitors'));
+    DATA.visitors=vS.docs.map(d=>({id:d.id,...d.data()}));
+  }catch(e){console.error(e);}
+
   const search=(el('vis-admin-search')?.value||'').toLowerCase();
   const vb=el('vis-badge');if(vb)vb.textContent=DATA.visitors.length||'';
-  const listEl=el('visiteurs-list');if(!listEl)return;
-  const visiteurs=DATA.visitors.map(v=>{
+
+  // Construire la liste depuis visitors + bookings/inscriptions sans code
+  const emailsWithCode = new Set(DATA.visitors.map(v=>v.email.toLowerCase()));
+
+  // Visiteurs avec code
+  const withCode = DATA.visitors.map(v=>{
     const bk=DATA.bookings.filter(b=>(b.email||'').toLowerCase()===v.email).sort((a,b)=>a.slotStart.localeCompare(b.slotStart));
     const ins=DATA.inscriptions.filter(i=>(i.email||'').toLowerCase()===v.email);
-    const first=bk[0];
+    const first=bk[0]||ins[0];
     return{...v,bookings:bk,inscriptions:ins,prenom:first?.prenom||'',nom:first?.nom||'',societe:first?.societe||''};
-  }).filter(v=>!search||(v.prenom+' '+v.nom+' '+v.email).toLowerCase().includes(search))
+  });
+
+  // Visiteurs sans code (ont des bookings/inscriptions mais pas dans visitors)
+  const allEmails = new Set([
+    ...DATA.bookings.map(b=>(b.email||'').toLowerCase()),
+    ...DATA.inscriptions.map(i=>(i.email||'').toLowerCase()),
+  ]);
+  const withoutCode = [...allEmails].filter(e=>e&&!emailsWithCode.has(e)).map(emailLow=>{
+    const bk=DATA.bookings.filter(b=>(b.email||'').toLowerCase()===emailLow).sort((a,b)=>a.slotStart.localeCompare(b.slotStart));
+    const ins=DATA.inscriptions.filter(i=>(i.email||'').toLowerCase()===emailLow);
+    const first=bk[0]||ins[0];
+    return{id:'nocode-'+emailLow,email:emailLow,code:'–',bookings:bk,inscriptions:ins,prenom:first?.prenom||'',nom:first?.nom||'',societe:first?.societe||''};
+  });
+
+  const visiteurs=[...withCode,...withoutCode]
+    .filter(v=>!search||(v.prenom+' '+v.nom+' '+v.email).toLowerCase().includes(search))
     .sort((a,b)=>(a.nom||'').localeCompare(b.nom||''));
+
   if(!visiteurs.length){listEl.innerHTML='<div class="empty-state"><i class="ti ti-users"></i><p>Aucun visiteur.</p></div>';return;}
   listEl.innerHTML=`<table class="rdv-table"><thead><tr><th>Visiteur</th><th>Email</th><th>Société</th><th>Code</th><th>RDV</th><th>Ateliers</th><th></th></tr></thead><tbody>
   ${visiteurs.map(v=>`<tr>
@@ -569,6 +596,7 @@ function renderVisiteursList(){
 }
 
 async function deleteVisiteur(visitorId, email) {
+  // Si pas de vrai ID visitor (visiteur sans code), pas de doc à supprimer dans visitors
   const emailLow = (email||'').toLowerCase();
   const bkCount  = DATA.bookings.filter(b=>(b.email||'').toLowerCase()===emailLow).length;
   const insCount = DATA.inscriptions.filter(i=>(i.email||'').toLowerCase()===emailLow).length;
@@ -589,14 +617,14 @@ Cette action est irréversible.`))return;
     DATA.inscriptions.filter(i=>(i.email||'').toLowerCase()===emailLow).forEach(i=>batch.delete(doc(db,'inscriptions',i.id)));
     // Supprimer waitlist
     DATA.waitlist.filter(w=>(w.email||'').toLowerCase()===emailLow).forEach(w=>batch.delete(doc(db,'waitlist',w.id)));
-    // Supprimer visitor
-    batch.delete(doc(db,'visitors',visitorId));
+    // Supprimer visitor si existe
+    if(!visitorId.startsWith('nocode-')) batch.delete(doc(db,'visitors',visitorId));
     await batch.commit();
     // Mettre à jour DATA
     DATA.bookings     = DATA.bookings.filter(b=>(b.email||'').toLowerCase()!==emailLow);
     DATA.inscriptions = DATA.inscriptions.filter(i=>(i.email||'').toLowerCase()!==emailLow);
     DATA.waitlist     = DATA.waitlist.filter(w=>(w.email||'').toLowerCase()!==emailLow);
-    DATA.visitors     = DATA.visitors.filter(v=>v.id!==visitorId);
+    DATA.visitors     = DATA.visitors.filter(v=>v.id!==visitorId&&v.email.toLowerCase()!==emailLow);
     el('visiteur-detail')?.style && (el('visiteur-detail').style.display='none');
     renderVisiteursList();renderStats();updateBadges();
     toast('Visiteur et toutes ses données supprimés.');
