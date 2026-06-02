@@ -177,6 +177,12 @@
       </div>
       <div class="field"><label>Votre problématique *</label><textarea id="m-problematique" placeholder="Décrivez brièvement votre problématique…" rows="3"></textarea></div>
     </div>
+    <div class="field" style="margin-top:.25rem">
+      <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-weight:400">
+        <input type="checkbox" id="m-rgpd" style="margin-top:3px;accent-color:var(--cyan);flex-shrink:0" />
+        <span style="font-size:12px;color:var(--ink2);line-height:1.5">J'accepte que mes données soient utilisées dans le cadre de cet événement conformément à la <a href="rgpd.html" target="_blank" style="color:var(--cyan);font-weight:600">politique de confidentialité</a>. *</span>
+      </label>
+    </div>
     <div class="modal-foot">
       <button id="modal-cancel" class="btn-ghost">Annuler</button>
       <button id="modal-confirm" class="btn-primary"><i class="ti ti-calendar-check"></i> Confirmer</button>
@@ -210,6 +216,12 @@
         <div class="field"><label>Société</label><input id="ma-societe" placeholder="Votre société (optionnel)" /></div>
       </div>
     </div>
+    <div style="padding:0 1.25rem .5rem">
+      <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+        <input type="checkbox" id="ma-rgpd" style="margin-top:3px;accent-color:var(--cyan);flex-shrink:0" />
+        <span style="font-size:12px;color:var(--ink2);line-height:1.5">J'accepte que mes données soient utilisées conformément à la <a href="rgpd.html" target="_blank" style="color:var(--cyan);font-weight:600">politique de confidentialité</a>. *</span>
+      </label>
+    </div>
     <div class="modal-foot">
       <button id="ma-cancel" class="btn-ghost">Annuler</button>
       <button id="ma-confirm" class="btn-primary"><i class="ti ti-check"></i> Confirmer l'inscription</button>
@@ -217,6 +229,11 @@
   </div>
 </div>
 
+<footer style="background:var(--ink);color:rgba(255,255,255,.5);text-align:center;padding:1.25rem;font-size:12px;margin-top:3rem">
+  © 2026 Paris Initiative Entreprise ·
+  <a href="rgpd.html" style="color:var(--cyan);text-decoration:none;font-weight:500">Politique de confidentialité</a> ·
+  <a href="mailto:communication@paris-initiative.org" style="color:rgba(255,255,255,.5);text-decoration:none">communication@paris-initiative.org</a>
+</footer>
 <div id="toast" class="toast"></div>
 <div id="loader" class="loader"><div class="loader-inner"><div class="spinner"></div><div class="loader-msg">Vos experts arrivent dans quelques secondes...</div></div></div>
 

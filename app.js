@@ -660,6 +660,7 @@ function openModal(start,end){
   const exp=DATA.exposants.find(e=>e.id===pendingExp);
   el('m-info').textContent=`${exp.name} · ${start}–${end} · ${start>='14:00'?'Après-midi':'Matin'} · 22 sept. 2026`;
   ['m-prenom','m-nom','m-email','m-societe','m-problematique','m-code-rapide'].forEach(id=>{const e=el(id);if(e){e.value='';e.readOnly=false;e.style.background='';e.style.color='';e.style.fontWeight='';}});
+  if(el('m-rgpd'))el('m-rgpd').checked=false;
   if(el('m-code-status')){el('m-code-status').textContent='Vos informations seront pré-remplies automatiquement.';el('m-code-status').style.color='var(--ink3)';}
   el('modal').classList.add('open');
   el('m-code-apply').onclick=()=>applyQuickCode('m-code-rapide','m-code-status','m');
@@ -674,6 +675,7 @@ async function confirmBooking(){
   if(!prenom||!nom){toast('Merci de renseigner prénom et nom.');return;}
   if(!email){toast('Merci de renseigner votre email.');return;}
   if(!problematique){toast('Merci de décrire votre problématique.');return;}
+  if(!el('m-rgpd')?.checked){toast('Merci d\'accepter la politique de confidentialité.');return;}
   const doublon=DATA.bookings.find(b=>b.exposantId===pendingExp&&(b.email||'').toLowerCase()===email.toLowerCase());
   if(doublon){toast(`Vous avez déjà un RDV avec cet expert à ${doublon.slotStart}.`);closeModal();return;}
   // Vérif conflits ateliers
@@ -683,7 +685,7 @@ async function confirmBooking(){
   loader(true);
   try{
     const{code,isNew}=await getOrCreateVisitorCode(email);
-    const ref=await addDoc(collection(db,'bookings'),{exposantId:pendingExp,slotStart:pendingSlot,slotEnd:slot?.end||'',period:slot?.period||'',prenom,nom,email,societe,problematique,createdAt:Date.now()});
+    const ref=await addDoc(collection(db,'bookings'),{exposantId:pendingExp,slotStart:pendingSlot,slotEnd:slot?.end||'',period:slot?.period||'',prenom,nom,email,societe,problematique,consentRgpd:true,consentDate:new Date().toISOString(),createdAt:Date.now()});
     DATA.bookings.push({id:ref.id,exposantId:pendingExp,slotStart:pendingSlot,slotEnd:slot?.end,period:slot?.period,prenom,nom,email,societe,problematique});
     closeModal();
     if(isNew){showCodeModal(code,prenom,DATA.exposants.find(e=>e.id===pendingExp)?.name,pendingSlot,slot?.end);}
@@ -744,6 +746,7 @@ function openModalAtelier(atId){
   const at=DATA.ateliers.find(a=>a.id===atId);if(!at)return;
   el('ma-info').textContent=`${at.titre} · ${at.start}–${at.end} · ${at.salle} · 22 sept. 2026`;
   ['ma-prenom','ma-nom','ma-email','ma-societe','ma-code-rapide'].forEach(id=>{const e=el(id);if(e){e.value='';e.readOnly=false;e.style.background='';e.style.color='';e.style.fontWeight='';}});
+  if(el('ma-rgpd'))el('ma-rgpd').checked=false;
   if(el('ma-code-status')){el('ma-code-status').textContent='Vos informations seront pré-remplies automatiquement.';el('ma-code-status').style.color='var(--ink3)';}
   el('modal-atelier').classList.add('open');
   el('ma-code-apply').onclick=()=>applyQuickCode('ma-code-rapide','ma-code-status','ma');
@@ -755,6 +758,7 @@ async function confirmAtelier(){
   const prenom=el('ma-prenom').value.trim(),nom=el('ma-nom').value.trim(),email=el('ma-email').value.trim(),societe=el('ma-societe').value.trim();
   if(!prenom||!nom){toast('Merci de renseigner prénom et nom.');return;}
   if(!email){toast('Merci de renseigner votre email.');return;}
+  if(!el('ma-rgpd')?.checked){toast('Merci d\'accepter la politique de confidentialité.');return;}
   const at=DATA.ateliers.find(a=>a.id===pendingAtelierId);
   const alreadyIn=DATA.inscriptions.find(i=>i.atelierId===pendingAtelierId&&(i.email||'').toLowerCase()===email.toLowerCase());
   if(alreadyIn){toast('Vous êtes déjà inscrit à cet atelier.');return;}
@@ -772,7 +776,7 @@ async function confirmAtelier(){
   loader(true);
   try{
     const{code,isNew}=await getOrCreateVisitorCode(email);
-    const ref=await addDoc(collection(db,'inscriptions'),{atelierId:pendingAtelierId,prenom,nom,email,societe,createdAt:Date.now()});
+    const ref=await addDoc(collection(db,'inscriptions'),{atelierId:pendingAtelierId,prenom,nom,email,societe,consentRgpd:true,consentDate:new Date().toISOString(),createdAt:Date.now()});
     DATA.inscriptions.push({id:ref.id,atelierId:pendingAtelierId,prenom,nom,email,societe});
     el('modal-atelier').classList.remove('open');
     if(isNew)showCodeModal(code,prenom,at.titre,at.start,at.end);
@@ -809,6 +813,11 @@ async function searchMonPlanning(){
     <div style="font-size:13px;color:var(--ink3);margin-top:2px">${bk.length} RDV · ${ins.length} atelier${ins.length>1?'s':''} · 22 sept. 2026</div>
     ${!hasCode?'<div style="font-size:12px;color:#B8940A;background:#FFF8E6;border:1px solid #FFD82B;border-radius:6px;padding:6px 10px;margin-top:8px"><i class="ti ti-lock"></i> Mode lecture seule — saisissez votre code pour annuler.</div>':
     '<div style="font-size:12px;color:#2E6B12;background:#EAF3DE;border:1px solid #6BAA38;border-radius:6px;padding:6px 10px;margin-top:8px"><i class="ti ti-lock-open"></i> Accès complet — vous pouvez annuler.</div>'}
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--brd);font-size:11px;color:var(--ink3)">
+      Conformément au RGPD, vous pouvez demander la suppression de vos données en contactant
+      <a href="mailto:communication@paris-initiative.org" style="color:var(--cyan)">communication@paris-initiative.org</a> ·
+      <a href="rgpd.html" style="color:var(--cyan)">Politique de confidentialité</a>
+    </div>
   </div>`+
   allItems.map(item=>{
     const isPm=item.period==='aprem';const isAt=item.type==='atelier';
