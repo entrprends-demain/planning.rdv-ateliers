@@ -453,3 +453,14 @@ body { font-family: var(--font); background: var(--bg); color: var(--ink); -webk
   .nav-brand-main { font-size: 22px !important; }
   .nav-brand-sub { font-size: 13px !important; }
 }
+
+/* ── Slots liste d'attente ── */
+.slot-booked { background: #F5F5F5 !important; border-color: #CCC !important; color: var(--ink3) !important; cursor: pointer !important; position: relative; }
+.slot-booked:hover { background: #FEF3EB !important; border-color: var(--am-brd) !important; color: var(--am) !important; }
+.slot-disabled { background: #F5F5F5; border-color: #DDD; color: #BBB; cursor: not-allowed; }
+.slot-tag { font-size: 9px; display: block; text-align: center; margin-top: 2px; opacity: .7; }
+.slot-wait-badge { position: absolute; top: -6px; right: -6px; background: var(--am); color: #fff; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 6px; white-space: nowrap; }
+.slot-btn { position: relative; }
+
+/* Planning attente */
+.planning-item.wait-item { background: #FEF3EB; border: 1.5px solid var(--am-brd); border-style: dashed; }

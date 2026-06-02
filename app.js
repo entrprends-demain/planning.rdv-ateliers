@@ -83,19 +83,21 @@ function toast(msg) {
 async function loadAll() {
   loader(true);
   try {
-    const [eS,sS,bS,vS,aS,iS] = await Promise.all([
+    const [eS,sS,bS,vS,aS,iS,wS] = await Promise.all([
       getDocs(query(collection(db,'exposants'), orderBy('createdAt'))),
       getDocs(query(collection(db,'slots'),     orderBy('start'))),
       getDocs(query(collection(db,'bookings'),  orderBy('slotStart'))),
       getDocs(collection(db,'visitors')),
       getDocs(query(collection(db,'ateliers'),  orderBy('start'))),
       getDocs(collection(db,'inscriptions')),
+      getDocs(query(collection(db,'waitlist'),  orderBy('createdAt'))),
     ]);
     DATA.exposants    = eS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.bookings     = bS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.visitors     = vS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.ateliers     = aS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.inscriptions = iS.docs.map(d=>({id:d.id,...d.data()}));
+    DATA.waitlist     = wS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.slots = {};
     sS.docs.forEach(d=>{ const s={id:d.id,...d.data()}; if(!DATA.slots[s.exposantId])DATA.slots[s.exposantId]=[]; DATA.slots[s.exposantId].push(s); });
   } catch(e) { console.error(e); toast('Erreur de connexion Firebase.'); }
@@ -521,15 +523,22 @@ function openVisiteurDetail(v){
 function buildPlanningHTML(items){
   return items.map(item=>{
     const isAt=item.type==='atelier', isPm=item.period==='aprem';
-    const cls=isAt?(isPm?'at-pm':'at-am'):(isPm?'rdv-pm':'rdv-am');
-    const typeTag=isAt?'<span class="pi-type type-at">Atelier</span>':'<span class="pi-type type-rdv">RDV</span>';
+    const isWait=item.isWait||false;
+    const cls=isWait?'wait-item':(isAt?(isPm?'at-pm':'at-am'):(isPm?'rdv-pm':'rdv-am'));
+    const typeTag=isWait
+      ?`<span class="pi-type" style="background:var(--am);color:#fff">Attente #${item.waitPos}</span>`
+      :(isAt?'<span class="pi-type type-at">Atelier</span>':'<span class="pi-type type-rdv">RDV</span>');
+    const cancelBtn=item.canCancel?`<button class="cancel-rdv-btn" data-id="${item.id}" data-type="${isWait?'wait-'+(isAt?'atelier':'rdv'):item.type}" data-title="${item.title}" data-time="${item.time}"><i class="ti ti-trash"></i></button>`:'';
     return`<div class="planning-item ${cls}">
-      <div class="pi-time" style="color:${isAt?'#3B6D11':(isPm?'#B8940A':'var(--cyan)')}">${item.time}–${item.end}</div>
+      <div class="pi-time" style="color:${isWait?'var(--am)':(isAt?'#3B6D11':(isPm?'#B8940A':'var(--cyan)'))}">
+        ${item.time}–${item.end}
+      </div>
       <div class="pi-info">
-        <div class="pi-title">${item.title}</div>
+        <div class="pi-title">${item.title}${isWait?' <span style="font-size:11px;color:var(--am)">(liste d'attente)</span>':''}</div>
         <div class="pi-sub">${item.sub}${item.prob?` · "${item.prob}"`:''}</div>
       </div>
       ${typeTag}
+      ${cancelBtn}
     </div>`;
   }).join('');
 }
@@ -568,6 +577,64 @@ function renderGrid(){
   grid.querySelectorAll('.exp-card').forEach(c=>c.addEventListener('click',()=>openDrawer(c.dataset.id)));
 }
 
+/* ── Helpers liste d'attente ─────────────────────────────────── */
+
+function getWaitRdv(expId, start, email) {
+  return DATA.waitlist.find(w => w.expId===expId && w.slotStart===start && !w.atelierId && (email?(w.email||'').toLowerCase()===email.toLowerCase():true));
+}
+function getWaitAtelier(atId, email) {
+  return DATA.waitlist.find(w => w.atelierId===atId && !w.expId && (email?(w.email||'').toLowerCase()===email.toLowerCase():true));
+}
+function waitPosRdv(expId, start) {
+  return DATA.waitlist.filter(w=>w.expId===expId&&w.slotStart===start&&!w.atelierId).sort((a,b)=>a.createdAt-b.createdAt);
+}
+function waitPosAtelier(atId) {
+  return DATA.waitlist.filter(w=>w.atelierId===atId&&!w.expId).sort((a,b)=>a.createdAt-b.createdAt);
+}
+
+async function promoteWaitlistRdv(expId, slotStart) {
+  const queue = waitPosRdv(expId, slotStart);
+  if (!queue.length) return;
+  const next = queue[0];
+  loader(true);
+  try {
+    // Créer la réservation pour le premier en liste
+    const ref = await addDoc(collection(db,'bookings'), {
+      exposantId: expId, slotStart, slotEnd: next.slotEnd||'', period: next.period||'',
+      prenom: next.prenom, nom: next.nom, email: next.email, societe: next.societe||'',
+      problematique: next.problematique||'', structure: next.structure||'',
+      consentRgpd: true, consentDate: new Date().toISOString(), createdAt: Date.now(),
+      promotedFromWaitlist: true,
+    });
+    DATA.bookings.push({id:ref.id, exposantId:expId, slotStart, slotEnd:next.slotEnd, period:next.period, prenom:next.prenom, nom:next.nom, email:next.email, societe:next.societe, problematique:next.problematique});
+    // Supprimer de la liste d'attente
+    await deleteDoc(doc(db,'waitlist',next.id));
+    DATA.waitlist = DATA.waitlist.filter(w=>w.id!==next.id);
+    toast(`${next.prenom} ${next.nom} promu(e) depuis la liste d'attente !`);
+  } catch(e) { console.error(e); }
+  loader(false);
+}
+
+async function promoteWaitlistAtelier(atId) {
+  const queue = waitPosAtelier(atId);
+  if (!queue.length) return;
+  const next = queue[0];
+  const at = DATA.ateliers.find(a=>a.id===atId);
+  loader(true);
+  try {
+    const ref = await addDoc(collection(db,'inscriptions'), {
+      atelierId: atId, prenom: next.prenom, nom: next.nom, email: next.email,
+      societe: next.societe||'', consentRgpd: true, consentDate: new Date().toISOString(), createdAt: Date.now(),
+      promotedFromWaitlist: true,
+    });
+    DATA.inscriptions.push({id:ref.id, atelierId:atId, prenom:next.prenom, nom:next.nom, email:next.email});
+    await deleteDoc(doc(db,'waitlist',next.id));
+    DATA.waitlist = DATA.waitlist.filter(w=>w.id!==next.id);
+    toast(`${next.prenom} ${next.nom} promu(e) depuis la liste d'attente !`);
+  } catch(e) { console.error(e); }
+  loader(false);
+}
+
 /* ── Drawer RDV ───────────────────────────────────────────────── */
 function openDrawer(expId){
   pendingExp=expId;
@@ -577,10 +644,19 @@ function openDrawer(expId){
   el('d-confirm').innerHTML='';
   function fillSlots(list,cid,fcls){
     const c=el(cid);if(!list.length){c.innerHTML='<span style="font-size:12px;color:var(--ink3)">Non disponible</span>';return;}
-    c.innerHTML=list.map(s=>{const b=getBooking(expId,s.start);const free=s.enabled&&!b;const icon=b?'<i class="ti ti-lock" style="font-size:10px"></i>':'';
-      return`<button class="slot-btn ${free?fcls:'slot-taken'}" data-start="${s.start}" data-end="${s.end}" ${!free?'disabled':''}>${s.start}–${s.end}${icon}</button>`;
+    c.innerHTML=list.map(s=>{
+      const b=getBooking(expId,s.start);
+      const myWait=getWaitRdv(expId,s.start,null); // on check après avec email
+      const free=s.enabled&&!b;
+      const waitCount=waitPosRdv(expId,s.start).length;
+      if(free) return`<button class="slot-btn ${fcls}" data-start="${s.start}" data-end="${s.end}">${s.start}–${s.end}</button>`;
+      if(b) return`<button class="slot-btn slot-booked" data-start="${s.start}" data-end="${s.end}" data-waitcount="${waitCount}">${s.start}–${s.end}<span class="slot-tag">Pris</span>${waitCount?`<span class="slot-wait-badge">${waitCount} att.</span>`:''}</button>`;
+      return`<button class="slot-btn slot-disabled" disabled>${s.start}–${s.end}<span class="slot-tag">Indispo</span></button>`;
     }).join('');
-    c.querySelectorAll('.slot-btn:not([disabled])').forEach(btn=>btn.addEventListener('click',()=>openModal(btn.dataset.start,btn.dataset.end)));
+    // Slots libres → réserver
+    c.querySelectorAll('.slot-btn.'+fcls).forEach(btn=>btn.addEventListener('click',()=>openModal(btn.dataset.start,btn.dataset.end)));
+    // Slots pris → liste d'attente
+    c.querySelectorAll('.slot-btn.slot-booked').forEach(btn=>btn.addEventListener('click',()=>openModalWait('rdv',btn.dataset.start,btn.dataset.end,expId,null)));
   }
   const amFree=ms.filter(s=>s.enabled&&!getBooking(expId,s.start)).length;
   const pmFree=ps.filter(s=>s.enabled&&!getBooking(expId,s.start)).length;
@@ -670,7 +746,116 @@ function openModal(start,end){
   el('m-code-rapide').onkeydown=e=>{if(e.key==='Enter')applyQuickCode('m-code-rapide','m-code-status','m');};
   setTimeout(()=>el('m-code-rapide')?.focus(),80);
 }
-function closeModal(){el('modal')?.classList.remove('open');}
+/* ── Modal liste d'attente ────────────────────────────────────── */
+
+function openModalWait(type, slotStart, slotEnd, expId, atId) {
+  // Réutilise le modal existant en changeant le titre
+  const at = atId ? DATA.ateliers.find(a=>a.id===atId) : null;
+  const exp = expId ? DATA.exposants.find(e=>e.id===expId) : null;
+  const waitQueue = type==='rdv' ? waitPosRdv(expId,slotStart) : waitPosAtelier(atId);
+
+  pendingSlot = slotStart;
+  if(expId) pendingExp = expId;
+  if(atId) pendingAtelierId = atId;
+
+  const infoText = type==='rdv'
+    ? `${exp?.name} · ${slotStart}–${slotEnd} · Créneau complet`
+    : `${at?.titre} · ${at?.start}–${at?.end} · Atelier complet`;
+
+  el('m-info').innerHTML = `<span style="color:var(--am);font-weight:600"><i class="ti ti-clock" style="font-size:12px"></i> Liste d'attente — position ${waitQueue.length+1}</span><br><span style="font-size:11px">${infoText}</span>`;
+  document.querySelector('#modal .modal-title').textContent = "S'inscrire en liste d'attente";
+  document.querySelector('#modal-confirm').innerHTML = '<i class="ti ti-clock"></i> Rejoindre la liste';
+  document.querySelector('#modal-confirm').style.background = 'var(--am)';
+
+  ['m-prenom','m-nom','m-email','m-societe','m-problematique','m-code-rapide'].forEach(id=>{const e=el(id);if(e){e.value='';e.readOnly=false;e.style.background='';e.style.color='';e.style.fontWeight='';}});
+  if(el('m-rgpd'))el('m-rgpd').checked=false;
+  if(el('m-structure-search'))el('m-structure-search').value='';
+  if(el('m-structure'))el('m-structure').value='';
+  if(el('m-structure-wrap'))el('m-structure-wrap').style.display='none';
+
+  // Surcharger le confirm pour liste d'attente
+  el('modal-confirm').onclick = () => confirmWaitlist(type, expId, atId, slotStart, slotEnd);
+  el('modal').classList.add('open');
+  setTimeout(()=>el('m-code-rapide')?.focus(),80);
+  el('m-code-apply').onclick=()=>applyQuickCode('m-code-rapide','m-code-status','m');
+  el('m-code-rapide').onkeydown=e=>{if(e.key==='Enter')applyQuickCode('m-code-rapide','m-code-status','m');};
+}
+
+async function confirmWaitlist(type, expId, atId, slotStart, slotEnd) {
+  const prenom=el('m-prenom').value.trim(), nom=el('m-nom').value.trim();
+  const email=el('m-email').value.trim(), societe=el('m-societe').value.trim();
+  const problematique=el('m-problematique')?.value.trim()||'';
+  const structure=el('m-structure')?.value||'';
+  if(!prenom||!nom){toast('Merci de renseigner prénom et nom.');return;}
+  if(!email){toast('Merci de renseigner votre email.');return;}
+  if(!el('m-rgpd')?.checked){toast('Merci d'accepter la politique de confidentialité.');return;}
+
+  // Vérifier pas déjà en liste d'attente
+  const alreadyWait = type==='rdv'
+    ? getWaitRdv(expId, slotStart, email)
+    : getWaitAtelier(atId, email);
+  if(alreadyWait){toast('Vous êtes déjà sur la liste d'attente pour ce créneau.');closeModal();return;}
+
+  // Vérifier pas déjà inscrit
+  if(type==='rdv'){
+    const already=DATA.bookings.find(b=>b.exposantId===expId&&b.slotStart===slotStart&&(b.email||'').toLowerCase()===email.toLowerCase());
+    if(already){toast('Vous avez déjà ce RDV.');closeModal();return;}
+  } else {
+    const already=DATA.inscriptions.find(i=>i.atelierId===atId&&(i.email||'').toLowerCase()===email.toLowerCase());
+    if(already){toast('Vous êtes déjà inscrit à cet atelier.');closeModal();return;}
+  }
+
+  const slot = type==='rdv' ? getSlots(expId).find(s=>s.start===slotStart) : null;
+  loader(true);
+  try {
+    const {code,isNew} = await getOrCreateVisitorCode(email);
+    const ref = await addDoc(collection(db,'waitlist'),{
+      ...(type==='rdv' ? {expId, slotStart, slotEnd: slotEnd||slot?.end||'', period: slot?.period||''} : {atelierId: atId}),
+      type, prenom, nom, email, societe, problematique, structure,
+      consentRgpd: true, consentDate: new Date().toISOString(), createdAt: Date.now(),
+    });
+    DATA.waitlist.push({id:ref.id, ...(type==='rdv'?{expId,slotStart,slotEnd:slot?.end,period:slot?.period}:{atelierId:atId}), type, prenom, nom, email, societe});
+
+    // Reset le bouton confirm
+    el('modal-confirm').onclick = confirmBooking;
+    el('modal-confirm').innerHTML = '<i class="ti ti-calendar-check"></i> Confirmer';
+    el('modal-confirm').style.background = '';
+    document.querySelector('#modal .modal-title').textContent = 'Confirmer votre RDV';
+    closeModal();
+
+    const pos = type==='rdv' ? waitPosRdv(expId,slotStart).length : waitPosAtelier(atId).length;
+    const name = type==='rdv' ? DATA.exposants.find(e=>e.id===expId)?.name : DATA.ateliers.find(a=>a.id===atId)?.titre;
+
+    if(isNew) showCodeModal(code,prenom,name,slotStart||'',slotEnd||'');
+    else {
+      // Afficher confirmation liste d'attente
+      const overlay=document.createElement('div');
+      overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:800;display:flex;align-items:center;justify-content:center;padding:1rem';
+      overlay.innerHTML=`<div style="background:#fff;border-radius:20px;padding:2rem;max-width:400px;width:100%;text-align:center;border:2px solid var(--am);box-shadow:0 20px 60px rgba(0,0,0,.2)">
+        <i class="ti ti-clock" style="font-size:40px;color:var(--am);display:block;margin-bottom:.75rem"></i>
+        <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:.5rem">Inscrit en liste d'attente !</div>
+        <div style="font-size:13px;color:var(--ink3);margin-bottom:1rem">${name} · Position <strong style="color:var(--am);font-size:18px">${pos}</strong></div>
+        <div style="background:#FEF3EB;border:1.5px solid var(--am-brd);border-radius:10px;padding:.9rem;margin-bottom:1.25rem;font-size:12px;color:#5A2D00;text-align:left;line-height:1.6">
+          En cas de désistement, vous serez automatiquement inscrit(e) et votre place confirmée. Vous pouvez retrouver et annuler votre inscription en liste d'attente depuis "Mon Planning".
+        </div>
+        <button onclick="this.closest('div[style]').remove()" style="background:var(--am);color:#fff;border:none;border-radius:10px;padding:10px 24px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;width:100%">Compris !</button>
+      </div>`;
+      document.body.appendChild(overlay);
+    }
+    if(type==='rdv') openDrawer(expId);
+    else renderAteliersGrid();
+  } catch(e){console.error(e);toast('Erreur.');}
+  loader(false);
+}
+
+function closeModal(){
+  el('modal')?.classList.remove('open');
+  // Remettre le bouton confirm à son état normal
+  const btn=el('modal-confirm');
+  if(btn){btn.onclick=confirmBooking;btn.innerHTML='<i class="ti ti-calendar-check"></i> Confirmer';btn.style.background='';}
+  const title=document.querySelector('#modal .modal-title');
+  if(title)title.textContent='Confirmer votre RDV';
+}
 
 async function confirmBooking(){
   const prenom=el('m-prenom').value.trim(),nom=el('m-nom').value.trim(),email=el('m-email').value.trim();
@@ -738,12 +923,17 @@ function renderAteliersGrid(){
       <div class="at-cats">${cats}</div>
       <div class="at-footer">
         <div class="at-places${full?' full':`}`}"><strong>${inscrits}</strong>${at.places>0?` / ${at.places} places`:' inscrits'}${full?' · COMPLET':''}</div>
-        ${full?'<span style="font-size:12px;color:var(--red);font-weight:600">Complet</span>':
-          `<button class="btn-primary" style="padding:6px 14px;font-size:12px" data-atid="${at.id}"><i class="ti ti-plus"></i> S'inscrire</button>`}
+        ${full
+          ? `<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+               <span style="font-size:12px;color:var(--red);font-weight:600">Complet</span>
+               <button class="btn-ghost" style="padding:4px 12px;font-size:12px;border-color:var(--am-brd);color:var(--am)" data-atid-wait="${at.id}"><i class="ti ti-clock" style="font-size:11px"></i> Liste d'attente (${waitPosAtelier(at.id).length})</button>
+             </div>`
+          : `<button class="btn-primary" style="padding:6px 14px;font-size:12px" data-atid="${at.id}"><i class="ti ti-plus"></i> S'inscrire</button>`}
       </div>
     </div>`;
   }).join('');
   grid.querySelectorAll('[data-atid]').forEach(btn=>btn.addEventListener('click',()=>openModalAtelier(btn.dataset.atid)));
+  grid.querySelectorAll('[data-atid-wait]').forEach(btn=>btn.addEventListener('click',()=>openModalWait('atelier',null,null,null,btn.dataset.atidWait)));
 }
 
 function openModalAtelier(atId){
@@ -814,13 +1004,20 @@ async function searchMonPlanning(){
   const ins=DATA.inscriptions.filter(i=>(i.email||'').toLowerCase()===email);
   if(!bk.length&&!ins.length){result.innerHTML='<div class="rdv-empty"><i class="ti ti-calendar-off"></i><p>Aucun élément trouvé.</p></div>';return;}
   const first=bk[0]||ins[0];
+  const waits=DATA.waitlist.filter(w=>(w.email||'').toLowerCase()===email);
   const allItems=[
-    ...bk.map(b=>{const exp=DATA.exposants.find(e=>e.id===b.exposantId);return{id:b.id,time:b.slotStart,end:b.slotEnd,title:exp?.name||'–',sub:exp?.cat||'',prob:b.problematique||'',type:'rdv',period:b.period,canCancel:hasCode};}),
-    ...ins.map(i=>{const at=DATA.ateliers.find(a=>a.id===i.atelierId);return{id:i.id,time:at?.start||'',end:at?.end||'',title:at?.titre||'–',sub:at?.salle||'',type:'atelier',period:at?.period||'',canCancel:hasCode};}),
+    ...bk.map(b=>{const exp=DATA.exposants.find(e=>e.id===b.exposantId);return{id:b.id,time:b.slotStart,end:b.slotEnd,title:exp?.name||'–',sub:exp?.cat||'',prob:b.problematique||'',type:'rdv',period:b.period,canCancel:hasCode,isWait:false};}),
+    ...ins.map(i=>{const at=DATA.ateliers.find(a=>a.id===i.atelierId);return{id:i.id,time:at?.start||'',end:at?.end||'',title:at?.titre||'–',sub:at?.salle||'',type:'atelier',period:at?.period||'',canCancel:hasCode,isWait:false};}),
+    ...waits.map(w=>{
+      const exp=w.expId?DATA.exposants.find(e=>e.id===w.expId):null;
+      const at=w.atelierId?DATA.ateliers.find(a=>a.id===w.atelierId):null;
+      const pos=w.expId?waitPosRdv(w.expId,w.slotStart).findIndex(x=>x.id===w.id)+1:waitPosAtelier(w.atelierId).findIndex(x=>x.id===w.id)+1;
+      return{id:w.id,time:w.slotStart||at?.start||'',end:w.slotEnd||at?.end||'',title:exp?.name||at?.titre||'–',sub:exp?exp.cat:at?.salle||'',type:w.expId?'rdv':'atelier',period:w.period||at?.period||'',canCancel:hasCode,isWait:true,waitPos:pos};
+    }),
   ].sort((a,b)=>a.time.localeCompare(b.time));
   result.innerHTML=`<div class="mes-rdv-header">
     <div style="font-size:14px;font-weight:600">${first?.prenom||''} ${first?.nom||''}</div>
-    <div style="font-size:13px;color:var(--ink3);margin-top:2px">${bk.length} RDV · ${ins.length} atelier${ins.length>1?'s':''} · 22 sept. 2026</div>
+    <div style="font-size:13px;color:var(--ink3);margin-top:2px">${bk.length} RDV · ${ins.length} atelier${ins.length>1?'s':''} · ${waits.length?`${waits.length} liste${waits.length>1?'s':''} d'attente · `:''}22 sept. 2026</div>
     ${!hasCode?'<div style="font-size:12px;color:#B8940A;background:#FFF8E6;border:1px solid #FFD82B;border-radius:6px;padding:6px 10px;margin-top:8px"><i class="ti ti-lock"></i> Mode lecture seule — saisissez votre code pour annuler.</div>':
     '<div style="font-size:12px;color:#2E6B12;background:#EAF3DE;border:1px solid #6BAA38;border-radius:6px;padding:6px 10px;margin-top:8px"><i class="ti ti-lock-open"></i> Accès complet — vous pouvez annuler.</div>'}
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--brd);font-size:11px;color:var(--ink3)">
@@ -840,7 +1037,21 @@ async function searchMonPlanning(){
     </div>`;
   }).join('');
   result.querySelectorAll('.cancel-rdv-btn').forEach(btn=>{
-    btn.addEventListener('click',()=>cancelItem(btn.dataset.id,btn.dataset.type,btn.dataset.title,btn.dataset.time));
+    const t=btn.dataset.type;
+    if(t==='wait-rdv'||t==='wait-atelier'){
+      btn.addEventListener('click',async()=>{
+        if(!confirm(`Quitter la liste d'attente pour "${btn.dataset.title}" ?`))return;
+        loader(true);
+        try{
+          await deleteDoc(doc(db,'waitlist',btn.dataset.id));
+          DATA.waitlist=DATA.waitlist.filter(w=>w.id!==btn.dataset.id);
+          toast('Retiré de la liste d'attente.');searchMonPlanning();
+        }catch(e){console.error(e);toast('Erreur.');}
+        loader(false);
+      });
+    } else {
+      btn.addEventListener('click',()=>cancelItem(btn.dataset.id,btn.dataset.type,btn.dataset.title,btn.dataset.time));
+    }
   });
 }
 
@@ -848,10 +1059,20 @@ async function cancelItem(id,type,title,time){
   if(!confirm(`Annuler ${type==='rdv'?'votre RDV':'votre inscription à l\'atelier'} "${title}" à ${time} ?`))return;
   loader(true);
   try{
+    const item = type==='rdv'
+      ? DATA.bookings.find(b=>b.id===id)
+      : DATA.inscriptions.find(i=>i.id===id);
     await deleteDoc(doc(db,type==='rdv'?'bookings':'inscriptions',id));
-    if(type==='rdv')DATA.bookings=DATA.bookings.filter(b=>b.id!==id);
-    else DATA.inscriptions=DATA.inscriptions.filter(i=>i.id!==id);
+    if(type==='rdv'){
+      DATA.bookings=DATA.bookings.filter(b=>b.id!==id);
+      // Promouvoir le premier de la liste d'attente
+      if(item) await promoteWaitlistRdv(item.exposantId, item.slotStart);
+    } else {
+      DATA.inscriptions=DATA.inscriptions.filter(i=>i.id!==id);
+      if(item) await promoteWaitlistAtelier(item.atelierId);
+    }
     toast('Annulé.');searchMonPlanning();renderAteliersGrid();
+    if(type==='rdv'&&item)openDrawer(item.exposantId);
   }catch(e){console.error(e);toast('Erreur.');}
   loader(false);
 }
