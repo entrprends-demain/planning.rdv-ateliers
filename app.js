@@ -141,6 +141,132 @@ function renderStats() {
 }
 
 /* ── Admin tabs ───────────────────────────────────────────────── */
+
+/* ── Listes d'attente admin ──────────────────────────────────── */
+
+function updateWaitBadges() {
+  const rdvWaits = DATA.waitlist.filter(w=>w.expId&&!w.atelierId).length;
+  const atWaits  = DATA.waitlist.filter(w=>w.atelierId&&!w.expId).length;
+  const wb1=el('wrdv-badge'); if(wb1)wb1.textContent=rdvWaits||'';
+  const wb2=el('wat-badge');  if(wb2)wb2.textContent=atWaits||'';
+}
+
+async function renderWaitlistRdvs() {
+  const listEl=el('waitlist-rdvs-list'); if(!listEl)return;
+  try{const wS=await getDocs(query(collection(db,'waitlist'),orderBy('createdAt')));DATA.waitlist=wS.docs.map(d=>({id:d.id,...d.data()}));}catch(e){console.error(e);}
+  updateWaitBadges();
+  const waits=DATA.waitlist.filter(w=>w.expId&&!w.atelierId).sort((a,b)=>a.createdAt-b.createdAt);
+  if(!waits.length){
+    listEl.innerHTML=`<div class="empty-state"><i class="ti ti-clock" style="color:#B85C1A"></i><p>Aucune liste d'attente pour les RDV.</p></div>`;
+    return;
+  }
+  const groups={};
+  waits.forEach(w=>{
+    const key=w.expId+'__'+w.slotStart;
+    if(!groups[key])groups[key]={expId:w.expId,slotStart:w.slotStart,slotEnd:w.slotEnd,period:w.period,list:[]};
+    groups[key].list.push(w);
+  });
+  listEl.innerHTML=Object.values(groups).map(g=>{
+    const exp=DATA.exposants.find(e=>e.id===g.expId);
+    const isPm=g.period==='aprem';
+    return`<div style="background:#fff;border:1.5px solid #F0C8A0;border-radius:var(--rl);margin-bottom:1rem;overflow:hidden">
+      <div style="background:#FEF3EB;padding:.9rem 1.1rem;display:flex;align-items:center;gap:12px;border-bottom:1px solid #F0C8A0">
+        <div style="font-family:monospace;font-size:16px;font-weight:700;color:#B85C1A;min-width:110px">${g.slotStart}–${g.slotEnd}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700;color:var(--ink)">${exp?.name||'–'}</div>
+          <div style="font-size:12px;color:var(--ink3)">${exp?.cat||''}${exp?.expertise?' · '+exp.expertise:''}</div>
+        </div>
+        <span style="font-size:11px;padding:3px 10px;border-radius:100px;font-weight:700;background:${isPm?'#FFD82B':'var(--cyan)'};color:${isPm?'var(--ink)':'#fff'}">${isPm?'Ap-m':'Matin'}</span>
+        <span style="font-size:12px;font-weight:700;color:#B85C1A;background:#FEE0C8;padding:3px 10px;border-radius:100px">${g.list.length} en attente</span>
+      </div>
+      <table class="rdv-table" style="border:none;border-radius:0">
+        <thead><tr>
+          <th style="background:#FEF3EB;color:#B85C1A">#</th>
+          <th style="background:#FEF3EB;color:#B85C1A">Visiteur</th>
+          <th style="background:#FEF3EB;color:#B85C1A">Email</th>
+          <th style="background:#FEF3EB;color:#B85C1A">Société</th>
+          <th style="background:#FEF3EB;color:#B85C1A">Problématique</th>
+          <th style="background:#FEF3EB;color:#B85C1A">Inscrit le</th>
+          <th style="background:#FEF3EB;color:#B85C1A"></th>
+        </tr></thead>
+        <tbody>${g.list.map((w,i)=>`<tr>
+          <td><strong style="color:#B85C1A">#${i+1}</strong></td>
+          <td><strong>${w.prenom} ${w.nom}</strong></td>
+          <td>${w.email||'–'}</td>
+          <td>${w.societe||'–'}</td>
+          <td style="font-size:12px;max-width:180px">${w.problematique||'–'}</td>
+          <td style="font-size:11px;color:var(--ink3)">${w.createdAt?new Date(w.createdAt).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'–'}</td>
+          <td><button class="del-booking-btn" data-wid="${w.id}" title="Retirer"><i class="ti ti-trash"></i></button></td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+  listEl.querySelectorAll('[data-wid]').forEach(btn=>btn.addEventListener('click',async()=>{
+    if(!confirm(`Retirer ce visiteur de la liste d'attente ?`))return;
+    loader(true);
+    try{await deleteDoc(doc(db,'waitlist',btn.dataset.wid));DATA.waitlist=DATA.waitlist.filter(w=>w.id!==btn.dataset.wid);renderWaitlistRdvs();updateWaitBadges();}
+    catch(e){console.error(e);toast('Erreur.');}
+    loader(false);
+  }));
+}
+
+async function renderWaitlistAteliers() {
+  const listEl=el('waitlist-ateliers-list'); if(!listEl)return;
+  try{const wS=await getDocs(query(collection(db,'waitlist'),orderBy('createdAt')));DATA.waitlist=wS.docs.map(d=>({id:d.id,...d.data()}));}catch(e){console.error(e);}
+  updateWaitBadges();
+  const waits=DATA.waitlist.filter(w=>w.atelierId&&!w.expId).sort((a,b)=>a.createdAt-b.createdAt);
+  if(!waits.length){
+    listEl.innerHTML=`<div class="empty-state"><i class="ti ti-clock" style="color:#B85C1A"></i><p>Aucune liste d'attente pour les ateliers.</p></div>`;
+    return;
+  }
+  const groups={};
+  waits.forEach(w=>{
+    if(!groups[w.atelierId])groups[w.atelierId]={atelierId:w.atelierId,list:[]};
+    groups[w.atelierId].list.push(w);
+  });
+  listEl.innerHTML=Object.values(groups).map(g=>{
+    const at=DATA.ateliers.find(a=>a.id===g.atelierId);
+    const isPm=at?.period==='aprem';
+    const inscrits=DATA.inscriptions.filter(i=>i.atelierId===g.atelierId).length;
+    return`<div style="background:#fff;border:1.5px solid #F0C8A0;border-radius:var(--rl);margin-bottom:1rem;overflow:hidden">
+      <div style="background:#FEF3EB;padding:.9rem 1.1rem;display:flex;align-items:center;gap:12px;border-bottom:1px solid #F0C8A0">
+        <div style="font-family:monospace;font-size:16px;font-weight:700;color:#B85C1A;min-width:110px">${at?.start||'–'}–${at?.end||''}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700;color:var(--ink)">${at?.titre||'–'}</div>
+          <div style="font-size:12px;color:var(--ink3)"><i class="ti ti-map-pin" style="font-size:11px"></i> ${at?.salle||''} · ${inscrits}/${at?.places||'∞'} inscrits</div>
+        </div>
+        <span style="font-size:11px;padding:3px 10px;border-radius:100px;font-weight:700;background:${isPm?'#FFD82B':'var(--cyan)'};color:${isPm?'var(--ink)':'#fff'}">${isPm?'Ap-m':'Matin'}</span>
+        <span style="font-size:12px;font-weight:700;color:#B85C1A;background:#FEE0C8;padding:3px 10px;border-radius:100px">${g.list.length} en attente</span>
+      </div>
+      <table class="rdv-table" style="border:none;border-radius:0">
+        <thead><tr>
+          <th style="background:#FEF3EB;color:#B85C1A">#</th>
+          <th style="background:#FEF3EB;color:#B85C1A">Visiteur</th>
+          <th style="background:#FEF3EB;color:#B85C1A">Email</th>
+          <th style="background:#FEF3EB;color:#B85C1A">Société</th>
+          <th style="background:#FEF3EB;color:#B85C1A">Inscrit le</th>
+          <th style="background:#FEF3EB;color:#B85C1A"></th>
+        </tr></thead>
+        <tbody>${g.list.map((w,i)=>`<tr>
+          <td><strong style="color:#B85C1A">#${i+1}</strong></td>
+          <td><strong>${w.prenom} ${w.nom}</strong></td>
+          <td>${w.email||'–'}</td>
+          <td>${w.societe||'–'}</td>
+          <td style="font-size:11px;color:var(--ink3)">${w.createdAt?new Date(w.createdAt).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'–'}</td>
+          <td><button class="del-booking-btn" data-wid="${w.id}" title="Retirer"><i class="ti ti-trash"></i></button></td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+  listEl.querySelectorAll('[data-wid]').forEach(btn=>btn.addEventListener('click',async()=>{
+    if(!confirm(`Retirer ce visiteur de la liste d'attente ?`))return;
+    loader(true);
+    try{await deleteDoc(doc(db,'waitlist',btn.dataset.wid));DATA.waitlist=DATA.waitlist.filter(w=>w.id!==btn.dataset.wid);renderWaitlistAteliers();updateWaitBadges();}
+    catch(e){console.error(e);toast('Erreur.');}
+    loader(false);
+  }));
+}
+
 function switchAdminTab(tab) {
   document.querySelectorAll('.atab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   ['exposants','ateliers-admin','rdvs','visiteurs','waitlist-rdvs','waitlist-ateliers'].forEach(t=>{
@@ -1320,131 +1446,6 @@ function renderAccueil(){
   document.querySelectorAll('.accueil-card-btn').forEach(btn=>{
     btn.onclick=()=>switchVisitorTab(btn.dataset.goto);
   });
-}
-
-/* ── Listes d'attente admin ──────────────────────────────────── */
-
-function updateWaitBadges() {
-  const rdvWaits = DATA.waitlist.filter(w=>w.expId&&!w.atelierId).length;
-  const atWaits  = DATA.waitlist.filter(w=>w.atelierId&&!w.expId).length;
-  const wb1=el('wrdv-badge'); if(wb1)wb1.textContent=rdvWaits||'';
-  const wb2=el('wat-badge');  if(wb2)wb2.textContent=atWaits||'';
-}
-
-async function renderWaitlistRdvs() {
-  const listEl=el('waitlist-rdvs-list'); if(!listEl)return;
-  try{const wS=await getDocs(query(collection(db,'waitlist'),orderBy('createdAt')));DATA.waitlist=wS.docs.map(d=>({id:d.id,...d.data()}));}catch(e){console.error(e);}
-  updateWaitBadges();
-  const waits=DATA.waitlist.filter(w=>w.expId&&!w.atelierId).sort((a,b)=>a.createdAt-b.createdAt);
-  if(!waits.length){
-    listEl.innerHTML=`<div class="empty-state"><i class="ti ti-clock" style="color:#B85C1A"></i><p>Aucune liste d'attente pour les RDV.</p></div>`;
-    return;
-  }
-  const groups={};
-  waits.forEach(w=>{
-    const key=w.expId+'__'+w.slotStart;
-    if(!groups[key])groups[key]={expId:w.expId,slotStart:w.slotStart,slotEnd:w.slotEnd,period:w.period,list:[]};
-    groups[key].list.push(w);
-  });
-  listEl.innerHTML=Object.values(groups).map(g=>{
-    const exp=DATA.exposants.find(e=>e.id===g.expId);
-    const isPm=g.period==='aprem';
-    return`<div style="background:#fff;border:1.5px solid #F0C8A0;border-radius:var(--rl);margin-bottom:1rem;overflow:hidden">
-      <div style="background:#FEF3EB;padding:.9rem 1.1rem;display:flex;align-items:center;gap:12px;border-bottom:1px solid #F0C8A0">
-        <div style="font-family:monospace;font-size:16px;font-weight:700;color:#B85C1A;min-width:110px">${g.slotStart}–${g.slotEnd}</div>
-        <div style="flex:1">
-          <div style="font-size:14px;font-weight:700;color:var(--ink)">${exp?.name||'–'}</div>
-          <div style="font-size:12px;color:var(--ink3)">${exp?.cat||''}${exp?.expertise?' · '+exp.expertise:''}</div>
-        </div>
-        <span style="font-size:11px;padding:3px 10px;border-radius:100px;font-weight:700;background:${isPm?'#FFD82B':'var(--cyan)'};color:${isPm?'var(--ink)':'#fff'}">${isPm?'Ap-m':'Matin'}</span>
-        <span style="font-size:12px;font-weight:700;color:#B85C1A;background:#FEE0C8;padding:3px 10px;border-radius:100px">${g.list.length} en attente</span>
-      </div>
-      <table class="rdv-table" style="border:none;border-radius:0">
-        <thead><tr>
-          <th style="background:#FEF3EB;color:#B85C1A">#</th>
-          <th style="background:#FEF3EB;color:#B85C1A">Visiteur</th>
-          <th style="background:#FEF3EB;color:#B85C1A">Email</th>
-          <th style="background:#FEF3EB;color:#B85C1A">Société</th>
-          <th style="background:#FEF3EB;color:#B85C1A">Problématique</th>
-          <th style="background:#FEF3EB;color:#B85C1A">Inscrit le</th>
-          <th style="background:#FEF3EB;color:#B85C1A"></th>
-        </tr></thead>
-        <tbody>${g.list.map((w,i)=>`<tr>
-          <td><strong style="color:#B85C1A">#${i+1}</strong></td>
-          <td><strong>${w.prenom} ${w.nom}</strong></td>
-          <td>${w.email||'–'}</td>
-          <td>${w.societe||'–'}</td>
-          <td style="font-size:12px;max-width:180px">${w.problematique||'–'}</td>
-          <td style="font-size:11px;color:var(--ink3)">${w.createdAt?new Date(w.createdAt).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'–'}</td>
-          <td><button class="del-booking-btn" data-wid="${w.id}" title="Retirer"><i class="ti ti-trash"></i></button></td>
-        </tr>`).join('')}</tbody>
-      </table>
-    </div>`;
-  }).join('');
-  listEl.querySelectorAll('[data-wid]').forEach(btn=>btn.addEventListener('click',async()=>{
-    if(!confirm(`Retirer ce visiteur de la liste d'attente ?`))return;
-    loader(true);
-    try{await deleteDoc(doc(db,'waitlist',btn.dataset.wid));DATA.waitlist=DATA.waitlist.filter(w=>w.id!==btn.dataset.wid);renderWaitlistRdvs();updateWaitBadges();}
-    catch(e){console.error(e);toast('Erreur.');}
-    loader(false);
-  }));
-}
-
-async function renderWaitlistAteliers() {
-  const listEl=el('waitlist-ateliers-list'); if(!listEl)return;
-  try{const wS=await getDocs(query(collection(db,'waitlist'),orderBy('createdAt')));DATA.waitlist=wS.docs.map(d=>({id:d.id,...d.data()}));}catch(e){console.error(e);}
-  updateWaitBadges();
-  const waits=DATA.waitlist.filter(w=>w.atelierId&&!w.expId).sort((a,b)=>a.createdAt-b.createdAt);
-  if(!waits.length){
-    listEl.innerHTML=`<div class="empty-state"><i class="ti ti-clock" style="color:#B85C1A"></i><p>Aucune liste d'attente pour les ateliers.</p></div>`;
-    return;
-  }
-  const groups={};
-  waits.forEach(w=>{
-    if(!groups[w.atelierId])groups[w.atelierId]={atelierId:w.atelierId,list:[]};
-    groups[w.atelierId].list.push(w);
-  });
-  listEl.innerHTML=Object.values(groups).map(g=>{
-    const at=DATA.ateliers.find(a=>a.id===g.atelierId);
-    const isPm=at?.period==='aprem';
-    const inscrits=DATA.inscriptions.filter(i=>i.atelierId===g.atelierId).length;
-    return`<div style="background:#fff;border:1.5px solid #F0C8A0;border-radius:var(--rl);margin-bottom:1rem;overflow:hidden">
-      <div style="background:#FEF3EB;padding:.9rem 1.1rem;display:flex;align-items:center;gap:12px;border-bottom:1px solid #F0C8A0">
-        <div style="font-family:monospace;font-size:16px;font-weight:700;color:#B85C1A;min-width:110px">${at?.start||'–'}–${at?.end||''}</div>
-        <div style="flex:1">
-          <div style="font-size:14px;font-weight:700;color:var(--ink)">${at?.titre||'–'}</div>
-          <div style="font-size:12px;color:var(--ink3)"><i class="ti ti-map-pin" style="font-size:11px"></i> ${at?.salle||''} · ${inscrits}/${at?.places||'∞'} inscrits</div>
-        </div>
-        <span style="font-size:11px;padding:3px 10px;border-radius:100px;font-weight:700;background:${isPm?'#FFD82B':'var(--cyan)'};color:${isPm?'var(--ink)':'#fff'}">${isPm?'Ap-m':'Matin'}</span>
-        <span style="font-size:12px;font-weight:700;color:#B85C1A;background:#FEE0C8;padding:3px 10px;border-radius:100px">${g.list.length} en attente</span>
-      </div>
-      <table class="rdv-table" style="border:none;border-radius:0">
-        <thead><tr>
-          <th style="background:#FEF3EB;color:#B85C1A">#</th>
-          <th style="background:#FEF3EB;color:#B85C1A">Visiteur</th>
-          <th style="background:#FEF3EB;color:#B85C1A">Email</th>
-          <th style="background:#FEF3EB;color:#B85C1A">Société</th>
-          <th style="background:#FEF3EB;color:#B85C1A">Inscrit le</th>
-          <th style="background:#FEF3EB;color:#B85C1A"></th>
-        </tr></thead>
-        <tbody>${g.list.map((w,i)=>`<tr>
-          <td><strong style="color:#B85C1A">#${i+1}</strong></td>
-          <td><strong>${w.prenom} ${w.nom}</strong></td>
-          <td>${w.email||'–'}</td>
-          <td>${w.societe||'–'}</td>
-          <td style="font-size:11px;color:var(--ink3)">${w.createdAt?new Date(w.createdAt).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'–'}</td>
-          <td><button class="del-booking-btn" data-wid="${w.id}" title="Retirer"><i class="ti ti-trash"></i></button></td>
-        </tr>`).join('')}</tbody>
-      </table>
-    </div>`;
-  }).join('');
-  listEl.querySelectorAll('[data-wid]').forEach(btn=>btn.addEventListener('click',async()=>{
-    if(!confirm(`Retirer ce visiteur de la liste d'attente ?`))return;
-    loader(true);
-    try{await deleteDoc(doc(db,'waitlist',btn.dataset.wid));DATA.waitlist=DATA.waitlist.filter(w=>w.id!==btn.dataset.wid);renderWaitlistAteliers();updateWaitBadges();}
-    catch(e){console.error(e);toast('Erreur.');}
-    loader(false);
-  }));
 }
 
 /* ── Init ─────────────────────────────────────────────────────── */
