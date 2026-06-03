@@ -120,7 +120,7 @@ async function loadAll() {
     DATA.inscriptions = iS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.waitlist     = wS.docs.map(d=>({id:d.id,...d.data()}));
     const cfgDoc = cS.docs.find(d=>d.id==='siteConfig');
-    if(cfgDoc){ const c=cfgDoc.data(); PLATFORM_MODE=c.mode||'inscription'; DATA.config={mode:PLATFORM_MODE,lectureDate:c.lectureDate||'1er juillet 2026'}; }
+    if(cfgDoc){ const c=cfgDoc.data(); PLATFORM_MODE=c.mode||'inscription'; DATA.config={mode:PLATFORM_MODE,lectureDate:c.lectureDate||'1er juillet 2026'}; } else { DATA.config={mode:'inscription',lectureDate:'1er juillet 2026'}; }
     DATA.slots = {};
     sS.docs.forEach(d=>{ const s={id:d.id,...d.data()}; if(!DATA.slots[s.exposantId])DATA.slots[s.exposantId]=[]; DATA.slots[s.exposantId].push(s); });
   } catch(e) { console.error(e); toast('Erreur de connexion Firebase.'); }
