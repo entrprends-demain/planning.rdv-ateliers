@@ -120,7 +120,7 @@ async function loadAll() {
     DATA.inscriptions = iS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.waitlist     = wS.docs.map(d=>({id:d.id,...d.data()}));
     const cfgDoc = cS.docs.find(d=>d.id==='siteConfig');
-    if(cfgDoc){ const c=cfgDoc.data(); SITE_MODE=c.mode||'inscription'; DATA.config={mode:SITE_MODE,lectureDate:c.lectureDate||'1er juillet 2026'}; }
+    if(cfgDoc){ const c=cfgDoc.data(); PLATFORM_MODE=c.mode||'inscription'; DATA.config={mode:PLATFORM_MODE,lectureDate:c.lectureDate||'1er juillet 2026'}; }
     DATA.slots = {};
     sS.docs.forEach(d=>{ const s={id:d.id,...d.data()}; if(!DATA.slots[s.exposantId])DATA.slots[s.exposantId]=[]; DATA.slots[s.exposantId].push(s); });
   } catch(e) { console.error(e); toast('Erreur de connexion Firebase.'); }
@@ -926,7 +926,7 @@ async function promoteWaitlistAtelier(atId) {
 
 /* ── Drawer RDV ───────────────────────────────────────────────── */
 async function openDrawer(expId){
-  if(SITE_MODE === 'lecture'){
+  if(PLATFORM_MODE === 'lecture'){
     // Mode lecture : afficher infos sans bouton d'inscription
     const exp=DATA.exposants.find(e=>e.id===expId);
     const slots=getSlots(expId);
@@ -1204,9 +1204,9 @@ async function confirmBooking(){
     const ref=await addDoc(collection(db,'bookings'),{exposantId:pendingExp,slotStart:pendingSlot,slotEnd:slot?.end||'',period:slot?.period||'',prenom,nom,email,societe,structure,problematique,mode:PLATFORM_MODE,consentRgpd:true,consentDate:new Date().toISOString(),createdAt:Date.now()});
     DATA.bookings.push({id:ref.id,exposantId:pendingExp,slotStart:pendingSlot,slotEnd:slot?.end,period:slot?.period,prenom,nom,email,societe,problematique});
     closeModal();
-    if(isNew){showCodeModal(code,prenom,DATA.exposants.find(e=>e.id===pendingExp)?.name,pendingSlot,slot?.end,SITE_MODE==='preinscription');}
+    if(isNew){showCodeModal(code,prenom,DATA.exposants.find(e=>e.id===pendingExp)?.name,pendingSlot,slot?.end,PLATFORM_MODE==='preinscription');}
     else{el('d-confirm').innerHTML=`<div class="confirm-ok"><i class="ti ti-circle-check"></i><div>RDV confirmé — ${prenom} ${nom}<br><span style="font-weight:400;font-size:12px">${pendingSlot}–${slot?.end}</span></div></div>`;openDrawer(pendingExp);}
-    toast(SITE_MODE==='preinscription'?`Préinscription enregistrée !`:`RDV confirmé !`);
+    toast(PLATFORM_MODE==='preinscription'?`Préinscription enregistrée !`:`RDV confirmé !`);
   }catch(e){console.error(e);toast('Erreur.');}
   loader(false);
 }
@@ -1263,7 +1263,7 @@ function renderAteliersGrid(){
 }
 
 function openModalAtelier(atId){
-  if(SITE_MODE === 'lecture'){ toast(`Inscriptions disponibles à partir du ${DATA.config.lectureDate||'1er juillet 2026'}.`); return; }
+  if(PLATFORM_MODE === 'lecture'){ toast(`Inscriptions disponibles à partir du ${DATA.config.lectureDate||'1er juillet 2026'}.`); return; }
   pendingAtelierId=atId;
   const at=DATA.ateliers.find(a=>a.id===atId);if(!at)return;
   el('ma-info').textContent=`${at.titre} · ${at.start}–${at.end} · ${at.salle} · 22 sept. 2026`;
@@ -1306,8 +1306,8 @@ async function confirmAtelier(){
     const ref=await addDoc(collection(db,'inscriptions'),{atelierId:pendingAtelierId,prenom,nom,email,societe,structure:structureAt,consentRgpd:true,consentDate:new Date().toISOString(),createdAt:Date.now()});
     DATA.inscriptions.push({id:ref.id,atelierId:pendingAtelierId,prenom,nom,email,societe});
     el('modal-atelier').classList.remove('open');
-    if(isNew)showCodeModal(code,prenom,at.titre,at.start,at.end,SITE_MODE==='preinscription');
-    else toast(SITE_MODE==='preinscription'?`Préinscription enregistrée — ${at.titre} !`:`Inscription confirmée — ${at.titre} !`);
+    if(isNew)showCodeModal(code,prenom,at.titre,at.start,at.end,PLATFORM_MODE==='preinscription');
+    else toast(PLATFORM_MODE==='preinscription'?`Préinscription enregistrée — ${at.titre} !`:`Inscription confirmée — ${at.titre} !`);
     renderAteliersGrid();
   }catch(e){console.error(e);toast('Erreur.');}
   loader(false);
@@ -1476,21 +1476,21 @@ async function searchExposantPlanning(){
 
 /* ── Mode visiteur ───────────────────────────────────────────── */
 
-function applyVisitorMode() {
+function applyModeUI() {
   // Supprimer bannière existante
   document.querySelector('.mode-banner')?.remove();
 
-  if(SITE_MODE === 'inscription') return; // rien à faire
+  if(PLATFORM_MODE === 'inscription') return; // rien à faire
 
   const banner = document.createElement('div');
 
-  if(SITE_MODE === 'lecture') {
+  if(PLATFORM_MODE === 'lecture') {
     banner.className = 'mode-banner lecture';
     banner.innerHTML = `<i class="ti ti-eye"></i>
       <span><strong>Consultation uniquement</strong> — Les inscriptions ne sont pas encore ouvertes.
       Elles seront disponibles à partir du <strong>${DATA.config.lectureDate||'1er juillet 2026'}</strong>.
       Vous pouvez dès maintenant découvrir les experts et les ateliers proposés.</span>`;
-  } else if(SITE_MODE === 'preinscription') {
+  } else if(PLATFORM_MODE === 'preinscription') {
     banner.className = 'mode-banner preinscription';
     banner.innerHTML = `<i class="ti ti-pencil"></i>
       <span><strong>Préinscriptions ouvertes</strong> — Vos inscriptions sont enregistrées mais restent provisoires.
@@ -1509,7 +1509,7 @@ function switchVisitorTab(tab){
   document.querySelectorAll('.vtab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   if(tab==='ateliers')renderAteliersGrid();
   if(tab==='rdvs')renderGrid();
-  applyVisitorMode();
+  applyModeUI();
   if(tab==='accueil')renderAccueil();
 }
 
@@ -1526,35 +1526,6 @@ function renderAccueil(){
 
 /* ── Logique mode plateforme ─────────────────────────────────── */
 
-function applyModeUI() {
-  const banner = el('mode-banner');
-  if (!banner) return;
-
-  // Masquer/afficher boutons d'inscription selon le mode
-  if (PLATFORM_MODE === 'lecture') {
-    banner.style.display = 'block';
-    banner.className = 'banner-lecture';
-    banner.innerHTML = `👁️ <strong>Consultation uniquement</strong> — Les inscriptions ne sont pas encore ouvertes. Les préinscriptions ouvriront le <strong>1er juillet 2026</strong>. Revenez bientôt !`;
-  } else if (PLATFORM_MODE === 'preinscription') {
-    banner.style.display = 'block';
-    banner.className = 'banner-preinscription';
-    banner.innerHTML = `📋 <strong>Mode préinscription</strong> — Les places ne sont pas garanties (5 RDV max · 3 ateliers max). Confirmation demandée en septembre.`;
-  } else {
-    banner.style.display = 'none';
-  }
-
-  // Afficher/masquer avertissements dans les modals
-  const isPre = PLATFORM_MODE === 'preinscription';
-  ['m-preinscription-warn','ma-preinscription-warn'].forEach(id => {
-    const e = el(id); if(e) e.style.display = isPre ? 'block' : 'none';
-  });
-  ['m-triche-warn'].forEach(id => {
-    const e = el(id); if(e) e.style.display = isPre ? 'block' : 'none';
-  });
-  ['m-loyaute-wrap','ma-loyaute-wrap'].forEach(id => {
-    const e = el(id); if(e) e.style.display = isPre ? 'block' : 'none';
-  });
-}
 
 function renderModeAdmin() {
   // Surligner la carte active
@@ -1730,7 +1701,7 @@ async function saveMode() {
     const cfgRef = doc(db,'config','siteConfig');
     const {setDoc:setDoc1}=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
     await setDoc1(cfgRef, { mode: selected, lectureDate: DATA.config.lectureDate || '1er juillet 2026' });
-    SITE_MODE = selected;
+    PLATFORM_MODE = selected;
     DATA.config.mode = selected;
     updateModeLabel();
     toast(`Mode "${selected}" activé !`);
@@ -1813,5 +1784,5 @@ if(IS_VISITOR){
   el('exp-search-btn')?.addEventListener('click',searchExposantPlanning);
   el('exp-email-input')?.addEventListener('keydown',e=>{if(e.key==='Enter')searchExposantPlanning();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeDrawer();el('modal-atelier')?.classList.remove('open');}});
-  loadAll().then(()=>{applyVisitorMode();renderAccueil();renderGrid();renderAteliersGrid();});
+  loadAll().then(()=>{applyModeUI();renderAccueil();renderGrid();renderAteliersGrid();});
 }
