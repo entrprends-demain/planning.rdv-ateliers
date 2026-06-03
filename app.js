@@ -1163,38 +1163,77 @@ async function searchMonPlanning(){
   if(!DATA.waitlist.length){
     try{const ws=await getDocs(query(collection(db,'waitlist'),orderBy('createdAt')));DATA.waitlist=ws.docs.map(d=>({id:d.id,...d.data()}));}catch(e){console.error(e);}
   }
+  // Recharger la waitlist fraîche depuis Firebase
+  try{const ws=await getDocs(query(collection(db,'waitlist'),orderBy('createdAt')));DATA.waitlist=ws.docs.map(d=>({id:d.id,...d.data()}));}catch(e){console.error(e);}
+
   const waits=DATA.waitlist.filter(w=>(w.email||'').toLowerCase()===email);
-  const allItems=[
-    ...bk.map(b=>{const exp=DATA.exposants.find(e=>e.id===b.exposantId);return{id:b.id,time:b.slotStart,end:b.slotEnd,title:exp?.name||'–',sub:exp?.cat||'',prob:b.problematique||'',type:'rdv',period:b.period,canCancel:hasCode,isWait:false};}),
-    ...ins.map(i=>{const at=DATA.ateliers.find(a=>a.id===i.atelierId);return{id:i.id,time:at?.start||'',end:at?.end||'',title:at?.titre||'–',sub:at?.salle||'',type:'atelier',period:at?.period||'',canCancel:hasCode,isWait:false};}),
-    ...waits.map(w=>{
-      const exp=w.expId?DATA.exposants.find(e=>e.id===w.expId):null;
-      const at=w.atelierId?DATA.ateliers.find(a=>a.id===w.atelierId):null;
-      const pos=w.expId?waitPosRdv(w.expId,w.slotStart).findIndex(x=>x.id===w.id)+1:waitPosAtelier(w.atelierId).findIndex(x=>x.id===w.id)+1;
-      return{id:w.id,time:w.slotStart||at?.start||'',end:w.slotEnd||at?.end||'',title:exp?.name||at?.titre||'–',sub:exp?exp.cat:at?.salle||'',type:w.expId?'rdv':'atelier',period:w.period||at?.period||'',canCancel:hasCode,isWait:true,waitPos:pos};
-    }),
-  ].sort((a,b)=>a.time.localeCompare(b.time));
-  result.innerHTML=`<div class="mes-rdv-header">
-    <div style="font-size:14px;font-weight:600">${first?.prenom||''} ${first?.nom||''}</div>
-    <div style="font-size:13px;color:var(--ink3);margin-top:2px">${bk.length} RDV · ${ins.length} atelier${ins.length>1?'s':''} · ${waits.length?`${waits.length} liste${waits.length>1?'s':''} d'attente · `:''}22 sept. 2026</div>
-    ${!hasCode?'<div style="font-size:12px;color:#B8940A;background:#FFF8E6;border:1px solid #FFD82B;border-radius:6px;padding:6px 10px;margin-top:8px"><i class="ti ti-lock"></i> Mode lecture seule — saisissez votre code pour annuler.</div>':
-    '<div style="font-size:12px;color:#2E6B12;background:#EAF3DE;border:1px solid #6BAA38;border-radius:6px;padding:6px 10px;margin-top:8px"><i class="ti ti-lock-open"></i> Accès complet — vous pouvez annuler.</div>'}
-    <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--brd);font-size:11px;color:var(--ink3)">
-      Conformément au RGPD, vous pouvez demander la suppression de vos données en contactant
-      <a href="mailto:communication@paris-initiative.org" style="color:var(--cyan)">communication@paris-initiative.org</a> ·
-      <a href="rgpd.html" style="color:var(--cyan)">Politique de confidentialité</a>
-    </div>
-  </div>`+
-  allItems.map(item=>{
-    const isPm=item.period==='aprem';const isAt=item.type==='atelier';
-    const cls=isAt?(isPm?'at-pm':'at-am'):(isPm?'rdv-pm':'rdv-am');
-    return`<div class="planning-item ${cls}" data-iid="${item.id}" data-itype="${item.type}">
-      <div class="pi-time" style="color:${isAt?'#3B6D11':(isPm?'#B8940A':'var(--cyan)')}">${item.time}–${item.end}</div>
-      <div class="pi-info"><div class="pi-title">${item.title}</div><div class="pi-sub">${item.sub}${item.prob?' · "'+item.prob+'"':''}</div></div>
-      <span class="pi-type ${isAt?'type-at':'type-rdv'}">${isAt?'Atelier':'RDV'}</span>
-      ${item.canCancel?`<button class="cancel-rdv-btn" data-id="${item.id}" data-type="${item.type}" data-title="${item.title}" data-time="${item.time}"><i class="ti ti-trash"></i></button>`:''}
+
+  // 3 listes séparées triées chronologiquement
+  const rdvItems = bk.map(b=>{
+    const exp=DATA.exposants.find(e=>e.id===b.exposantId);
+    return{id:b.id,time:b.slotStart,end:b.slotEnd,title:exp?.name||'–',sub:(exp?.cat||'')+(exp?.expertise?' · '+exp.expertise:''),prob:b.problematique||'',type:'rdv',period:b.period,canCancel:hasCode};
+  }).sort((a,b)=>a.time.localeCompare(b.time));
+
+  const atelierItems = ins.map(i=>{
+    const at=DATA.ateliers.find(a=>a.id===i.atelierId);
+    return{id:i.id,time:at?.start||'',end:at?.end||'',title:at?.titre||'–',sub:at?.salle||'',type:'atelier',period:at?.period||'',canCancel:hasCode};
+  }).sort((a,b)=>a.time.localeCompare(b.time));
+
+  const waitItems = waits.map(w=>{
+    const exp=w.expId?DATA.exposants.find(e=>e.id===w.expId):null;
+    const at=w.atelierId?DATA.ateliers.find(a=>a.id===w.atelierId):null;
+    const queue=w.expId?waitPosRdv(w.expId,w.slotStart):waitPosAtelier(w.atelierId);
+    const pos=queue.findIndex(x=>x.id===w.id)+1;
+    return{id:w.id,time:w.slotStart||at?.start||'',end:w.slotEnd||at?.end||'',title:exp?.name||at?.titre||'–',sub:exp?(exp.cat+(exp.expertise?' · '+exp.expertise:'')):(at?.salle||''),subType:exp?'RDV':'Atelier',type:w.expId?'rdv':'atelier',period:w.period||at?.period||'',canCancel:hasCode,waitPos:pos};
+  }).sort((a,b)=>a.time.localeCompare(b.time));
+
+  function planItem(item, isWait=false){
+    const isPm=item.period==='aprem', isAt=item.type==='atelier';
+    const cls=isWait?'wait-item-red':(isAt?(isPm?'at-pm':'at-am'):(isPm?'rdv-pm':'rdv-am'));
+    const timeColor=isWait?'#B85C1A':(isAt?'#3B6D11':(isPm?'#B8940A':'var(--cyan)'));
+    const badge=isWait
+      ?`<span class="pi-type" style="background:#B85C1A;color:#fff">Att. #${item.waitPos}</span>`
+      :(isAt?'<span class="pi-type type-at">Atelier</span>':'<span class="pi-type type-rdv">RDV</span>');
+    const dataType=isWait?('wait-'+(isAt?'atelier':'rdv')):item.type;
+    const cancelBtn=item.canCancel
+      ?`<button class="cancel-rdv-btn" data-id="${item.id}" data-type="${dataType}" data-title="${item.title}" data-time="${item.time}"><i class="ti ti-trash"></i></button>`:'';
+    return`<div class="planning-item ${cls}">
+      <div class="pi-time" style="color:${timeColor}">${item.time}–${item.end}</div>
+      <div class="pi-info">
+        <div class="pi-title">${item.title}${isWait?` <span style="font-size:11px;font-weight:400;color:#B85C1A">(${item.subType})</span>`:''}</div>
+        <div class="pi-sub">${item.sub}${!isWait&&item.prob?' · "'+item.prob+'"':''}</div>
+      </div>
+      ${badge}${cancelBtn}
     </div>`;
-  }).join('');
+  }
+
+  const sectionTitle = (icon, label, count, color='var(--cyan)') =>
+    `<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:${color};display:flex;align-items:center;gap:6px;margin:1.25rem 0 .5rem;padding-bottom:.4rem;border-bottom:2px solid ${color}22">
+      <i class="ti ${icon}"></i> ${label} <span style="font-weight:400;font-size:11px;opacity:.7">${count}</span>
+    </div>`;
+
+  const hasAnything = rdvItems.length||atelierItems.length||waitItems.length;
+  if(!hasAnything){result.innerHTML='<div class="rdv-empty"><i class="ti ti-calendar-off"></i><p>Aucun élément trouvé.</p></div>';return;}
+
+  result.innerHTML=`
+    <div class="mes-rdv-header">
+      <div style="font-size:15px;font-weight:700">${first?.prenom||''} ${first?.nom||''}</div>
+      <div style="font-size:13px;color:var(--ink3);margin-top:2px">${rdvItems.length} RDV · ${atelierItems.length} atelier${atelierItems.length>1?'s':''} · ${waitItems.length?waitItems.length+' en attente · ':''}22 septembre 2026</div>
+      ${!hasCode
+        ?'<div style="font-size:12px;color:#B8940A;background:#FFF8E6;border:1px solid #FFD82B;border-radius:6px;padding:6px 10px;margin-top:8px"><i class="ti ti-lock"></i> Mode lecture seule — saisissez votre code pour annuler.</div>'
+        :'<div style="font-size:12px;color:#2E6B12;background:#EAF3DE;border:1px solid #6BAA38;border-radius:6px;padding:6px 10px;margin-top:8px"><i class="ti ti-lock-open"></i> Accès complet — vous pouvez annuler.</div>'}
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--brd);font-size:11px;color:var(--ink3)">
+        Conformément au RGPD, vous pouvez demander la suppression de vos données en contactant
+        <a href="mailto:communication@paris-initiative.org" style="color:var(--cyan)">communication@paris-initiative.org</a> ·
+        <a href="rgpd.html" style="color:var(--cyan)">Politique de confidentialité</a>
+      </div>
+    </div>
+
+    ${rdvItems.length?sectionTitle('ti-users','RDV Individuels',rdvItems.length,'var(--cyan)')+rdvItems.map(i=>planItem(i,false)).join(''):''}
+    ${atelierItems.length?sectionTitle('ti-school','Ateliers',atelierItems.length,'#3B6D11')+atelierItems.map(i=>planItem(i,false)).join(''):''}
+    ${waitItems.length?sectionTitle('ti-clock','Liste d'attente',waitItems.length,'#B85C1A')+waitItems.map(i=>planItem(i,true)).join(''):''}
+  `;
+
   result.querySelectorAll('.cancel-rdv-btn').forEach(btn=>{
     const t=btn.dataset.type;
     if(t==='wait-rdv'||t==='wait-atelier'){
