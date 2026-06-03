@@ -1231,7 +1231,7 @@ async function searchMonPlanning(){
 
     ${rdvItems.length?sectionTitle('ti-users','RDV Individuels',rdvItems.length,'var(--cyan)')+rdvItems.map(i=>planItem(i,false)).join(''):''}
     ${atelierItems.length?sectionTitle('ti-school','Ateliers',atelierItems.length,'#3B6D11')+atelierItems.map(i=>planItem(i,false)).join(''):''}
-    ${waitItems.length?sectionTitle('ti-clock','Liste d'attente',waitItems.length,'#B85C1A')+waitItems.map(i=>planItem(i,true)).join(''):''}
+    ${waitItems.length?sectionTitle("ti-clock","Liste d'attente",waitItems.length,"#B85C1A")+waitItems.map(i=>planItem(i,true)).join(''):''}
   `;
 
   result.querySelectorAll('.cancel-rdv-btn').forEach(btn=>{
