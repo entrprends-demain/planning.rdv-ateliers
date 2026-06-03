@@ -2,7 +2,7 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-  collection, doc, getDocs, addDoc, updateDoc, deleteDoc, writeBatch, query, orderBy }
+  collection, doc, getDocs, addDoc, updateDoc, deleteDoc, setDoc, writeBatch, query, orderBy }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const fbApp = initializeApp({
@@ -27,15 +27,24 @@ async function loadPlatformMode() {
   try {
     const snap = await getDocs(collection(db, 'config'));
     const cfg = snap.docs.find(d => d.id === 'platform');
-    if (cfg) PLATFORM_MODE = cfg.data().mode || 'inscription';
+    if (cfg) {
+      PLATFORM_MODE = cfg.data().mode || 'inscription';
+      DATA.config.mode = PLATFORM_MODE;
+      DATA.config.lectureDate = cfg.data().lectureDate || '1er juillet 2026';
+    } else {
+      // Créer le doc config avec valeur par défaut
+      await setDoc(doc(db,'config','platform'), { mode: 'inscription', updatedAt: Date.now() });
+      PLATFORM_MODE = 'inscription';
+    }
   } catch(e) { console.error(e); }
 }
 
 async function setPlatformMode(mode) {
   try {
-    const { setDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
     await setDoc(doc(db, 'config', 'platform'), { mode, updatedAt: Date.now() });
     PLATFORM_MODE = mode;
+    DATA.config.mode = mode;
+    console.log('Mode saved:', mode);
   } catch(e) { console.error(e); toast('Erreur sauvegarde mode.'); }
 }
 
@@ -1560,7 +1569,6 @@ async function launchValidation() {
   loader(true);
   try{
     // Marquer la date limite de validation dans config
-    const {setDoc} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
     await setDoc(doc(db,'config','validation'),{
       launchedAt: Date.now(),
       deadlineAt: Date.now() + 24*60*60*1000,
@@ -1699,8 +1707,7 @@ async function saveMode() {
   loader(true);
   try {
     const cfgRef = doc(db,'config','siteConfig');
-    const {setDoc:setDoc1}=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-    await setDoc1(cfgRef, { mode: selected, lectureDate: DATA.config.lectureDate || '1er juillet 2026' });
+    await setDoc(cfgRef, { mode: selected, lectureDate: DATA.config.lectureDate || '1er juillet 2026' });
     PLATFORM_MODE = selected;
     DATA.config.mode = selected;
     updateModeLabel();
@@ -1715,8 +1722,7 @@ async function saveLectureDate() {
   loader(true);
   try {
     const cfgRef = doc(db,'config','siteConfig');
-    const {setDoc:setDoc2}=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-    await setDoc2(cfgRef, { mode: DATA.config.mode, lectureDate: date });
+    await setDoc(cfgRef, { mode: DATA.config.mode, lectureDate: date });
     DATA.config.lectureDate = date;
     updateLecturePreview();
     toast('Date enregistrée !');
