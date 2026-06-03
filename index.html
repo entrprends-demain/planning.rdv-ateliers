@@ -10,6 +10,7 @@
 </head>
 <body>
 
+<div id="mode-banner" style="display:none"></div>
 <nav class="nav">
   <div class="nav-inner">
     <div class="nav-brand">
@@ -237,10 +238,24 @@
       </div>
       <div class="field"><label>Votre problématique *</label><textarea id="m-problematique" placeholder="Décrivez brièvement votre problématique…" rows="3"></textarea></div>
     </div>
+    <div id="m-preinscription-warn" style="display:none;background:#FFF8E6;border:1.5px solid #FFD82B;border-radius:10px;padding:.9rem;margin-top:.25rem">
+      <div style="font-size:12px;font-weight:700;color:#B8940A;margin-bottom:.4rem">⚠️ Préinscription — places non garanties</div>
+      <div style="font-size:12px;color:#5A4A00;line-height:1.5">Cette préinscription ne garantit pas votre place. Vous serez invité(e) à confirmer début septembre. Maximum <strong>5 RDV</strong> par personne en préinscription.</div>
+    </div>
+    <div id="m-triche-warn" style="display:none;background:#FCEBEB;border:1.5px solid #F09595;border-radius:10px;padding:.9rem;margin-top:.25rem">
+      <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:.4rem">⚠️ Utilisation loyale obligatoire</div>
+      <div style="font-size:12px;color:var(--red);line-height:1.5">Toute tentative d'inscription avec plusieurs adresses email entraînera l'annulation de l'ensemble des RDV et ateliers concernés. En cas de problème de connexion, contactez-nous via le formulaire <a href="contact.html" style="color:var(--red);font-weight:600">Contact</a>.</div>
+    </div>
     <div class="field" style="margin-top:.25rem">
       <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-weight:400">
         <input type="checkbox" id="m-rgpd" style="margin-top:3px;accent-color:var(--cyan);flex-shrink:0" />
         <span style="font-size:12px;color:var(--ink2);line-height:1.5">J'accepte que mes données soient utilisées dans le cadre de cet événement conformément à la <a href="rgpd.html" target="_blank" style="color:var(--cyan);font-weight:600">politique de confidentialité</a>. *</span>
+      </label>
+    </div>
+    <div id="m-loyaute-wrap" style="display:none" class="field" style="margin-top:.25rem">
+      <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-weight:400">
+        <input type="checkbox" id="m-loyaute" style="margin-top:3px;accent-color:var(--cyan);flex-shrink:0" />
+        <span style="font-size:12px;color:var(--ink2);line-height:1.5">Je m'engage à n'utiliser qu'une seule adresse email et à ne pas contourner les règles de préinscription. *</span>
       </label>
     </div>
     <div class="modal-foot">
@@ -285,10 +300,20 @@
       </div>
     </div>
     <div style="padding:0 1.25rem .5rem">
+      <div id="ma-preinscription-warn" style="display:none;background:#FFF8E6;border:1.5px solid #FFD82B;border-radius:10px;padding:.9rem;margin-bottom:.75rem">
+        <div style="font-size:12px;font-weight:700;color:#B8940A;margin-bottom:.3rem">⚠️ Préinscription — places non garanties</div>
+        <div style="font-size:12px;color:#5A4A00;line-height:1.5">Maximum <strong>3 ateliers</strong> par personne en préinscription.</div>
+      </div>
       <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
         <input type="checkbox" id="ma-rgpd" style="margin-top:3px;accent-color:var(--cyan);flex-shrink:0" />
         <span style="font-size:12px;color:var(--ink2);line-height:1.5">J'accepte que mes données soient utilisées conformément à la <a href="rgpd.html" target="_blank" style="color:var(--cyan);font-weight:600">politique de confidentialité</a>. *</span>
       </label>
+      <div id="ma-loyaute-wrap" style="display:none;margin-top:8px">
+        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+          <input type="checkbox" id="ma-loyaute" style="margin-top:3px;accent-color:var(--cyan);flex-shrink:0" />
+          <span style="font-size:12px;color:var(--ink2);line-height:1.5">Je m'engage à n'utiliser qu'une seule adresse email. *</span>
+        </label>
+      </div>
     </div>
     <div class="modal-foot">
       <button id="ma-cancel" class="btn-ghost">Annuler</button>

@@ -19,6 +19,26 @@ try {
   db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
 } catch(e) { db = getFirestore(fbApp); }
 
+/* ── Mode de la plateforme ────────────────────────────────────── */
+// Modes : 'lecture' | 'preinscription' | 'inscription'
+let PLATFORM_MODE = 'inscription'; // valeur par défaut, rechargée depuis Firebase
+
+async function loadPlatformMode() {
+  try {
+    const snap = await getDocs(collection(db, 'config'));
+    const cfg = snap.docs.find(d => d.id === 'platform');
+    if (cfg) PLATFORM_MODE = cfg.data().mode || 'inscription';
+  } catch(e) { console.error(e); }
+}
+
+async function setPlatformMode(mode) {
+  try {
+    const { setDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    await setDoc(doc(db, 'config', 'platform'), { mode, updatedAt: Date.now() });
+    PLATFORM_MODE = mode;
+  } catch(e) { console.error(e); toast('Erreur sauvegarde mode.'); }
+}
+
 /* ── Créneaux RDV ─────────────────────────────────────────────── */
 function fmt(h, m) { return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'); }
 function buildRdvSlots(sh, sm, eh, em) {
@@ -83,7 +103,7 @@ function toast(msg) {
 async function loadAll() {
   loader(true);
   try {
-    const [eS,sS,bS,vS,aS,iS,wS] = await Promise.all([
+    const [eS,sS,bS,vS,aS,iS,wS,cS] = await Promise.all([
       getDocs(query(collection(db,'exposants'), orderBy('createdAt'))),
       getDocs(query(collection(db,'slots'),     orderBy('start'))),
       getDocs(query(collection(db,'bookings'),  orderBy('slotStart'))),
@@ -91,6 +111,7 @@ async function loadAll() {
       getDocs(query(collection(db,'ateliers'),  orderBy('start'))),
       getDocs(collection(db,'inscriptions')),
       getDocs(query(collection(db,'waitlist'),  orderBy('createdAt'))),
+      getDocs(collection(db,'config')),
     ]);
     DATA.exposants    = eS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.bookings     = bS.docs.map(d=>({id:d.id,...d.data()}));
@@ -98,6 +119,8 @@ async function loadAll() {
     DATA.ateliers     = aS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.inscriptions = iS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.waitlist     = wS.docs.map(d=>({id:d.id,...d.data()}));
+    const cfgDoc = cS.docs.find(d=>d.id==='siteConfig');
+    if(cfgDoc){ const c=cfgDoc.data(); SITE_MODE=c.mode||'inscription'; DATA.config={mode:SITE_MODE,lectureDate:c.lectureDate||'1er juillet 2026'}; }
     DATA.slots = {};
     sS.docs.forEach(d=>{ const s={id:d.id,...d.data()}; if(!DATA.slots[s.exposantId])DATA.slots[s.exposantId]=[]; DATA.slots[s.exposantId].push(s); });
   } catch(e) { console.error(e); toast('Erreur de connexion Firebase.'); }
@@ -113,6 +136,7 @@ function initLogin() {
     await loadAll();
     renderAdminExpList(); renderStats();
     updateBadges();
+    renderModeAdmin();
   }
   if(sessionStorage.getItem(SK)==='1'){doUnlock();return;}
   el('pwd-btn').addEventListener('click',async()=>{
@@ -269,7 +293,7 @@ async function renderWaitlistAteliers() {
 
 function switchAdminTab(tab) {
   document.querySelectorAll('.atab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
-  ['exposants','ateliers-admin','rdvs','visiteurs','waitlist-rdvs','waitlist-ateliers'].forEach(t=>{
+  ['exposants','ateliers-admin','rdvs','visiteurs','waitlist-rdvs','waitlist-ateliers','parametres'].forEach(t=>{
     const el2=el('tab-'+t); if(el2)el2.style.display=t===tab?(t==='exposants'?'flex':'block'):'none';
   });
   if(tab==='rdvs')             renderRdvList();
@@ -277,6 +301,7 @@ function switchAdminTab(tab) {
   if(tab==='ateliers-admin')   renderAteliersAdmin();
   if(tab==='waitlist-rdvs')    renderWaitlistRdvs();
   if(tab==='waitlist-ateliers')renderWaitlistAteliers();
+  if(tab==='parametres')       initParametres();
 }
 
 /* ── Admin exposants ──────────────────────────────────────────── */
@@ -901,6 +926,23 @@ async function promoteWaitlistAtelier(atId) {
 
 /* ── Drawer RDV ───────────────────────────────────────────────── */
 async function openDrawer(expId){
+  if(SITE_MODE === 'lecture'){
+    // Mode lecture : afficher infos sans bouton d'inscription
+    const exp=DATA.exposants.find(e=>e.id===expId);
+    const slots=getSlots(expId);
+    el('d-name').textContent=exp?.name||'–';
+    el('d-cat').textContent=(exp?.cat||'')+(exp?.expertise?' · '+exp.expertise:'');
+    el('d-confirm').innerHTML='';
+    const ms=slots.filter(s=>s.period==='matin'), ps=slots.filter(s=>s.period==='aprem');
+    const fill=(list,cid)=>{const c=el(cid);if(!list.length){c.innerHTML='';return;}c.innerHTML=list.map(s=>`<span class="slot-btn ${s.period==='matin'?'slot-free-am':'slot-free-pm'}" style="cursor:default;opacity:.7">${s.start}–${s.end}</span>`).join('');};
+    el('d-am-count').textContent=ms.length?ms.length+` créneau${ms.length>1?'x':''}`:'' ;
+    el('d-pm-count').textContent=ps.length?ps.length+` créneau${ps.length>1?'x':''}`:'' ;
+    el('d-matin').style.display=ms.length?'flex':'none';
+    el('d-aprem').style.display=ps.length?'flex':'none';
+    fill(ms,'d-am-slots');fill(ps,'d-pm-slots');
+    el('overlay').classList.add('open');el('drawer').classList.add('open');document.body.style.overflow='hidden';
+    return;
+  }
   // Recharger les bookings pour avoir l'état le plus récent
   try{
     const bS=await getDocs(query(collection(db,'bookings'),orderBy('slotStart')));
@@ -952,14 +994,14 @@ async function getOrCreateVisitorCode(email){
   return{code,isNew:true};
 }
 
-function showCodeModal(code,prenom,expName,start,end){
+function showCodeModal(code,prenom,expName,start,end,isPreinscription=false){
   navigator.clipboard.writeText(code).catch(()=>{});
   const overlay=document.createElement('div');
   overlay.id='code-modal';
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:800;display:flex;align-items:center;justify-content:center;padding:1rem';
   overlay.innerHTML=`<div style="background:#fff;border-radius:20px;padding:2rem;max-width:440px;width:100%;text-align:center;border:2px solid var(--cyan);box-shadow:0 20px 60px rgba(0,0,0,.2)">
     <i class="ti ti-circle-check" style="font-size:40px;color:var(--cyan);display:block;margin-bottom:.75rem"></i>
-    <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:.25rem">Inscription confirmée !</div>
+    <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:.25rem">${isPreinscription?'Préinscription enregistrée !':'Inscription confirmée !'}</div>
     <div style="font-size:13px;color:var(--ink3);margin-bottom:1.5rem">${start}–${end} chez ${expName}</div>
     <div style="background:var(--cyan-l);border:2px solid var(--cyan);border-radius:14px;padding:1.25rem;margin-bottom:1rem">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--cyan-d);margin-bottom:.5rem">🔑 Votre code personnel</div>
@@ -973,6 +1015,9 @@ function showCodeModal(code,prenom,expName,start,end){
         <strong>Sans ce code</strong> : consultation uniquement. Pour modification, contactez l'équipe PIE.
       </div>
     </div>
+    ${isPreinscription?`<div style="background:#EAF3DE;border:1.5px solid #6BAA38;border-radius:10px;padding:.9rem;margin-bottom:1rem;font-size:12px;color:#2E5A00;text-align:left;line-height:1.6">
+      <strong><i class="ti ti-pencil"></i> Préinscription</strong> — Votre inscription est enregistrée mais reste provisoire. Elle sera confirmée définitivement à l'ouverture officielle des inscriptions.
+    </div>`:''}
     <button id="code-ok-btn" style="background:var(--cyan);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;width:100%">J'ai noté mon code → Continuer</button>
   </div>`;
   document.body.appendChild(overlay);
@@ -1156,12 +1201,12 @@ async function confirmBooking(){
   loader(true);
   try{
     const{code,isNew}=await getOrCreateVisitorCode(email);
-    const ref=await addDoc(collection(db,'bookings'),{exposantId:pendingExp,slotStart:pendingSlot,slotEnd:slot?.end||'',period:slot?.period||'',prenom,nom,email,societe,structure,problematique,consentRgpd:true,consentDate:new Date().toISOString(),createdAt:Date.now()});
+    const ref=await addDoc(collection(db,'bookings'),{exposantId:pendingExp,slotStart:pendingSlot,slotEnd:slot?.end||'',period:slot?.period||'',prenom,nom,email,societe,structure,problematique,mode:PLATFORM_MODE,consentRgpd:true,consentDate:new Date().toISOString(),createdAt:Date.now()});
     DATA.bookings.push({id:ref.id,exposantId:pendingExp,slotStart:pendingSlot,slotEnd:slot?.end,period:slot?.period,prenom,nom,email,societe,problematique});
     closeModal();
-    if(isNew){showCodeModal(code,prenom,DATA.exposants.find(e=>e.id===pendingExp)?.name,pendingSlot,slot?.end);}
+    if(isNew){showCodeModal(code,prenom,DATA.exposants.find(e=>e.id===pendingExp)?.name,pendingSlot,slot?.end,SITE_MODE==='preinscription');}
     else{el('d-confirm').innerHTML=`<div class="confirm-ok"><i class="ti ti-circle-check"></i><div>RDV confirmé — ${prenom} ${nom}<br><span style="font-weight:400;font-size:12px">${pendingSlot}–${slot?.end}</span></div></div>`;openDrawer(pendingExp);}
-    toast('RDV confirmé !');
+    toast(SITE_MODE==='preinscription'?`Préinscription enregistrée !`:`RDV confirmé !`);
   }catch(e){console.error(e);toast('Erreur.');}
   loader(false);
 }
@@ -1218,6 +1263,7 @@ function renderAteliersGrid(){
 }
 
 function openModalAtelier(atId){
+  if(SITE_MODE === 'lecture'){ toast(`Inscriptions disponibles à partir du ${DATA.config.lectureDate||'1er juillet 2026'}.`); return; }
   pendingAtelierId=atId;
   const at=DATA.ateliers.find(a=>a.id===atId);if(!at)return;
   el('ma-info').textContent=`${at.titre} · ${at.start}–${at.end} · ${at.salle} · 22 sept. 2026`;
@@ -1260,8 +1306,8 @@ async function confirmAtelier(){
     const ref=await addDoc(collection(db,'inscriptions'),{atelierId:pendingAtelierId,prenom,nom,email,societe,structure:structureAt,consentRgpd:true,consentDate:new Date().toISOString(),createdAt:Date.now()});
     DATA.inscriptions.push({id:ref.id,atelierId:pendingAtelierId,prenom,nom,email,societe});
     el('modal-atelier').classList.remove('open');
-    if(isNew)showCodeModal(code,prenom,at.titre,at.start,at.end);
-    else toast(`Inscription confirmée — ${at.titre} !`);
+    if(isNew)showCodeModal(code,prenom,at.titre,at.start,at.end,SITE_MODE==='preinscription');
+    else toast(SITE_MODE==='preinscription'?`Préinscription enregistrée — ${at.titre} !`:`Inscription confirmée — ${at.titre} !`);
     renderAteliersGrid();
   }catch(e){console.error(e);toast('Erreur.');}
   loader(false);
@@ -1428,12 +1474,42 @@ async function searchExposantPlanning(){
   loader(false);
 }
 
+/* ── Mode visiteur ───────────────────────────────────────────── */
+
+function applyVisitorMode() {
+  // Supprimer bannière existante
+  document.querySelector('.mode-banner')?.remove();
+
+  if(SITE_MODE === 'inscription') return; // rien à faire
+
+  const banner = document.createElement('div');
+
+  if(SITE_MODE === 'lecture') {
+    banner.className = 'mode-banner lecture';
+    banner.innerHTML = `<i class="ti ti-eye"></i>
+      <span><strong>Consultation uniquement</strong> — Les inscriptions ne sont pas encore ouvertes.
+      Elles seront disponibles à partir du <strong>${DATA.config.lectureDate||'1er juillet 2026'}</strong>.
+      Vous pouvez dès maintenant découvrir les experts et les ateliers proposés.</span>`;
+  } else if(SITE_MODE === 'preinscription') {
+    banner.className = 'mode-banner preinscription';
+    banner.innerHTML = `<i class="ti ti-pencil"></i>
+      <span><strong>Préinscriptions ouvertes</strong> — Vos inscriptions sont enregistrées mais restent provisoires.
+      Elles seront confirmées définitivement à l'ouverture officielle des inscriptions.</span>`;
+  }
+
+  // Insérer après la nav
+  const nav = document.querySelector('.nav');
+  if(nav && nav.nextSibling) nav.parentNode.insertBefore(banner, nav.nextSibling);
+}
+
 /* ── Navigation visiteur ──────────────────────────────────────── */
 function switchVisitorTab(tab){
+  applyModeUI();
   ['accueil','rdvs','ateliers','planning','exposant'].forEach(t=>{const e=el('tab-'+t);if(e)e.style.display=t===tab?'block':'none';});
   document.querySelectorAll('.vtab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   if(tab==='ateliers')renderAteliersGrid();
   if(tab==='rdvs')renderGrid();
+  applyVisitorMode();
   if(tab==='accueil')renderAccueil();
 }
 
@@ -1446,6 +1522,101 @@ function renderAccueil(){
   document.querySelectorAll('.accueil-card-btn').forEach(btn=>{
     btn.onclick=()=>switchVisitorTab(btn.dataset.goto);
   });
+}
+
+/* ── Logique mode plateforme ─────────────────────────────────── */
+
+function applyModeUI() {
+  const banner = el('mode-banner');
+  if (!banner) return;
+
+  // Masquer/afficher boutons d'inscription selon le mode
+  if (PLATFORM_MODE === 'lecture') {
+    banner.style.display = 'block';
+    banner.className = 'banner-lecture';
+    banner.innerHTML = `👁️ <strong>Consultation uniquement</strong> — Les inscriptions ne sont pas encore ouvertes. Les préinscriptions ouvriront le <strong>1er juillet 2026</strong>. Revenez bientôt !`;
+  } else if (PLATFORM_MODE === 'preinscription') {
+    banner.style.display = 'block';
+    banner.className = 'banner-preinscription';
+    banner.innerHTML = `📋 <strong>Mode préinscription</strong> — Les places ne sont pas garanties (5 RDV max · 3 ateliers max). Confirmation demandée en septembre.`;
+  } else {
+    banner.style.display = 'none';
+  }
+
+  // Afficher/masquer avertissements dans les modals
+  const isPre = PLATFORM_MODE === 'preinscription';
+  ['m-preinscription-warn','ma-preinscription-warn'].forEach(id => {
+    const e = el(id); if(e) e.style.display = isPre ? 'block' : 'none';
+  });
+  ['m-triche-warn'].forEach(id => {
+    const e = el(id); if(e) e.style.display = isPre ? 'block' : 'none';
+  });
+  ['m-loyaute-wrap','ma-loyaute-wrap'].forEach(id => {
+    const e = el(id); if(e) e.style.display = isPre ? 'block' : 'none';
+  });
+}
+
+function renderModeAdmin() {
+  // Surligner la carte active
+  ['lecture','preinscription','inscription'].forEach(m => {
+    const card = el('mc-'+m);
+    if(!card) return;
+    card.className = 'mode-card' + (PLATFORM_MODE===m ? (m==='preinscription'?' active-mode-pre':m==='inscription'?' active-mode-ins':' active-mode') : '');
+    const btn = card.querySelector('.mode-btn');
+    if(btn) btn.textContent = PLATFORM_MODE===m ? '✓ Actif' : 'Activer';
+    if(btn) btn.disabled = PLATFORM_MODE===m;
+  });
+
+  const cur = el('mode-current');
+  if(cur){
+    const labels={'lecture':'👁️ Lecture seule','preinscription':'📋 Préinscription','inscription':'✅ Inscription définitive'};
+    cur.textContent = `Mode actuel : ${labels[PLATFORM_MODE]||PLATFORM_MODE}`;
+  }
+
+  // Stats validation
+  const preRdv  = DATA.bookings.filter(b=>b.mode==='preinscription'&&!b.confirmed).length;
+  const preAt   = DATA.inscriptions.filter(i=>i.mode==='preinscription'&&!i.confirmed).length;
+  const confRdv = DATA.bookings.filter(b=>b.mode==='preinscription'&&b.confirmed).length;
+  const vs = el('validation-stats');
+  if(vs) vs.innerHTML = `${preRdv} RDV préinscrits non confirmés · ${preAt} ateliers préinscrits non confirmés · ${confRdv} RDV confirmés`;
+}
+
+async function launchValidation() {
+  const preRdv = DATA.bookings.filter(b=>b.mode==='preinscription'&&!b.confirmed);
+  const preAt  = DATA.inscriptions.filter(i=>i.mode==='preinscription'&&!i.confirmed);
+  if(!preRdv.length&&!preAt.length){toast('Aucune préinscription à valider.');return;}
+  if(!confirm(`Lancer la validation pour ${preRdv.length} RDV et ${preAt.length} ateliers préinscrits ? Les visiteurs auront 24h pour confirmer depuis "Mon Planning".`))return;
+  loader(true);
+  try{
+    // Marquer la date limite de validation dans config
+    const {setDoc} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    await setDoc(doc(db,'config','validation'),{
+      launchedAt: Date.now(),
+      deadlineAt: Date.now() + 24*60*60*1000,
+    });
+    toast('Demande de validation lancée ! Les visiteurs sont informés à leur prochaine connexion.');
+    renderModeAdmin();
+  }catch(e){console.error(e);toast('Erreur.');}
+  loader(false);
+}
+
+async function cancelUnconfirmed() {
+  const preRdv = DATA.bookings.filter(b=>b.mode==='preinscription'&&!b.confirmed);
+  const preAt  = DATA.inscriptions.filter(i=>i.mode==='preinscription'&&!i.confirmed);
+  if(!confirm(`Annuler ${preRdv.length} RDV et ${preAt.length} ateliers non confirmés ? Les créneaux seront redistribués aux listes d'attente.`))return;
+  loader(true);
+  try{
+    const batch=writeBatch(db);
+    preRdv.forEach(b=>batch.delete(doc(db,'bookings',b.id)));
+    preAt.forEach(i=>batch.delete(doc(db,'inscriptions',i.id)));
+    await batch.commit();
+    // Redistribuer
+    for(const b of preRdv){DATA.bookings=DATA.bookings.filter(x=>x.id!==b.id);await promoteWaitlistRdv(b.exposantId,b.slotStart);}
+    for(const i of preAt){DATA.inscriptions=DATA.inscriptions.filter(x=>x.id!==i.id);await promoteWaitlistAtelier(i.atelierId);}
+    renderModeAdmin();renderStats();updateBadges();
+    toast(`${preRdv.length} RDV et ${preAt.length} ateliers annulés et redistribués.`);
+  }catch(e){console.error(e);toast('Erreur.');}
+  loader(false);
 }
 
 /* ── Init ─────────────────────────────────────────────────────── */
@@ -1523,6 +1694,65 @@ function initStructureField(searchId, dropdownId, hiddenId, wrapId, societyId) {
   }
 }
 
+/* ── Paramètres admin ─────────────────────────────────────────── */
+
+function initParametres() {
+  // Sélectionner le bon radio
+  const radio = document.querySelector(`input[name="site-mode"][value="${DATA.config.mode}"]`);
+  if(radio) radio.checked = true;
+  const dateInput = el('lecture-date');
+  if(dateInput) dateInput.value = DATA.config.lectureDate || '1er juillet 2026';
+  updateLecturePreview();
+  updateModeLabel();
+
+  el('lecture-date')?.addEventListener('input', updateLecturePreview);
+  el('save-mode-btn')?.addEventListener('click', saveMode);
+  el('save-lecture-btn')?.addEventListener('click', saveLectureDate);
+}
+
+function updateLecturePreview() {
+  const date = el('lecture-date')?.value || '1er juillet 2026';
+  const prev = el('lecture-preview');
+  if(prev) prev.innerHTML = `Les inscriptions seront ouvertes à partir du <strong>${date}</strong>. En attendant, vous pouvez consulter les experts et ateliers disponibles.`;
+}
+
+function updateModeLabel() {
+  const labels = { lecture: 'Lecture seule', preinscription: 'Préinscription', inscription: 'Inscription définitive' };
+  const el2 = el('mode-current-label');
+  if(el2) el2.textContent = labels[DATA.config.mode] || '–';
+}
+
+async function saveMode() {
+  const selected = document.querySelector('input[name="site-mode"]:checked')?.value;
+  if(!selected) { toast('Choisissez un mode.'); return; }
+  loader(true);
+  try {
+    const cfgRef = doc(db,'config','siteConfig');
+    const {setDoc:setDoc1}=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    await setDoc1(cfgRef, { mode: selected, lectureDate: DATA.config.lectureDate || '1er juillet 2026' });
+    SITE_MODE = selected;
+    DATA.config.mode = selected;
+    updateModeLabel();
+    toast(`Mode "${selected}" activé !`);
+  } catch(e) { console.error(e); toast('Erreur.'); }
+  loader(false);
+}
+
+async function saveLectureDate() {
+  const date = el('lecture-date')?.value.trim();
+  if(!date) { toast('Saisissez une date.'); return; }
+  loader(true);
+  try {
+    const cfgRef = doc(db,'config','siteConfig');
+    const {setDoc:setDoc2}=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    await setDoc2(cfgRef, { mode: DATA.config.mode, lectureDate: date });
+    DATA.config.lectureDate = date;
+    updateLecturePreview();
+    toast('Date enregistrée !');
+  } catch(e) { console.error(e); toast('Erreur.'); }
+  loader(false);
+}
+
 const IS_ADMIN=!!el('admin-app'), IS_VISITOR=!!el('grid');
 
 if(IS_ADMIN){
@@ -1537,6 +1767,19 @@ if(IS_ADMIN){
   el('rdv-filter-period')?.addEventListener('change',renderRdvList);
   el('export-csv')?.addEventListener('click',exportCsv);
   el('vis-admin-search')?.addEventListener('input',renderVisiteursList);
+  // Onglet mode
+  document.querySelectorAll('.mode-btn').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      const m=btn.dataset.mode;
+      loader(true);
+      await setPlatformMode(m);
+      renderModeAdmin();
+      toast(`Mode "${m}" activé.`);
+      loader(false);
+    });
+  });
+  el('btn-launch-validation')?.addEventListener('click',launchValidation);
+  el('btn-cancel-unconfirmed')?.addEventListener('click',cancelUnconfirmed);
   initLogin();
 }
 
@@ -1570,5 +1813,5 @@ if(IS_VISITOR){
   el('exp-search-btn')?.addEventListener('click',searchExposantPlanning);
   el('exp-email-input')?.addEventListener('keydown',e=>{if(e.key==='Enter')searchExposantPlanning();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeDrawer();el('modal-atelier')?.classList.remove('open');}});
-  loadAll().then(()=>{renderAccueil();renderGrid();renderAteliersGrid();});
+  loadAll().then(()=>{applyVisitorMode();renderAccueil();renderGrid();renderAteliersGrid();});
 }

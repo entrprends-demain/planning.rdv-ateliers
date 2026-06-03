@@ -42,6 +42,8 @@
     <button class="atab" data-tab="rdvs"><i class="ti ti-calendar-check"></i> RDV <span id="rdv-badge" class="rdv-badge"></span></button>
     <button class="atab" data-tab="waitlist-rdvs"><i class="ti ti-clock" style="color:#B85C1A"></i> Attente RDV <span id="wrdv-badge" class="rdv-badge" style="background:#B85C1A"></span></button>
     <button class="atab" data-tab="visiteurs"><i class="ti ti-id-badge"></i> Visiteurs <span id="vis-badge" class="rdv-badge"></span></button>
+    <button class="atab" data-tab="mode" style="margin-left:auto;background:var(--yellow);color:var(--ink);font-weight:700"><i class="ti ti-settings-2"></i> Mode plateforme</button>
+    <button class="atab" data-tab="parametres"><i class="ti ti-settings-2"></i> Paramètres</button>
   </div>
 
   <!-- Onglet Exposants -->
@@ -196,6 +198,76 @@
   </div>
 
 </div>
+
+  <!-- Onglet Paramètres -->
+  <div id="tab-parametres" style="display:none;padding:2rem;max-width:700px;margin:0 auto">
+    <div style="font-family:var(--font);font-size:20px;font-weight:700;color:var(--ink);margin-bottom:.5rem">Paramètres de la plateforme</div>
+    <div style="font-size:13px;color:var(--ink3);margin-bottom:2rem">Ces réglages s'appliquent immédiatement à la page visiteurs.</div>
+
+    <!-- Mode inscription -->
+    <div style="background:#fff;border:1.5px solid var(--brd2);border-radius:var(--rl);padding:1.5rem;margin-bottom:1.25rem">
+      <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:.4rem"><i class="ti ti-toggle-right" style="color:var(--cyan);font-size:16px"></i> Mode d'inscription</div>
+      <div style="font-size:13px;color:var(--ink3);margin-bottom:1.25rem">Choisissez ce que les visiteurs peuvent faire sur la plateforme.</div>
+
+      <div style="display:flex;flex-direction:column;gap:10px" id="mode-choices">
+
+        <label class="mode-choice" id="mode-lecture">
+          <input type="radio" name="site-mode" value="lecture" />
+          <div class="mode-choice-inner">
+            <div class="mode-icon" style="background:#F0F0F0;color:var(--ink3)"><i class="ti ti-eye"></i></div>
+            <div>
+              <div class="mode-title">Lecture seule</div>
+              <div class="mode-desc">Les visiteurs peuvent consulter les experts et ateliers mais ne peuvent pas s'inscrire. Un message d'information leur indique la date d'ouverture des préinscriptions.</div>
+            </div>
+          </div>
+        </label>
+
+        <label class="mode-choice" id="mode-preinscription">
+          <input type="radio" name="site-mode" value="preinscription" />
+          <div class="mode-choice-inner">
+            <div class="mode-icon" style="background:#FFF8E6;color:#B8940A"><i class="ti ti-pencil"></i></div>
+            <div>
+              <div class="mode-title">Préinscription</div>
+              <div class="mode-desc">Les visiteurs peuvent s'inscrire, mais un message clair indique qu'il s'agit d'une préinscription non définitive.</div>
+            </div>
+          </div>
+        </label>
+
+        <label class="mode-choice" id="mode-inscription">
+          <input type="radio" name="site-mode" value="inscription" />
+          <div class="mode-choice-inner">
+            <div class="mode-icon" style="background:var(--cyan-l);color:var(--cyan-d)"><i class="ti ti-check"></i></div>
+            <div>
+              <div class="mode-title">Inscription définitive</div>
+              <div class="mode-desc">Les inscriptions sont ouvertes et confirmées. Les visiteurs reçoivent une confirmation immédiate.</div>
+            </div>
+          </div>
+        </label>
+
+      </div>
+
+      <div style="margin-top:1.25rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div id="mode-status" style="font-size:13px;color:var(--ink3)">Mode actuel : <strong id="mode-current-label">chargement…</strong></div>
+        <button id="save-mode-btn" class="btn-primary"><i class="ti ti-device-floppy"></i> Enregistrer</button>
+      </div>
+    </div>
+
+    <!-- Message lecture seule -->
+    <div style="background:#fff;border:1.5px solid var(--brd2);border-radius:var(--rl);padding:1.5rem">
+      <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:.4rem"><i class="ti ti-message" style="color:var(--cyan);font-size:16px"></i> Message affiché en mode lecture seule</div>
+      <div style="font-size:13px;color:var(--ink3);margin-bottom:.75rem">Ce texte apparaît bien en évidence sur la page d'accueil visiteurs.</div>
+      <div class="field">
+        <label>Date d'ouverture des préinscriptions</label>
+        <input id="lecture-date" placeholder="Ex: 1er juillet 2026" style="max-width:300px" />
+      </div>
+      <div style="margin-top:.75rem;padding:.9rem;background:var(--cyan-l);border:1.5px solid var(--brd2);border-radius:10px;font-size:13px;color:var(--cyan-d)">
+        <strong>Aperçu du message :</strong><br>
+        <span id="lecture-preview">Les inscriptions seront ouvertes à partir du <strong>1er juillet 2026</strong>. En attendant, vous pouvez consulter les experts et ateliers disponibles.</span>
+      </div>
+      <button id="save-lecture-btn" class="btn-ghost" style="margin-top:.75rem"><i class="ti ti-device-floppy"></i> Enregistrer</button>
+    </div>
+  </div>
+
 
 <footer style="background:var(--ink);color:rgba(255,255,255,.5);text-align:center;padding:1rem;font-size:12px">
   © 2026 Paris Initiative Entreprise ·

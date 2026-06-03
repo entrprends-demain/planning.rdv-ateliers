@@ -476,3 +476,29 @@ body { font-family: var(--font); background: var(--bg); color: var(--ink); -webk
 .planning-item.wait-item-red .pi-time {
   color: #B85C1A !important;
 }
+
+/* ── Paramètres mode inscription ── */
+.mode-choice { display: block; cursor: pointer; }
+.mode-choice input[type=radio] { display: none; }
+.mode-choice-inner { display: flex; align-items: flex-start; gap: 14px; padding: 1rem; border-radius: 10px; border: 2px solid var(--brd2); background: var(--white); transition: .15s; }
+.mode-choice:hover .mode-choice-inner { border-color: var(--cyan); background: var(--cyan-l); }
+.mode-choice input:checked + .mode-choice-inner { border-color: var(--cyan); background: var(--cyan-l); box-shadow: 0 0 0 3px rgba(63,203,209,.15); }
+.mode-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+.mode-title { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
+.mode-desc { font-size: 12px; color: var(--ink2); line-height: 1.5; }
+
+/* ── Bannière mode visiteur ── */
+.mode-banner { padding: 1rem 1.5rem; font-size: 14px; font-weight: 500; text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.mode-banner.lecture { background: #FFF8E6; color: #5A3A00; border-bottom: 2px solid #FFD82B; }
+.mode-banner.preinscription { background: #EAF3DE; color: #2E5A00; border-bottom: 2px solid #6BAA38; }
+
+/* ── Mode plateforme ── */
+.mode-card { background: var(--white); border: 2px solid var(--brd2); border-radius: var(--rl); padding: 1.25rem; transition: .2s; }
+.mode-card.active-mode { border-color: var(--cyan); background: var(--cyan-l); box-shadow: 0 4px 16px rgba(63,203,209,.15); }
+.mode-card.active-mode-pre { border-color: #FFD82B; background: #FFF8E6; }
+.mode-card.active-mode-ins { border-color: #6BAA38; background: #F0FFF4; }
+
+/* ── Bandeau mode ── */
+#mode-banner { width: 100%; text-align: center; font-family: var(--font); font-size: 14px; font-weight: 600; padding: 12px 1rem; }
+#mode-banner.banner-lecture { background: #1A1816; color: #FFD82B; }
+#mode-banner.banner-preinscription { background: #FFF3CD; color: #856404; border-bottom: 2px solid #FFD82B; }
