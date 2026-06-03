@@ -310,7 +310,7 @@ function switchAdminTab(tab) {
   if(tab==='ateliers-admin')   renderAteliersAdmin();
   if(tab==='waitlist-rdvs')    renderWaitlistRdvs();
   if(tab==='waitlist-ateliers')renderWaitlistAteliers();
-  if(tab==='parametres')       initParametres();
+  if(tab==='parametres') { initParametres(); renderModeAdmin(); }
 }
 
 /* ── Admin exposants ──────────────────────────────────────────── */
@@ -340,21 +340,22 @@ function toggleAddForm(){ el('add-form').classList.toggle('open'); }
 
 async function addExposant() {
   const name=el('f-name').value.trim(), email=el('f-email').value.trim(),
-    adresse=el('f-adresse').value.trim(), cat=el('f-cat').value,
+    website=el('f-website')?.value.trim()||'', cat=el('f-cat').value,
     expertise=el('f-expertise').value.trim(), period=el('f-period').value;
   if(!name){toast('Merci de saisir un nom.');return;}
   loader(true);
   try {
-    const ref=await addDoc(collection(db,'exposants'),{name,email,adresse,cat,expertise,period,createdAt:Date.now()});
-    const exp={id:ref.id,name,email,adresse,cat,expertise,period};
+    const ref=await addDoc(collection(db,'exposants'),{name,email,website,cat,expertise,period,createdAt:Date.now()});
+    const exp={id:ref.id,name,email,website,cat,expertise,period};
     DATA.exposants.push(exp);
     const created=[];
-    for(const s of slotsForPeriod(period)){
+    if(period!=='aucun') for(const s of slotsForPeriod(period)){
       const r=await addDoc(collection(db,'slots'),{exposantId:exp.id,start:s.start,end:s.end,period:s.period,enabled:true});
       created.push({id:r.id,exposantId:exp.id,...s,enabled:true});
     }
+    if(period==='aucun'){} // pas de slots
     DATA.slots[exp.id]=created;
-    ['f-name','f-email','f-adresse','f-expertise'].forEach(id=>{if(el(id))el(id).value='';});
+    ['f-name','f-email','f-website','f-expertise'].forEach(id=>{if(el(id))el(id).value='';});
     toggleAddForm(); renderAdminExpList(); renderStats();
     toast(name+' ajouté !');
   } catch(e){console.error(e);toast('Erreur.');}
@@ -388,7 +389,7 @@ function openEditPanel(expId) {
     <div class="edit-form">
       <div class="field"><label>Nom</label><input id="e-name" value="${exp.name||''}" /></div>
       <div class="field"><label>Email</label><input id="e-email" type="email" value="${exp.email||''}" /></div>
-      <div class="field"><label>Adresse</label><input id="e-adresse" value="${exp.adresse||''}" /></div>
+      <div class="field"><label>Site internet</label><input id="e-website" value="${exp.website||''}" placeholder="https://..." /></div>
       <div class="field"><label>Catégorie</label><select id="e-cat">${ALL_CATS.slice(0,7).map(c=>`<option value="${c}"${exp.cat===c?' selected':''}>${c}</option>`).join('')}</select></div>
       <div class="field"><label>Expertise</label><input id="e-expertise" value="${exp.expertise||''}" /></div>
       <div class="field"><label>Disponibilité</label><select id="e-period">
@@ -408,14 +409,14 @@ function openEditPanel(expId) {
 async function saveEditExposant(expId) {
   const exp=DATA.exposants.find(e=>e.id===expId);
   const name=el('e-name').value.trim(), email=el('e-email').value.trim(),
-    adresse=el('e-adresse').value.trim(), cat=el('e-cat').value,
+    website=el('e-website')?.value.trim()||'', cat=el('e-cat').value,
     expertise=el('e-expertise').value.trim(), period=el('e-period').value;
   if(!name){toast('Merci de saisir un nom.');return;}
   loader(true);
   try {
     const changed=period!==exp.period;
-    await updateDoc(doc(db,'exposants',expId),{name,email,adresse,cat,expertise,period});
-    Object.assign(exp,{name,email,adresse,cat,expertise,period});
+    await updateDoc(doc(db,'exposants',expId),{name,email,website,cat,expertise,period});
+    Object.assign(exp,{name,email,website,cat,expertise,period});
     if(changed){
       const batch=writeBatch(db);
       (DATA.slots[expId]||[]).forEach(s=>batch.delete(doc(db,'slots',s.id)));
@@ -477,10 +478,11 @@ async function setPeriod(period){
     await updateDoc(doc(db,'exposants',exp.id),{period});exp.period=period;
     const batch=writeBatch(db);(DATA.slots[exp.id]||[]).forEach(s=>batch.delete(doc(db,'slots',s.id)));await batch.commit();
     const created=[];
-    for(const s of slotsForPeriod(period)){
+    if(period!=='aucun') for(const s of slotsForPeriod(period)){
       const r=await addDoc(collection(db,'slots'),{exposantId:exp.id,start:s.start,end:s.end,period:s.period,enabled:true});
       created.push({id:r.id,exposantId:exp.id,...s,enabled:true});
     }
+    if(period==='aucun'){} // pas de slots
     DATA.slots[exp.id]=created; renderCal();renderStats();toast('Disponibilité mise à jour');
   }catch(e){console.error(e);toast('Erreur.');}
   loader(false);
@@ -765,7 +767,7 @@ async function deleteVisiteur(visitorId, email) {
 
 • ${bkCount} RDV
 • ${insCount} inscription${insCount>1?'s':''} atelier
-• ${wCount} liste${wCount>1?'s':''} d'attente
+• ${wCount} liste${wCount>1?'s':""} d'attente
 
 Cette action est irréversible.`))return;
   loader(true);
@@ -851,7 +853,9 @@ function renderGrid(){
   if(expSel){const cur=expSel.value;const xs=[...new Set(DATA.exposants.map(e=>e.expertise).filter(Boolean))].sort();expSel.innerHTML='<option value="">Toutes expertises</option>'+xs.map(x=>`<option value="${x}"${x===cur?' selected':''}>${x}</option>`).join('');}
   const grid=el('grid');if(!grid)return;
   if(!DATA.exposants.length){grid.innerHTML='<div class="empty-state"><i class="ti ti-calendar-off"></i><p>Aucun expert disponible.</p></div>';return;}
+  // Exclure les exposants sans RDV (period='aucun')
   const list=DATA.exposants.filter(exp=>{
+    if(exp.period==='aucun') return false;
     const ms=!search||exp.name.toLowerCase().includes(search)||exp.cat.toLowerCase().includes(search)||(exp.expertise||'').toLowerCase().includes(search);
     const mc=!catF||exp.cat===catF, me=!expertF||exp.expertise===expertF;
     const mp=!periodFilter||exp.period===periodFilter||exp.period==='jour';
@@ -1514,12 +1518,73 @@ function applyModeUI() {
 /* ── Navigation visiteur ──────────────────────────────────────── */
 function switchVisitorTab(tab){
   applyModeUI();
-  ['accueil','rdvs','ateliers','planning','exposant'].forEach(t=>{const e=el('tab-'+t);if(e)e.style.display=t===tab?'block':'none';});
+  ['accueil','rdvs','ateliers','planning','exposant','exposants-list'].forEach(t=>{const e=el('tab-'+t);if(e)e.style.display=t===tab?'block':'none';});
   document.querySelectorAll('.vtab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   if(tab==='ateliers')renderAteliersGrid();
   if(tab==='rdvs')renderGrid();
+  if(tab==='exposants-list')renderExposantsList();
   applyModeUI();
   if(tab==='accueil')renderAccueil();
+}
+
+/* ── Répertoire exposants ───────────────────────────────────────── */
+function renderExposantsList() {
+  const search = (el('el-search')?.value||'').toLowerCase();
+  const catF   = el('el-cat')?.value||'';
+  const grid   = el('exposants-list-grid'); if(!grid) return;
+
+  // Populer filtre catégorie
+  const catSel = el('el-cat');
+  if(catSel){
+    const cur  = catSel.value;
+    const cats = [...new Set(DATA.exposants.map(e=>e.cat).filter(Boolean))].sort();
+    catSel.innerHTML = '<option value="">Toutes catégories</option>' +
+      cats.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
+  }
+
+  const list = DATA.exposants
+    .filter(exp => {
+      const ms = !search || (exp.name+' '+exp.cat+' '+(exp.expertise||'')).toLowerCase().includes(search);
+      const mc = !catF || exp.cat === catF;
+      return ms && mc;
+    })
+    .sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+
+  if(!list.length){
+    grid.innerHTML='<div class="empty-state"><i class="ti ti-building-community"></i><p>Aucun exposant trouvé.</p></div>';
+    return;
+  }
+
+  grid.innerHTML = list.map(exp=>{
+    const hasRdv = exp.period !== 'aucun';
+    const slots  = hasRdv ? getSlots(exp.id) : [];
+    const free   = slots.filter(s=>s.enabled&&!getBooking(exp.id,s.start)).length;
+    return`<div class="exposant-list-card">
+      <div class="elc-header">
+        <div class="avatar" style="width:48px;height:48px;font-size:15px;flex-shrink:0">${initials(exp.name)}</div>
+        <div style="flex:1">
+          <div style="font-size:15px;font-weight:700;color:var(--ink)">${exp.name}</div>
+          <div style="font-size:12px;color:var(--cyan-d);font-weight:500">${exp.cat||''}</div>
+          ${exp.expertise?`<div style="font-size:12px;color:var(--ink3)">${exp.expertise}</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          ${hasRdv?`<span style="font-size:11px;padding:3px 8px;border-radius:6px;background:var(--cyan-l);color:var(--cyan-d);font-weight:600">${free} créneau${free>1?'x':''} libre${free>1?'s':''}</span>`:'<span style="font-size:11px;padding:3px 8px;border-radius:6px;background:#f5f5f5;color:var(--ink3)">Présence seule</span>'}
+        </div>
+      </div>
+      <div class="elc-footer">
+        ${exp.website?`<a href="${exp.website.startsWith('http')?exp.website:'https://'+exp.website}" target="_blank" rel="noopener" class="btn-ghost" style="padding:5px 12px;font-size:12px;text-decoration:none"><i class="ti ti-world"></i> Site web</a>`:''}
+        ${hasRdv?`<button class="btn-primary" data-exp-id="${exp.id}" style="padding:5px 12px;font-size:12px"><i class="ti ti-calendar-plus"></i> Prendre RDV</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Brancher boutons RDV
+  grid.querySelectorAll('[data-exp-id]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      switchVisitorTab('rdvs');
+      setTimeout(()=>openDrawer(btn.dataset.expId),300);
+    });
+  });
 }
 
 /* ── Page d'accueil ─────────────────────────────────────────────── */
@@ -1528,7 +1593,7 @@ function renderAccueil(){
   if(rdvNum) rdvNum.textContent=DATA.exposants.length;
   if(atNum)  atNum.textContent=DATA.ateliers.length;
   // Brancher les boutons des cartes
-  document.querySelectorAll('.accueil-card-btn').forEach(btn=>{
+  document.querySelectorAll('.accueil-card-btn, [data-goto]').forEach(btn=>{
     btn.onclick=()=>switchVisitorTab(btn.dataset.goto);
   });
 }
@@ -1770,6 +1835,8 @@ if(IS_VISITOR){
   document.querySelectorAll('.pf').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.pf').forEach(b=>b.classList.remove('active'));btn.classList.add('active');periodFilter=btn.dataset.p;renderGrid();}));
   document.querySelectorAll('.at-pf').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.at-pf').forEach(b=>b.classList.remove('active'));btn.classList.add('active');atPeriodFilter=btn.dataset.p;renderAteliersGrid();}));
   el('at-search')?.addEventListener('input',renderAteliersGrid);
+  el('el-search')?.addEventListener('input',renderExposantsList);
+  el('el-cat')?.addEventListener('change',renderExposantsList);
   el('at-cat')?.addEventListener('change',renderAteliersGrid);
   el('overlay').addEventListener('click',closeDrawer);
   el('drawer-close').addEventListener('click',closeDrawer);

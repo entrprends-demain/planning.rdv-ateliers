@@ -36,7 +36,7 @@
       <img src="logo.png" alt="Entreprends Demain !" class="accueil-logo" />
       <div class="accueil-text">
         <h1>Entreprends <em>Demain !</em></h1>
-        <p class="accueil-sub">Le premier salon de l'entrepreneuriat durable parisien</p>
+        <p class="accueil-sub">Le premier salon de l'entrepreneuriat durable à Paris</p>
         <p class="accueil-date"><i class="ti ti-map-pin"></i> Mardi 22 septembre 2026 · Cité des Métiers de Paris</p>
       </div>
     </div>
@@ -44,7 +44,7 @@
 
   <div class="container">
     <div class="accueil-desc">
-      <p><strong>Entreprends Demain !</strong> est le premier salon de l'entrepreneuriat durable parisien. <strong>Le pôle Créer son Activité</strong> de la Cité des Métiers et le groupement d'associations <strong>Le Projecteur — Carrefour de l'entrepreneuriat parisien</strong> vous invitent à venir découvrir leurs <strong>partenaires experts</strong> (comptables, communicants, avocats, architectes, banques…) ainsi que toutes les <strong>institutions</strong> jouant un rôle dans l'environnement entrepreneurial parisien.</p>
+      <p><strong>Entreprends Demain !</strong> est le premier salon de l'entrepreneuriat durable à Paris. <strong>Le pôle Créer son Activité</strong> de la Cité des Métiers et le groupement d'associations <strong>Le Projecteur — Carrefour de l'entrepreneuriat parisien</strong> vous invitent à venir découvrir leurs <strong>partenaires experts</strong> (comptables, communicants, avocats, architectes, banques…) ainsi que toutes les <strong>institutions</strong> jouant un rôle dans l'environnement entrepreneurial parisien.</p>
       <p>Vous pouvez dès à présent vous inscrire à des <strong>RDV individuels</strong> avec des experts en renseignant votre problématique, ainsi qu'à des <strong>ateliers</strong> sur divers sujets autour des besoins d'un entrepreneur.</p>
     </div>
 
@@ -77,6 +77,31 @@
         </button>
       </div>
     </div>
+
+    <div style="text-align:center;margin-top:1rem">
+      <button class="btn-ghost" data-goto="exposants-list" id="btn-voir-exposants" style="font-size:14px;padding:10px 24px">
+        <i class="ti ti-building-community"></i> Découvrir tous les exposants et partenaires
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Répertoire exposants ── -->
+<div id="tab-exposants-list" style="display:none">
+  <div class="container">
+    <div class="atelier-hero">
+      <i class="ti ti-building-community"></i>
+      <h2>Nos exposants et partenaires</h2>
+      <p>Retrouvez l'ensemble des experts présents lors de l'événement du 22 septembre 2026.</p>
+    </div>
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <i class="ti ti-search"></i>
+        <input type="text" id="el-search" placeholder="Rechercher un exposant…" />
+      </div>
+      <select id="el-cat"><option value="">Toutes catégories</option></select>
+    </div>
+    <div id="exposants-list-grid"></div>
   </div>
 </div>
 

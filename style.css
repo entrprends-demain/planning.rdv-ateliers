@@ -502,3 +502,10 @@ body { font-family: var(--font); background: var(--bg); color: var(--ink); -webk
 #mode-banner { width: 100%; text-align: center; font-family: var(--font); font-size: 14px; font-weight: 600; padding: 12px 1rem; }
 #mode-banner.banner-lecture { background: #1A1816; color: #FFD82B; }
 #mode-banner.banner-preinscription { background: #FFF3CD; color: #856404; border-bottom: 2px solid #FFD82B; }
+
+/* ── Répertoire exposants ── */
+#exposants-list-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px,1fr)); gap: 14px; }
+.exposant-list-card { background: var(--white); border: 1.5px solid var(--brd2); border-radius: var(--rl); padding: 1.1rem; transition: .2s; }
+.exposant-list-card:hover { border-color: var(--cyan); box-shadow: 0 4px 16px rgba(63,203,209,.1); }
+.elc-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+.elc-footer { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

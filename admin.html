@@ -42,7 +42,7 @@
     <button class="atab" data-tab="rdvs"><i class="ti ti-calendar-check"></i> RDV <span id="rdv-badge" class="rdv-badge"></span></button>
     <button class="atab" data-tab="waitlist-rdvs"><i class="ti ti-clock" style="color:#B85C1A"></i> Attente RDV <span id="wrdv-badge" class="rdv-badge" style="background:#B85C1A"></span></button>
     <button class="atab" data-tab="visiteurs"><i class="ti ti-id-badge"></i> Visiteurs <span id="vis-badge" class="rdv-badge"></span></button>
-    <button class="atab" data-tab="mode" style="margin-left:auto;background:var(--yellow);color:var(--ink);font-weight:700"><i class="ti ti-settings-2"></i> Mode plateforme</button>
+    
     <button class="atab" data-tab="parametres"><i class="ti ti-settings-2"></i> Paramètres</button>
   </div>
 
@@ -56,7 +56,7 @@
       <div id="add-form" class="add-form">
         <input id="f-name" placeholder="Nom de l'exposant" />
         <input id="f-email" type="email" placeholder="Email de l'exposant" />
-        <input id="f-adresse" placeholder="Adresse (optionnel)" />
+        <input id="f-website" placeholder="Site internet (optionnel)" />
         <select id="f-cat">
           <option value="">-- Catégorie --</option>
           <option>Droit immobilier, architecture, aménagement</option>
@@ -72,6 +72,7 @@
           <option value="jour">Journée complète</option>
           <option value="matin">Matin uniquement</option>
           <option value="aprem">Après-midi uniquement</option>
+          <option value="aucun">Pas de RDV</option>
         </select>
         <div class="form-actions">
           <button id="form-cancel" class="btn-ghost">Annuler</button>
