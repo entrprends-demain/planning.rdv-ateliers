@@ -1047,11 +1047,27 @@ async function applyQuickCode(codeInputId,statusId,fieldPrefix){
   let prev=DATA.bookings.find(b=>(b.email||'').toLowerCase()===visitor.email);
   if(!prev){try{const snap=await getDocs(query(collection(db,'bookings'),orderBy('slotStart')));DATA.bookings=snap.docs.map(d=>({id:d.id,...d.data()}));prev=DATA.bookings.find(b=>(b.email||'').toLowerCase()===visitor.email);}catch(e){console.error(e);}}
   if(!prev){const ins=DATA.inscriptions.find(i=>(i.email||'').toLowerCase()===visitor.email);if(ins)prev=ins;}
-  function fillLock(prenom,nom,email,societe){
-    ['prenom','nom','email','societe'].forEach(f=>{const e=el(fieldPrefix+'-'+f);if(e){e.value=f==='prenom'?prenom:f==='nom'?nom:f==='email'?email:societe;e.readOnly=true;e.style.background='var(--cyan-l)';e.style.color='var(--cyan-d)';e.style.fontWeight='600';}});
+  function fillLock(prenom,nom,email,societe,structure){
+    ['prenom','nom','email','societe'].forEach(f=>{
+      const e=el(fieldPrefix+'-'+f);
+      if(e){e.value=f==='prenom'?prenom:f==='nom'?nom:f==='email'?email:societe;e.readOnly=true;e.style.background='var(--cyan-l)';e.style.color='var(--cyan-d)';e.style.fontWeight='600';}
+    });
+    // Préremplir le champ structure si société renseignée
+    if(societe && structure){
+      const sw=el(fieldPrefix+'-structure-wrap');
+      const ss=el(fieldPrefix+'-structure-search');
+      const sh=el(fieldPrefix+'-structure');
+      if(sw) sw.style.display='block';
+      if(ss){ ss.value=structure; ss.readOnly=true; ss.style.background='var(--cyan-l)'; ss.style.color='var(--cyan-d)'; ss.style.fontWeight='600'; }
+      if(sh) sh.value=structure;
+    }
     if(status){status.textContent='✓ Informations pré-remplies.';status.style.color='#2E6B12';}
+    setTimeout(()=>{
+      const focus = fieldPrefix==='m' ? el('m-problematique') : el(fieldPrefix+'-prenom');
+      if(focus&&!focus.value) focus.focus();
+    },100);
   }
-  if(prev){fillLock(prev.prenom||'',prev.nom||'',prev.email||visitor.email,prev.societe||'');}
+  if(prev){fillLock(prev.prenom||'',prev.nom||'',prev.email||visitor.email,prev.societe||'',prev.structure||'');}
   else{const e=el(fieldPrefix+'-email');if(e){e.value=visitor.email;e.readOnly=true;}if(status){status.textContent='✓ Code reconnu.';status.style.color='#2E6B12';}}
   setTimeout(()=>el(fieldPrefix==='m'?'m-problematique':fieldPrefix+'-prenom')?.focus(),100);
 }
@@ -1061,7 +1077,7 @@ function openModal(start,end){
   pendingSlot=start;
   const exp=DATA.exposants.find(e=>e.id===pendingExp);
   el('m-info').textContent=`${exp.name} · ${start}–${end} · ${start>='14:00'?'Après-midi':'Matin'} · 22 sept. 2026`;
-  ['m-prenom','m-nom','m-email','m-societe','m-problematique','m-code-rapide'].forEach(id=>{const e=el(id);if(e){e.value='';e.readOnly=false;e.style.background='';e.style.color='';e.style.fontWeight='';}});
+  ['m-prenom','m-nom','m-email','m-societe','m-problematique','m-code-rapide','m-structure-search'].forEach(id=>{const e=el(id);if(e){e.value='';e.readOnly=false;e.style.background='';e.style.color='';e.style.fontWeight='';}});
   if(el('m-rgpd'))el('m-rgpd').checked=false;
   if(el('m-structure-search'))el('m-structure-search').value='';
   if(el('m-structure'))el('m-structure').value='';
@@ -1096,7 +1112,7 @@ function openModalWait(type, slotStart, slotEnd, expId, atId) {
   document.querySelector('#modal-confirm').style.fontSize = '14px';
   document.querySelector('#modal-confirm').style.padding = '12px 20px';
 
-  ['m-prenom','m-nom','m-email','m-societe','m-problematique','m-code-rapide'].forEach(id=>{const e=el(id);if(e){e.value='';e.readOnly=false;e.style.background='';e.style.color='';e.style.fontWeight='';}});
+  ['m-prenom','m-nom','m-email','m-societe','m-problematique','m-code-rapide','m-structure-search'].forEach(id=>{const e=el(id);if(e){e.value='';e.readOnly=false;e.style.background='';e.style.color='';e.style.fontWeight='';}});
   if(el('m-rgpd'))el('m-rgpd').checked=false;
   if(el('m-structure-search'))el('m-structure-search').value='';
   if(el('m-structure'))el('m-structure').value='';
@@ -1277,7 +1293,7 @@ function openModalAtelier(atId){
   pendingAtelierId=atId;
   const at=DATA.ateliers.find(a=>a.id===atId);if(!at)return;
   el('ma-info').textContent=`${at.titre} · ${at.start}–${at.end} · ${at.salle} · 22 sept. 2026`;
-  ['ma-prenom','ma-nom','ma-email','ma-societe','ma-code-rapide'].forEach(id=>{const e=el(id);if(e){e.value='';e.readOnly=false;e.style.background='';e.style.color='';e.style.fontWeight='';}});
+  ['ma-prenom','ma-nom','ma-email','ma-societe','ma-code-rapide','ma-structure-search'].forEach(id=>{const e=el(id);if(e){e.value='';e.readOnly=false;e.style.background='';e.style.color='';e.style.fontWeight='';}});
   if(el('ma-rgpd'))el('ma-rgpd').checked=false;
   if(el('ma-structure-search'))el('ma-structure-search').value='';
   if(el('ma-structure'))el('ma-structure').value='';
