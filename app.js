@@ -155,7 +155,8 @@ async function loadCurrentAdmin(email) {
   const adminDoc = snap.docs.find(d => d.data().email === email);
   if (adminDoc) {
     const d = adminDoc.data();
-    currentAdmin = { id: adminDoc.id, email, role: d.role, droits: d.droits || {} };
+    console.log('Admin trouvé:', d.email, 'role:', d.role);
+    currentAdmin = { id: adminDoc.id, email, role: (d.role||'admin').toLowerCase(), droits: d.droits || {} };
   } else if (email === SUPER_ADMIN_EMAIL) {
     // Créer le super-admin automatiquement
     const ref = await addDoc(collection(db,'admins'), {
@@ -173,7 +174,7 @@ async function loadCurrentAdmin(email) {
 
 function applyDroits() {
   if(!currentAdmin) return;
-  const isSA = currentAdmin.role === 'superadmin';
+  const isSA = currentAdmin.role?.toLowerCase() === 'superadmin';
   document.querySelectorAll('.atab').forEach(btn => {
     const tab = btn.dataset.tab;
     const allowed = isSA || currentAdmin.droits[tab] !== false;
@@ -1763,7 +1764,9 @@ async function cancelUnconfirmed() {
 
 async function renderEquipe() {
   const listEl = el('equipe-list'); if(!listEl) return;
-  const isSA = currentAdmin?.role === 'superadmin';
+  console.log('currentAdmin:', currentAdmin);
+  const isSA = currentAdmin?.role?.toLowerCase() === 'superadmin';
+  console.log('isSA:', isSA);
   if(!isSA) { listEl.innerHTML='<div class="empty-state"><i class="ti ti-lock"></i><p>Accès réservé au super-administrateur.</p></div>'; return; }
 
   const snap = await getDocs(collection(db,'admins'));
