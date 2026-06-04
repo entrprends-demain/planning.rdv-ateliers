@@ -1,7 +1,7 @@
 /* ── RDV Entreprends Demain · app.js ── */
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+import { getFirestore,
   collection, doc, getDocs, addDoc, updateDoc, deleteDoc, setDoc, writeBatch, query, orderBy }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
@@ -14,10 +14,7 @@ const fbApp = initializeApp({
   appId:             '1:303753000581:web:ef789f95513debcfac1bec',
 });
 
-let db;
-try {
-  db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
-} catch(e) { db = getFirestore(fbApp); }
+const db = getFirestore(fbApp);
 
 /* ── Mode de la plateforme ────────────────────────────────────── */
 // Modes : 'lecture' | 'preinscription' | 'inscription'
