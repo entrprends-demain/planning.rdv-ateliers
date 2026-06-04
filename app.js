@@ -1792,6 +1792,12 @@ async function renderEquipe() {
   const ALL_TABS = ['exposants','ateliers-admin','rdvs','visiteurs','waitlist-rdvs','waitlist-ateliers','parametres','historique'];
   const LABELS = {'exposants':'Exposants','ateliers-admin':'Ateliers','rdvs':'RDV','visiteurs':'Visiteurs','waitlist-rdvs':'Att. RDV','waitlist-ateliers':'Att. Ateliers','parametres':'Paramètres','historique':'Historique'};
 
+  // Droits par défaut pour un nouvel admin (historique et paramètres désactivés)
+  const DEFAULT_DROITS = {
+    'exposants':true,'ateliers-admin':true,'rdvs':true,'visiteurs':true,
+    'waitlist-rdvs':true,'waitlist-ateliers':true,'parametres':false,'historique':false
+  };
+
   listEl.innerHTML = `
     <div style="display:flex;justify-content:flex-end;margin-bottom:1rem">
       <button id="add-admin-btn" class="btn-primary"><i class="ti ti-user-plus"></i> Ajouter un admin</button>
@@ -1807,11 +1813,19 @@ async function renderEquipe() {
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <div class="field"><label>Mot de passe *</label><input id="new-admin-pwd" type="password" placeholder="8 caractères min." /></div>
-        <div class="field"><label>Confirmer le mot de passe *</label><input id="new-admin-pwd2" type="password" placeholder="Répétez le mot de passe" /></div>
+        <div class="field"><label>Confirmer *</label><input id="new-admin-pwd2" type="password" placeholder="Répétez le mot de passe" /></div>
       </div>
-      <div class="field" style="margin-bottom:10px"><label>Accès aux onglets</label>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
-          ${ALL_TABS.map(t=>`<label class="cat-check"><input type="checkbox" class="new-droit" value="${t}" checked /> ${LABELS[t]}</label>`).join('')}
+      <div class="field" style="margin-bottom:10px">
+        <label>Accès aux onglets <span style="font-size:11px;color:var(--ink3);font-weight:400">(Paramètres et Historique désactivés par défaut)</span></label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+          ${ALL_TABS.map(t=>{
+            const on = DEFAULT_DROITS[t] !== false;
+            return`<button type="button" class="new-droit-btn" data-tab="${t}" data-val="${on?'1':'0'}"
+              style="font-size:12px;padding:5px 12px;border-radius:6px;border:2px solid;cursor:pointer;font-family:var(--font);font-weight:600;transition:.15s;
+              ${on?'background:var(--cyan);border-color:var(--cyan);color:#fff':'background:#f0f0f0;border-color:#ccc;color:#888'}">
+              ${on?'✓ ':''}${LABELS[t]}
+            </button>`;
+          }).join('')}
         </div>
       </div>
       <div style="display:flex;gap:8px">
@@ -1822,7 +1836,8 @@ async function renderEquipe() {
     ${admins.map(a=>{
       const isSelf = a.email === currentAdmin?.email;
       const isThisSA = a.role === 'superadmin';
-      return`<div style="background:#fff;border:1.5px solid var(--brd2);border-radius:12px;padding:1.1rem;margin-bottom:10px">
+      const droits = a.droits || DEFAULT_DROITS;
+      return`<div style="background:#fff;border:1.5px solid var(--brd2);border-radius:12px;padding:1.1rem;margin-bottom:10px" data-admin-card="${a.id}">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:${isThisSA?'0':'10px'}">
           <div style="width:38px;height:38px;border-radius:50%;background:${isThisSA?'var(--yellow)':'var(--cyan-l)'};display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:${isThisSA?'var(--ink)':'var(--cyan)'}">
             ${a.email[0].toUpperCase()}
@@ -1837,30 +1852,71 @@ async function renderEquipe() {
             ${!isSelf?`<button class="del-booking-btn" style="padding:5px 8px" data-del-admin="${a.id}" data-del-email="${a.email}"><i class="ti ti-trash"></i></button>`:''}
           </div>
         </div>
-        ${!isThisSA?`<div style="display:flex;flex-wrap:wrap;gap:4px">
-          ${ALL_TABS.map(t=>`<label style="font-size:11px;padding:2px 8px;border-radius:4px;cursor:pointer;border:1px solid;${(a.droits||{})[t]!==false?'background:var(--cyan-l);border-color:var(--brd2);color:var(--cyan-d)':'background:#f5f5f5;border-color:#ddd;color:var(--ink3)'}">
-            <input type="checkbox" style="display:none" class="droit-cb" data-aid="${a.id}" data-tab="${t}" ${(a.droits||{})[t]!==false?'checked':''}>${LABELS[t]}
-          </label>`).join('')}
-        </div>`:''}
+        ${!isThisSA?`
+          <div style="font-size:11px;color:var(--ink3);margin-bottom:6px;font-weight:600">Accès aux onglets :</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px">
+            ${ALL_TABS.map(t=>{
+              const on = droits[t] !== false;
+              return`<button type="button" class="droit-toggle-btn" data-aid="${a.id}" data-tab="${t}" data-val="${on?'1':'0'}"
+                style="font-size:11px;padding:4px 10px;border-radius:6px;border:2px solid;cursor:pointer;font-family:var(--font);font-weight:600;transition:.15s;
+                ${on?'background:var(--cyan);border-color:var(--cyan);color:#fff':'background:#f0f0f0;border-color:#ccc;color:#888'}">
+                ${on?'✓ ':''}${LABELS[t]}
+              </button>`;
+            }).join('')}
+          </div>`:''}
       </div>`;
     }).join('')}
   `;
+
+  // Toggle boutons du formulaire
+  listEl.querySelectorAll('.new-droit-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const on = btn.dataset.val === '1';
+      btn.dataset.val = on ? '0' : '1';
+      if(!on){
+        btn.style.background='var(--cyan)'; btn.style.borderColor='var(--cyan)'; btn.style.color='#fff';
+        btn.textContent='✓ '+btn.textContent.replace('✓ ','').trim();
+      } else {
+        btn.style.background='#f0f0f0'; btn.style.borderColor='#ccc'; btn.style.color='#888';
+        btn.textContent=btn.textContent.replace('✓ ','').trim();
+      }
+    });
+  });
 
   el('add-admin-btn')?.addEventListener('click',()=>{ el('add-admin-form').style.display = el('add-admin-form').style.display==='none'?'block':'none'; });
   el('cancel-new-admin')?.addEventListener('click',()=>{ el('add-admin-form').style.display='none'; });
   el('save-new-admin')?.addEventListener('click', createAdmin);
   listEl.querySelectorAll('[data-promote]').forEach(btn=>btn.addEventListener('click',()=>transfertSuperAdmin(btn.dataset.promote,btn.dataset.email)));
   listEl.querySelectorAll('[data-del-admin]').forEach(btn=>btn.addEventListener('click',()=>deleteAdmin(btn.dataset.delAdmin,btn.dataset.delEmail)));
-  listEl.querySelectorAll('.droit-cb').forEach(cb=>cb.addEventListener('change',async()=>{
-    const aid=cb.dataset.aid, tab=cb.dataset.tab, val=cb.checked;
-    try{
-      const adDoc=snap.docs.find(d=>d.id===aid);
-      const droits={...(adDoc?.data().droits||{}),[tab]:val};
-      await updateDoc(doc(db,'admins',aid),{droits});
-      await logAction('DROITS', `${adDoc?.data().email} → ${tab}=${val}`);
-      toast('Droits mis à jour.');
-    }catch(e){console.error(e);toast('Erreur.');}
-  }));
+
+  // Toggle droits admins existants — boutons visuels
+  listEl.querySelectorAll('.droit-toggle-btn').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      const aid=btn.dataset.aid, tab=btn.dataset.tab;
+      const on = btn.dataset.val === '1';
+      const newVal = !on;
+      // Mise à jour visuelle immédiate
+      btn.dataset.val = newVal ? '1' : '0';
+      if(newVal){
+        btn.style.background='var(--cyan)'; btn.style.borderColor='var(--cyan)'; btn.style.color='#fff';
+        btn.textContent='✓ '+btn.textContent.replace('✓ ','').trim();
+      } else {
+        btn.style.background='#f0f0f0'; btn.style.borderColor='#ccc'; btn.style.color='#888';
+        btn.textContent=btn.textContent.replace('✓ ','').trim();
+      }
+      // Sauvegarder dans Firebase
+      try{
+        const adDoc=snap.docs.find(d=>d.id===aid);
+        const droits={...(adDoc?.data().droits||DEFAULT_DROITS),[tab]:newVal};
+        await updateDoc(doc(db,'admins',aid),{droits});
+        await logAction('DROITS', `${adDoc?.data().email} → ${tab}=${newVal}`);
+        toast(`Accès "${LABELS[tab]}" ${newVal?'activé':'désactivé'}.`);
+      }catch(e){console.error(e);toast('Erreur.');
+        // Annuler le changement visuel en cas d'erreur
+        btn.dataset.val = on ? '1' : '0';
+      }
+    });
+  });
 }
 
 async function createAdmin() {
@@ -1875,7 +1931,7 @@ async function createAdmin() {
   if(pwd.length<8){toast('Mot de passe : 8 caractères minimum.');return;}
   if(pwd!==pwd2){toast('Les mots de passe ne correspondent pas.');return;}
   const droits={};
-  document.querySelectorAll('.new-droit').forEach(cb=>{droits[cb.value]=cb.checked;});
+  document.querySelectorAll('.new-droit-btn').forEach(btn=>{droits[btn.dataset.tab]=btn.dataset.val==='1';});
   loader(true);
   try{
     await addDoc(collection(db,'admins'),{prenom,nom,structure,email,password:pwd,role:'admin',droits,createdBy:currentAdmin?.email,createdAt:Date.now()});
