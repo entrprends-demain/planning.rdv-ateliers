@@ -391,12 +391,18 @@ function switchAdminTab(tab) {
   ['exposants','ateliers-admin','rdvs','visiteurs','waitlist-rdvs','waitlist-ateliers','parametres','equipe','historique'].forEach(t=>{
     const el2=el('tab-'+t); if(el2)el2.style.display=t===tab?(t==='exposants'?'flex':'block'):'none';
   });
-  if(tab==='rdvs')             renderRdvList();
-  if(tab==='visiteurs')        renderVisiteursList();
-  if(tab==='ateliers-admin')   renderAteliersAdmin();
-  if(tab==='waitlist-rdvs')    renderWaitlistRdvs();
-  if(tab==='waitlist-ateliers')renderWaitlistAteliers();
-  if(tab==='parametres') { initParametres(); renderModeAdmin(); }
+  loadAll().then(()=>{
+    updateBadges(); renderStats();
+    if(tab==='exposants')        renderAdminExpList();
+    if(tab==='rdvs')             renderRdvList();
+    if(tab==='visiteurs')        renderVisiteursList();
+    if(tab==='ateliers-admin')   renderAteliersAdmin();
+    if(tab==='waitlist-rdvs')    renderWaitlistRdvs();
+    if(tab==='waitlist-ateliers')renderWaitlistAteliers();
+    if(tab==='parametres')       { initParametres(); renderModeAdmin(); }
+    if(tab==='equipe')           renderEquipe();
+    if(tab==='historique')       renderHistorique();
+  });
 }
 
 /* ── Admin exposants ──────────────────────────────────────────── */
@@ -1628,11 +1634,12 @@ function switchVisitorTab(tab){
   applyModeUI();
   ['accueil','rdvs','ateliers','planning','exposant','exposants-list'].forEach(t=>{const e=el('tab-'+t);if(e)e.style.display=t===tab?'block':'none';});
   document.querySelectorAll('.vtab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
-  if(tab==='ateliers')renderAteliersGrid();
-  if(tab==='rdvs')renderGrid();
-  if(tab==='exposants-list')renderExposantsList();
-  applyModeUI();
-  if(tab==='accueil')renderAccueil();
+  loadAll().then(()=>{
+    if(tab==='accueil')        renderAccueil();
+    if(tab==='rdvs')           renderGrid();
+    if(tab==='ateliers')       renderAteliersGrid();
+    if(tab==='exposants-list') renderExposantsList();
+  });
 }
 
 /* ── Répertoire exposants ───────────────────────────────────────── */
