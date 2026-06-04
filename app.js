@@ -184,31 +184,41 @@ function applyDroits() {
   if(emailEl) emailEl.textContent = currentAdmin.email + (isSA ? ' 👑' : '');
 }
 
+const ADMIN_SK = 'rdv-admin-session';
+
 function initLogin() {
   async function doUnlock(email) {
     el('login-screen').style.display='none';
     el('admin-app').style.display='block';
+    sessionStorage.setItem(ADMIN_SK, email);
     await loadAll();
     renderAdminExpList(); renderStats(); updateBadges(); renderModeAdmin();
     applyDroits();
     await logAction('CONNEXION');
   }
 
+  // Restaurer session si déjà connecté
+  const savedEmail = sessionStorage.getItem(ADMIN_SK);
+  if(savedEmail){
+    loadCurrentAdmin(savedEmail).then(ok => {
+      if(ok) doUnlock(savedEmail);
+      else sessionStorage.removeItem(ADMIN_SK);
+    });
+  }
+
   el('pwd-btn').addEventListener('click', async () => {
     const email = (el('pwd-email')?.value || '').trim();
     const pwd   = (el('pwd')?.value || '').trim();
     if(!email || !pwd) { el('pwd-error').textContent='Renseignez email et mot de passe.'; el('pwd-error').classList.add('show'); return; }
-    // Vérifier dans Firestore si cet admin existe et si le mot de passe correspond
     try {
       const snap = await getDocs(collection(db,'admins'));
       const adminDoc = snap.docs.find(d => d.data().email === email);
       if(!adminDoc && email !== SUPER_ADMIN_EMAIL) {
-        el('pwd-error').textContent = 'Email non autorisé.'; el('pwd-error').classList.add('show'); return;
+        el('pwd-error').textContent='Email non autorisé.'; el('pwd-error').classList.add('show'); return;
       }
-      // Vérification du mot de passe (stocké hashé ou en clair pour l'instant)
       const storedPwd = adminDoc?.data().password || 'Fredtunousmanques';
       if(pwd !== storedPwd) {
-        el('pwd-error').textContent = 'Mot de passe incorrect.'; el('pwd-error').classList.add('show');
+        el('pwd-error').textContent='Mot de passe incorrect.'; el('pwd-error').classList.add('show');
         el('pwd').value=''; el('pwd').focus(); return;
       }
       const ok = await loadCurrentAdmin(email);
@@ -223,6 +233,7 @@ function initLogin() {
   el('logout-btn').addEventListener('click', async () => {
     await logAction('DÉCONNEXION');
     currentAdmin = null;
+    sessionStorage.removeItem(ADMIN_SK);
     el('admin-app').style.display='none';
     el('login-screen').style.display='flex';
     if(el('pwd')) el('pwd').value='';
@@ -1780,8 +1791,16 @@ async function renderEquipe() {
     </div>
     <div id="add-admin-form" style="display:none;background:var(--cyan-l);border:1.5px solid var(--brd2);border-radius:12px;padding:1.25rem;margin-bottom:1rem">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div class="field"><label>Prénom *</label><input id="new-admin-prenom" placeholder="Prénom" /></div>
+        <div class="field"><label>Nom *</label><input id="new-admin-nom" placeholder="Nom" /></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div class="field"><label>Structure</label><input id="new-admin-structure" placeholder="Organisation, association…" /></div>
         <div class="field"><label>Email *</label><input id="new-admin-email" type="email" placeholder="admin@exemple.fr" /></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <div class="field"><label>Mot de passe *</label><input id="new-admin-pwd" type="password" placeholder="8 caractères min." /></div>
+        <div class="field"><label>Confirmer le mot de passe *</label><input id="new-admin-pwd2" type="password" placeholder="Répétez le mot de passe" /></div>
       </div>
       <div class="field" style="margin-bottom:10px"><label>Accès aux onglets</label>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
@@ -1802,7 +1821,8 @@ async function renderEquipe() {
             ${a.email[0].toUpperCase()}
           </div>
           <div style="flex:1">
-            <div style="font-weight:600;color:var(--ink)">${a.email}${isSelf?` <span style="font-size:11px;color:var(--ink3)">(vous)</span>`:''}</div>
+            <div style="font-weight:600;color:var(--ink)">${a.prenom||''} ${a.nom||''}${a.prenom?' — ':''}<span style="font-weight:400">${a.email}</span>${isSelf?` <span style="font-size:11px;color:var(--ink3)">(vous)</span>`:''}</div>
+            ${a.structure?`<div style="font-size:11px;color:var(--ink3)">${a.structure}</div>`:''}
             <div style="font-size:12px;color:${isThisSA?'#B8940A':'var(--ink3)'};">${isThisSA?'👑 Super-administrateur':'Administrateur'}</div>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -1837,17 +1857,26 @@ async function renderEquipe() {
 }
 
 async function createAdmin() {
+  const prenom=(el('new-admin-prenom')?.value||'').trim();
+  const nom=(el('new-admin-nom')?.value||'').trim();
+  const structure=(el('new-admin-structure')?.value||'').trim();
   const email=(el('new-admin-email')?.value||'').trim();
   const pwd=(el('new-admin-pwd')?.value||'').trim();
-  if(!email||pwd.length<8){toast('Email valide et mot de passe (8 car. min.) requis.');return;}
+  const pwd2=(el('new-admin-pwd2')?.value||'').trim();
+  if(!prenom||!nom){toast('Prénom et nom requis.');return;}
+  if(!email){toast('Email requis.');return;}
+  if(pwd.length<8){toast('Mot de passe : 8 caractères minimum.');return;}
+  if(pwd!==pwd2){toast('Les mots de passe ne correspondent pas.');return;}
   const droits={};
   document.querySelectorAll('.new-droit').forEach(cb=>{droits[cb.value]=cb.checked;});
   loader(true);
   try{
-    await addDoc(collection(db,'admins'),{email,password:pwd,role:'admin',droits,createdBy:currentAdmin?.email,createdAt:Date.now()});
-    await logAction('AJOUT ADMIN', email);
+    await addDoc(collection(db,'admins'),{prenom,nom,structure,email,password:pwd,role:'admin',droits,createdBy:currentAdmin?.email,createdAt:Date.now()});
+    await logAction('AJOUT ADMIN', `${prenom} ${nom} (${email})`);
     el('add-admin-form').style.display='none';
-    toast(`Admin ${email} créé.`);
+    // Reset du formulaire
+    ['new-admin-prenom','new-admin-nom','new-admin-structure','new-admin-email','new-admin-pwd','new-admin-pwd2'].forEach(id=>{if(el(id))el(id).value='';});
+    toast(`Admin ${prenom} ${nom} créé.`);
     renderEquipe();
   }catch(e){console.error(e);toast('Erreur.');}
   loader(false);
