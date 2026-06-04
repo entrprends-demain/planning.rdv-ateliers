@@ -31,7 +31,7 @@
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <span id="admin-email-display" style="font-size:12px;color:rgba(255,255,255,.75);margin-right:4px"></span>
-        <a href="index.html" class="nav-link"><i class="ti ti-eye"></i> Vue visiteur</a>
+        <span id="admin-email-display" style="font-size:12px;color:rgba(255,255,255,.75);margin-right:8px"></span><a href="index.html" class="nav-link"><i class="ti ti-eye"></i> Vue visiteur</a>
         <button id="logout-btn" class="nav-link"><i class="ti ti-logout"></i></button>
       </div>
     </div>
@@ -44,6 +44,8 @@
     <button class="atab" data-tab="rdvs"><i class="ti ti-calendar-check"></i> RDV <span id="rdv-badge" class="rdv-badge"></span></button>
     <button class="atab" data-tab="waitlist-rdvs"><i class="ti ti-clock" style="color:#B85C1A"></i> Attente RDV <span id="wrdv-badge" class="rdv-badge" style="background:#B85C1A"></span></button>
     <button class="atab" data-tab="visiteurs"><i class="ti ti-id-badge"></i> Visiteurs <span id="vis-badge" class="rdv-badge"></span></button>
+    <button class="atab" data-tab="equipe"><i class="ti ti-users-group"></i> Équipe</button>
+    <button class="atab" data-tab="historique"><i class="ti ti-history"></i> Historique</button>
     <button class="atab" data-tab="equipe"><i class="ti ti-users-group"></i> Équipe</button>
     <button class="atab" data-tab="historique"><i class="ti ti-history"></i> Historique</button>
     
@@ -273,6 +275,24 @@
     </div>
   </div>
 
+
+  <!-- Onglet Équipe -->
+  <div id="tab-equipe" style="display:none;padding:1.75rem;max-width:1000px;margin:0 auto">
+    <div style="font-family:var(--font);font-size:20px;font-weight:700;color:var(--ink);margin-bottom:1.25rem">
+      <i class="ti ti-users-group" style="color:var(--cyan)"></i> Gestion de l'équipe admin
+    </div>
+    <div id="equipe-list"></div>
+  </div>
+
+  <!-- Onglet Historique -->
+  <div id="tab-historique" style="display:none;padding:1.75rem;max-width:1000px;margin:0 auto">
+    <div style="font-family:var(--font);font-size:20px;font-weight:700;color:var(--ink);margin-bottom:1.25rem">
+      <i class="ti ti-history" style="color:var(--cyan)"></i> Historique des actions
+    </div>
+    <div id="historique-list"></div>
+  </div>
+
+</div>
 
 <footer style="background:var(--ink);color:rgba(255,255,255,.5);text-align:center;padding:1rem;font-size:12px">
   © 2026 Paris Initiative Entreprise ·
