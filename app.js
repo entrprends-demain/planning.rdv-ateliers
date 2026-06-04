@@ -1506,7 +1506,13 @@ function applyModeUI() {
   // Supprimer bannière existante
   document.querySelector('.mode-banner')?.remove();
 
-  if(PLATFORM_MODE === 'inscription') return; // rien à faire
+  // Bandeau code personnel — visible en inscription et préinscription
+  const codeBanner = el('code-info-banner');
+  if(codeBanner) {
+    codeBanner.style.display = (PLATFORM_MODE === 'lecture') ? 'none' : 'block';
+  }
+
+  if(PLATFORM_MODE === 'inscription') return; // rien à faire pour le mode banner
 
   const banner = document.createElement('div');
 
