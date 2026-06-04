@@ -174,7 +174,7 @@ async function loadCurrentAdmin(email) {
 
 function applyDroits() {
   if(!currentAdmin) return;
-  const isSA = currentAdmin.role?.toLowerCase() === 'superadmin';
+  const isSA = currentAdmin.role?.toLowerCase() === 'superadmin' || currentAdmin.email === SUPER_ADMIN_EMAIL;
   document.querySelectorAll('.atab').forEach(btn => {
     const tab = btn.dataset.tab;
     const allowed = isSA || currentAdmin.droits[tab] !== false;
@@ -1783,8 +1783,8 @@ async function cancelUnconfirmed() {
 async function renderEquipe() {
   const listEl = el('equipe-list'); if(!listEl) return;
   console.log('currentAdmin:', currentAdmin);
-  const isSA = currentAdmin?.role?.toLowerCase() === 'superadmin';
-  console.log('isSA:', isSA);
+  const isSA = currentAdmin?.role?.toLowerCase() === 'superadmin' || currentAdmin?.email === SUPER_ADMIN_EMAIL;
+  console.log('isSA:', isSA, 'role:', currentAdmin?.role, 'email:', currentAdmin?.email);
   if(!isSA) { listEl.innerHTML='<div class="empty-state"><i class="ti ti-lock"></i><p>Accès réservé au super-administrateur.</p></div>'; return; }
 
   const snap = await getDocs(collection(db,'admins'));
