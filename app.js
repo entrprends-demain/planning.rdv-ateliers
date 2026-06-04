@@ -1216,8 +1216,8 @@ async function confirmBooking(){
   if(!email){toast('Merci de renseigner votre email.');return;}
   if(!problematique){toast('Merci de décrire votre problématique.');return;}
   if(!el('m-rgpd')?.checked){toast('Merci d\'accepter la politique de confidentialité.');return;}
-  const structure = el('m-structure')?.value || '';
-  if(el('m-societe')?.value.trim() && !structure){ toast('Merci de sélectionner le type de structure.'); return; }
+  const structure = el('m-structure')?.value.trim() || el('m-structure-search')?.value.trim() || '';
+  if(el('m-societe')?.value.trim() && !structure){ toast('Merci de sélectionner votre type de structure dans la liste déroulante.'); el('m-structure-search')?.focus(); return; }
   const doublon=DATA.bookings.find(b=>b.exposantId===pendingExp&&(b.email||'').toLowerCase()===email.toLowerCase());
   if(doublon){toast(`Vous avez déjà un RDV avec cet expert à ${doublon.slotStart}.`);closeModal();return;}
   // Vérif conflits ateliers
@@ -1310,8 +1310,8 @@ async function confirmAtelier(){
   if(!prenom||!nom){toast('Merci de renseigner prénom et nom.');return;}
   if(!email){toast('Merci de renseigner votre email.');return;}
   if(!el('ma-rgpd')?.checked){toast('Merci d\'accepter la politique de confidentialité.');return;}
-  const structureAt = el('ma-structure')?.value || '';
-  if(el('ma-societe')?.value.trim() && !structureAt){ toast('Merci de sélectionner le type de structure.'); return; }
+  const structureAt = el('ma-structure')?.value.trim() || el('ma-structure-search')?.value.trim() || '';
+  if(el('ma-societe')?.value.trim() && !structureAt){ toast('Merci de sélectionner votre type de structure dans la liste déroulante.'); el('ma-structure-search')?.focus(); return; }
   const at=DATA.ateliers.find(a=>a.id===pendingAtelierId);
   const alreadyIn=DATA.inscriptions.find(i=>i.atelierId===pendingAtelierId&&(i.email||'').toLowerCase()===email.toLowerCase());
   if(alreadyIn){toast('Vous êtes déjà inscrit à cet atelier.');return;}
@@ -1744,9 +1744,21 @@ function initStructureField(searchId, dropdownId, hiddenId, wrapId, societyId) {
     dropEl.classList.add('open');
   }
 
-  searchEl.addEventListener('input', () => renderDropdown(searchEl.value));
+  searchEl.addEventListener('input', () => {
+    renderDropdown(searchEl.value);
+    // Si le texte tapé correspond exactement à un statut, on l'accepte directement
+    const match = STATUTS.find(s => s.label.toLowerCase() === searchEl.value.toLowerCase());
+    if(match) hiddenEl.value = match.label;
+    else if(!searchEl.value.trim()) hiddenEl.value = '';
+  });
   searchEl.addEventListener('focus', () => renderDropdown(searchEl.value));
-  searchEl.addEventListener('blur',  () => setTimeout(() => dropEl.classList.remove('open'), 150));
+  // Délai plus long pour laisser le mousedown se déclencher sur mobile
+  searchEl.addEventListener('blur', () => setTimeout(() => {
+    dropEl.classList.remove('open');
+    // Si texte correspond à un statut connu, valider silencieusement
+    const match = STATUTS.find(s => s.label.toLowerCase() === searchEl.value.toLowerCase());
+    if(match) hiddenEl.value = match.label;
+  }, 300));
 
   // Afficher/masquer le champ structure selon si société est remplie
   if (societyEl) {
