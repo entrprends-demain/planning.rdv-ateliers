@@ -14,10 +14,11 @@
   <div class="login-card">
     <div class="login-logo"><i class="ti ti-calendar-event"></i> Entreprends Demain !</div>
     <h2>Espace administrateur</h2>
-    <p>Accès réservé à l'organisateur.</p>
-    <div class="field"><label for="pwd">Mot de passe</label><input type="password" id="pwd" placeholder="••••••••" /></div>
-    <div id="pwd-error" class="pwd-error">Mot de passe incorrect.</div>
-    <button id="pwd-btn" class="btn-primary" style="width:100%;margin-top:.5rem;justify-content:center"><i class="ti ti-arrow-right"></i> Accéder</button>
+    <p>Connectez-vous avec vos identifiants.</p>
+    <div class="field"><label for="pwd-email">Email</label><input type="email" id="pwd-email" placeholder="votre@email.fr" /></div>
+    <div class="field" style="margin-top:8px"><label for="pwd">Mot de passe</label><input type="password" id="pwd" placeholder="••••••••" /></div>
+    <div id="pwd-error" class="pwd-error">Email ou mot de passe incorrect.</div>
+    <button id="pwd-btn" class="btn-primary" style="width:100%;margin-top:.5rem;justify-content:center"><i class="ti ti-arrow-right"></i> Se connecter</button>
   </div>
 </div>
 
@@ -29,6 +30,7 @@
         <span style="color:#fff">Administration <em style="color:var(--yellow)">· Inscriptions Entreprends Demain !</em></span>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
+        <span id="admin-email-display" style="font-size:12px;color:rgba(255,255,255,.75);margin-right:4px"></span>
         <a href="index.html" class="nav-link"><i class="ti ti-eye"></i> Vue visiteur</a>
         <button id="logout-btn" class="nav-link"><i class="ti ti-logout"></i></button>
       </div>
@@ -42,6 +44,8 @@
     <button class="atab" data-tab="rdvs"><i class="ti ti-calendar-check"></i> RDV <span id="rdv-badge" class="rdv-badge"></span></button>
     <button class="atab" data-tab="waitlist-rdvs"><i class="ti ti-clock" style="color:#B85C1A"></i> Attente RDV <span id="wrdv-badge" class="rdv-badge" style="background:#B85C1A"></span></button>
     <button class="atab" data-tab="visiteurs"><i class="ti ti-id-badge"></i> Visiteurs <span id="vis-badge" class="rdv-badge"></span></button>
+    <button class="atab" data-tab="equipe"><i class="ti ti-users-group"></i> Équipe</button>
+    <button class="atab" data-tab="historique"><i class="ti ti-history"></i> Historique</button>
     
     <button class="atab" data-tab="parametres"><i class="ti ti-settings-2"></i> Paramètres</button>
   </div>

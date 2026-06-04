@@ -134,23 +134,100 @@ async function loadAll() {
 }
 
 /* ── Auth admin ───────────────────────────────────────────────── */
-const PWD='Fredtunousmanques', SK='rdv-admin-ok';
+const SUPER_ADMIN_EMAIL = 'titoudy2003@gmail.com';
+let currentAdmin = null;
+
+async function logAction(action, details='') {
+  if(!currentAdmin) return;
+  try {
+    await addDoc(collection(db,'logs'), {
+      adminEmail: currentAdmin.email,
+      adminRole:  currentAdmin.role||'admin',
+      action, details,
+      timestamp: Date.now(),
+      date: new Date().toISOString(),
+    });
+  } catch(e) { console.error('Log:', e); }
+}
+
+async function loadCurrentAdmin(email) {
+  const snap = await getDocs(collection(db,'admins'));
+  const adminDoc = snap.docs.find(d => d.data().email === email);
+  if (adminDoc) {
+    const d = adminDoc.data();
+    currentAdmin = { id: adminDoc.id, email, role: d.role, droits: d.droits || {} };
+  } else if (email === SUPER_ADMIN_EMAIL) {
+    // Créer le super-admin automatiquement
+    const ref = await addDoc(collection(db,'admins'), {
+      email, role: 'superadmin',
+      droits: { exposants:true, ateliers:true, rdvs:true, visiteurs:true, mode:true, equipe:true, historique:true },
+      createdAt: Date.now(), createdBy: 'system'
+    });
+    currentAdmin = { id: ref.id, email, role: 'superadmin',
+      droits: { exposants:true, ateliers:true, rdvs:true, visiteurs:true, mode:true, equipe:true, historique:true }};
+  } else {
+    return false; // non autorisé
+  }
+  return true;
+}
+
+function applyDroits() {
+  if(!currentAdmin) return;
+  const isSA = currentAdmin.role === 'superadmin';
+  document.querySelectorAll('.atab').forEach(btn => {
+    const tab = btn.dataset.tab;
+    const allowed = isSA || currentAdmin.droits[tab] !== false;
+    btn.style.display = allowed ? '' : 'none';
+  });
+  const emailEl = el('admin-email-display');
+  if(emailEl) emailEl.textContent = currentAdmin.email + (isSA ? ' 👑' : '');
+}
+
 function initLogin() {
-  async function doUnlock() {
+  async function doUnlock(email) {
     el('login-screen').style.display='none';
     el('admin-app').style.display='block';
     await loadAll();
-    renderAdminExpList(); renderStats();
-    updateBadges();
-    renderModeAdmin();
+    renderAdminExpList(); renderStats(); updateBadges(); renderModeAdmin();
+    applyDroits();
+    await logAction('CONNEXION');
   }
-  if(sessionStorage.getItem(SK)==='1'){doUnlock();return;}
-  el('pwd-btn').addEventListener('click',async()=>{
-    if((el('pwd')?.value||'')===PWD){sessionStorage.setItem(SK,'1');await doUnlock();}
-    else{el('pwd-error')?.classList.add('show');if(el('pwd')){el('pwd').value='';el('pwd').focus();}}
+
+  el('pwd-btn').addEventListener('click', async () => {
+    const email = (el('pwd-email')?.value || '').trim();
+    const pwd   = (el('pwd')?.value || '').trim();
+    if(!email || !pwd) { el('pwd-error').textContent='Renseignez email et mot de passe.'; el('pwd-error').classList.add('show'); return; }
+    // Vérifier dans Firestore si cet admin existe et si le mot de passe correspond
+    try {
+      const snap = await getDocs(collection(db,'admins'));
+      const adminDoc = snap.docs.find(d => d.data().email === email);
+      if(!adminDoc && email !== SUPER_ADMIN_EMAIL) {
+        el('pwd-error').textContent = 'Email non autorisé.'; el('pwd-error').classList.add('show'); return;
+      }
+      // Vérification du mot de passe (stocké hashé ou en clair pour l'instant)
+      const storedPwd = adminDoc?.data().password || 'Fredtunousmanques';
+      if(pwd !== storedPwd) {
+        el('pwd-error').textContent = 'Mot de passe incorrect.'; el('pwd-error').classList.add('show');
+        el('pwd').value=''; el('pwd').focus(); return;
+      }
+      const ok = await loadCurrentAdmin(email);
+      if(!ok) { el('pwd-error').textContent='Accès refusé.'; el('pwd-error').classList.add('show'); return; }
+      await doUnlock(email);
+    } catch(e) { console.error(e); el('pwd-error').textContent='Erreur de connexion.'; el('pwd-error').classList.add('show'); }
   });
-  el('pwd').addEventListener('keydown',e=>{if(e.key==='Enter')el('pwd-btn').click();});
-  el('logout-btn').addEventListener('click',()=>{sessionStorage.removeItem(SK);location.reload();});
+
+  el('pwd')?.addEventListener('keydown', e => { if(e.key==='Enter') el('pwd-btn').click(); });
+  el('pwd-email')?.addEventListener('keydown', e => { if(e.key==='Enter') el('pwd')?.focus(); });
+
+  el('logout-btn').addEventListener('click', async () => {
+    await logAction('DÉCONNEXION');
+    currentAdmin = null;
+    el('admin-app').style.display='none';
+    el('login-screen').style.display='flex';
+    if(el('pwd')) el('pwd').value='';
+    if(el('pwd-email')) el('pwd-email').value='';
+    if(el('pwd-error')) el('pwd-error').classList.remove('show');
+  });
 }
 
 function updateBadges() {
@@ -299,7 +376,7 @@ async function renderWaitlistAteliers() {
 
 function switchAdminTab(tab) {
   document.querySelectorAll('.atab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
-  ['exposants','ateliers-admin','rdvs','visiteurs','waitlist-rdvs','waitlist-ateliers','parametres'].forEach(t=>{
+  ['exposants','ateliers-admin','rdvs','visiteurs','waitlist-rdvs','waitlist-ateliers','parametres','equipe','historique'].forEach(t=>{
     const el2=el('tab-'+t); if(el2)el2.style.display=t===tab?(t==='exposants'?'flex':'block'):'none';
   });
   if(tab==='rdvs')             renderRdvList();
@@ -1680,6 +1757,152 @@ async function cancelUnconfirmed() {
     toast(`${preRdv.length} RDV et ${preAt.length} ateliers annulés et redistribués.`);
   }catch(e){console.error(e);toast('Erreur.');}
   loader(false);
+}
+
+/* ── Onglet Équipe ───────────────────────────────────────────── */
+
+async function renderEquipe() {
+  const listEl = el('equipe-list'); if(!listEl) return;
+  const isSA = currentAdmin?.role === 'superadmin';
+  if(!isSA) { listEl.innerHTML='<div class="empty-state"><i class="ti ti-lock"></i><p>Accès réservé au super-administrateur.</p></div>'; return; }
+
+  const snap = await getDocs(collection(db,'admins'));
+  const admins = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.email.localeCompare(b.email));
+  const ALL_TABS = ['exposants','ateliers-admin','rdvs','visiteurs','waitlist-rdvs','waitlist-ateliers','parametres','historique'];
+  const LABELS = {'exposants':'Exposants','ateliers-admin':'Ateliers','rdvs':'RDV','visiteurs':'Visiteurs','waitlist-rdvs':'Att. RDV','waitlist-ateliers':'Att. Ateliers','parametres':'Paramètres','historique':'Historique'};
+
+  listEl.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:1rem">
+      <button id="add-admin-btn" class="btn-primary"><i class="ti ti-user-plus"></i> Ajouter un admin</button>
+    </div>
+    <div id="add-admin-form" style="display:none;background:var(--cyan-l);border:1.5px solid var(--brd2);border-radius:12px;padding:1.25rem;margin-bottom:1rem">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div class="field"><label>Email *</label><input id="new-admin-email" type="email" placeholder="admin@exemple.fr" /></div>
+        <div class="field"><label>Mot de passe *</label><input id="new-admin-pwd" type="password" placeholder="8 caractères min." /></div>
+      </div>
+      <div class="field" style="margin-bottom:10px"><label>Accès aux onglets</label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+          ${ALL_TABS.map(t=>`<label class="cat-check"><input type="checkbox" class="new-droit" value="${t}" checked /> ${LABELS[t]}</label>`).join('')}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button id="cancel-new-admin" class="btn-ghost">Annuler</button>
+        <button id="save-new-admin" class="btn-primary"><i class="ti ti-check"></i> Créer</button>
+      </div>
+    </div>
+    ${admins.map(a=>{
+      const isSelf = a.email === currentAdmin?.email;
+      const isThisSA = a.role === 'superadmin';
+      return`<div style="background:#fff;border:1.5px solid var(--brd2);border-radius:12px;padding:1.1rem;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:${isThisSA?'0':'10px'}">
+          <div style="width:38px;height:38px;border-radius:50%;background:${isThisSA?'var(--yellow)':'var(--cyan-l)'};display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:${isThisSA?'var(--ink)':'var(--cyan)'}">
+            ${a.email[0].toUpperCase()}
+          </div>
+          <div style="flex:1">
+            <div style="font-weight:600;color:var(--ink)">${a.email}${isSelf?` <span style="font-size:11px;color:var(--ink3)">(vous)</span>`:''}</div>
+            <div style="font-size:12px;color:${isThisSA?'#B8940A':'var(--ink3)'};">${isThisSA?'👑 Super-administrateur':'Administrateur'}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            ${!isSelf&&!isThisSA?`<button class="btn-ghost" style="padding:4px 10px;font-size:12px" data-promote="${a.id}" data-email="${a.email}"><i class="ti ti-crown"></i> Promouvoir SA</button>`:''}
+            ${!isSelf?`<button class="del-booking-btn" style="padding:5px 8px" data-del-admin="${a.id}" data-del-email="${a.email}"><i class="ti ti-trash"></i></button>`:''}
+          </div>
+        </div>
+        ${!isThisSA?`<div style="display:flex;flex-wrap:wrap;gap:4px">
+          ${ALL_TABS.map(t=>`<label style="font-size:11px;padding:2px 8px;border-radius:4px;cursor:pointer;border:1px solid;${(a.droits||{})[t]!==false?'background:var(--cyan-l);border-color:var(--brd2);color:var(--cyan-d)':'background:#f5f5f5;border-color:#ddd;color:var(--ink3)'}">
+            <input type="checkbox" style="display:none" class="droit-cb" data-aid="${a.id}" data-tab="${t}" ${(a.droits||{})[t]!==false?'checked':''}>${LABELS[t]}
+          </label>`).join('')}
+        </div>`:''}
+      </div>`;
+    }).join('')}
+  `;
+
+  el('add-admin-btn')?.addEventListener('click',()=>{ el('add-admin-form').style.display = el('add-admin-form').style.display==='none'?'block':'none'; });
+  el('cancel-new-admin')?.addEventListener('click',()=>{ el('add-admin-form').style.display='none'; });
+  el('save-new-admin')?.addEventListener('click', createAdmin);
+  listEl.querySelectorAll('[data-promote]').forEach(btn=>btn.addEventListener('click',()=>transfertSuperAdmin(btn.dataset.promote,btn.dataset.email)));
+  listEl.querySelectorAll('[data-del-admin]').forEach(btn=>btn.addEventListener('click',()=>deleteAdmin(btn.dataset.delAdmin,btn.dataset.delEmail)));
+  listEl.querySelectorAll('.droit-cb').forEach(cb=>cb.addEventListener('change',async()=>{
+    const aid=cb.dataset.aid, tab=cb.dataset.tab, val=cb.checked;
+    try{
+      const adDoc=snap.docs.find(d=>d.id===aid);
+      const droits={...(adDoc?.data().droits||{}),[tab]:val};
+      await updateDoc(doc(db,'admins',aid),{droits});
+      await logAction('DROITS', `${adDoc?.data().email} → ${tab}=${val}`);
+      toast('Droits mis à jour.');
+    }catch(e){console.error(e);toast('Erreur.');}
+  }));
+}
+
+async function createAdmin() {
+  const email=(el('new-admin-email')?.value||'').trim();
+  const pwd=(el('new-admin-pwd')?.value||'').trim();
+  if(!email||pwd.length<8){toast('Email valide et mot de passe (8 car. min.) requis.');return;}
+  const droits={};
+  document.querySelectorAll('.new-droit').forEach(cb=>{droits[cb.value]=cb.checked;});
+  loader(true);
+  try{
+    await addDoc(collection(db,'admins'),{email,password:pwd,role:'admin',droits,createdBy:currentAdmin?.email,createdAt:Date.now()});
+    await logAction('AJOUT ADMIN', email);
+    el('add-admin-form').style.display='none';
+    toast(`Admin ${email} créé.`);
+    renderEquipe();
+  }catch(e){console.error(e);toast('Erreur.');}
+  loader(false);
+}
+
+async function deleteAdmin(adminId, adminEmail) {
+  if(!confirm(`Supprimer le compte de ${adminEmail} ?`))return;
+  loader(true);
+  try{
+    await deleteDoc(doc(db,'admins',adminId));
+    await logAction('SUPPRESSION ADMIN', adminEmail);
+    toast(`Compte ${adminEmail} supprimé.`);
+    renderEquipe();
+  }catch(e){console.error(e);toast('Erreur.');}
+  loader(false);
+}
+
+async function transfertSuperAdmin(newId, newEmail) {
+  if(!confirm(`Transférer le rôle super-admin à ${newEmail} ? Vous deviendrez admin standard.`))return;
+  loader(true);
+  try{
+    const snap=await getDocs(collection(db,'admins'));
+    const myDoc=snap.docs.find(d=>d.data().email===currentAdmin?.email);
+    const batch=writeBatch(db);
+    if(myDoc) batch.update(doc(db,'admins',myDoc.id),{role:'admin'});
+    batch.update(doc(db,'admins',newId),{role:'superadmin',droits:{exposants:true,ateliers:true,rdvs:true,visiteurs:true,mode:true,equipe:true,historique:true}});
+    await batch.commit();
+    await logAction('TRANSFERT SA', `→ ${newEmail}`);
+    currentAdmin.role='admin';
+    applyDroits(); renderEquipe();
+    toast(`Super-admin transféré à ${newEmail}.`);
+  }catch(e){console.error(e);toast('Erreur.');}
+  loader(false);
+}
+
+/* ── Onglet Historique ───────────────────────────────────────── */
+
+async function renderHistorique() {
+  const listEl=el('historique-list'); if(!listEl) return;
+  try{
+    const snap=await getDocs(query(collection(db,'logs'),orderBy('timestamp','desc')));
+    const logs=snap.docs.map(d=>({id:d.id,...d.data()})).slice(0,200);
+    if(!logs.length){listEl.innerHTML='<div class="empty-state"><i class="ti ti-history"></i><p>Aucun historique.</p></div>';return;}
+    listEl.innerHTML=`<table class="rdv-table"><thead><tr>
+      <th>Date</th><th>Admin</th><th>Rôle</th><th>Action</th><th>Détail</th>
+    </tr></thead><tbody>${logs.map(l=>{
+      const d=new Date(l.timestamp);
+      const date=d.toLocaleDateString('fr-FR')+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+      const color=l.action?.includes('SUPPRESSION')?'var(--red)':l.action?.includes('CONNEXION')?'#3B6D11':'var(--ink)';
+      return`<tr>
+        <td style="font-size:12px;white-space:nowrap">${date}</td>
+        <td style="font-size:12px">${l.adminEmail||'–'}</td>
+        <td><span style="font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600;background:${l.adminRole==='superadmin'?'var(--yellow)':'var(--cyan-l)'};color:${l.adminRole==='superadmin'?'var(--ink)':'var(--cyan-d)'}">${l.adminRole||'–'}</span></td>
+        <td style="font-size:12px;font-weight:600;color:${color}">${l.action||'–'}</td>
+        <td style="font-size:12px;color:var(--ink3);max-width:200px">${l.details||'–'}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+  }catch(e){console.error(e);listEl.innerHTML='<div class="empty-state"><p>Erreur chargement.</p></div>';}
 }
 
 /* ── Init ─────────────────────────────────────────────────────── */
