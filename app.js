@@ -1618,7 +1618,22 @@ function applyModeUI() {
 
   // Onglet plan visiteur — visible uniquement si plan publié
   const planTab = el('vtab-plan');
-  if(planTab) planTab.style.display = DATA.config?.planPublic ? '' : 'none';
+  const planPublic = DATA.config?.planPublic;
+  if(planTab) planTab.style.display = planPublic ? '' : 'none';
+
+  // Quand le plan est visible : brand à gauche compact, onglets à droite
+  const navInner = el('nav-inner');
+  const navBrand = navInner?.querySelector('.nav-brand');
+  const visTabs  = navInner?.querySelector('.vis-tabs');
+  if(navInner && planPublic) {
+    navInner.style.justifyContent = 'space-between';
+    if(navBrand) { navBrand.style.flexShrink = '0'; navBrand.style.marginRight = 'auto'; }
+    if(visTabs)  { visTabs.style.flexShrink = '0'; visTabs.style.overflowX = 'visible'; visTabs.style.flexWrap = 'nowrap'; }
+  } else if(navInner) {
+    navInner.style.justifyContent = '';
+    if(navBrand) { navBrand.style.flexShrink = ''; navBrand.style.marginRight = ''; }
+    if(visTabs)  { visTabs.style.flexShrink = ''; visTabs.style.overflowX = ''; visTabs.style.flexWrap = ''; }
+  }
 
   if(PLATFORM_MODE === 'inscription') return; // rien à faire pour le mode banner
 
