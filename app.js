@@ -2414,7 +2414,6 @@ function renderPlanVisiteur() {
   // Toggle villages (ouvrir/fermer la liste)
   cont.querySelectorAll('.village-card-visitor').forEach(card=>{
     const vid = card.dataset.villageId;
-    card.querySelector('[style*="background:'+card.style.borderColor]') // header
     const header = card.querySelector('div[style*="padding:.85rem"]');
     const list = el('vexps-'+vid);
     const chevron = el('chevron-'+vid);
