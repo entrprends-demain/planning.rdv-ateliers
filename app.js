@@ -2214,9 +2214,9 @@ async function saveLectureDate() {
 const IS_ADMIN=!!el('admin-app'), IS_VISITOR=!!el('grid');
 
 if(IS_ADMIN){
-  el('add-btn').addEventListener('click',toggleAddForm);
-  el('form-cancel').addEventListener('click',toggleAddForm);
-  el('form-submit').addEventListener('click',addExposant);
+  el('add-btn')?.addEventListener('click',toggleAddForm);
+  el('form-cancel')?.addEventListener('click',toggleAddForm);
+  el('form-submit')?.addEventListener('click',addExposant);
   el('add-atelier-btn')?.addEventListener('click',()=>openAtelierForm());
   el('atelier-form-cancel')?.addEventListener('click',()=>{el('atelier-form').classList.remove('open');editAtelier=null;});
   el('atelier-form-submit')?.addEventListener('click',saveAtelier);
