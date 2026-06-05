@@ -129,7 +129,7 @@ async function loadAll() {
     DATA.inscriptions = iS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.waitlist     = wS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.villages     = vlS.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order||0)-(b.order||0));
-    const cfgDoc = cS.docs.find(d=>d.id==='siteConfig');
+    const cfgDoc = cS.docs.find(d=>d.id==='platform') || cS.docs.find(d=>d.id==='siteConfig');
     if(cfgDoc){ const c=cfgDoc.data(); PLATFORM_MODE=c.mode||'inscription'; DATA.config={mode:PLATFORM_MODE,lectureDate:c.lectureDate||'1er juillet 2026',planPublic:c.planPublic||false}; } else { DATA.config={mode:'inscription',lectureDate:'1er juillet 2026',planPublic:false}; }
     DATA.slots = {};
     sS.docs.forEach(d=>{ const s={id:d.id,...d.data()}; if(!DATA.slots[s.exposantId])DATA.slots[s.exposantId]=[]; DATA.slots[s.exposantId].push(s); });
@@ -1648,12 +1648,12 @@ function switchVisitorTab(tab){
   ['accueil','rdvs','ateliers','planning','exposant','exposants-list','plan-visiteur'].forEach(t=>{const e=el('tab-'+t);if(e)e.style.display=t===tab?'block':'none';});
   document.querySelectorAll('.vtab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   loadAll().then(()=>{
+    applyModeUI();
     if(tab==='accueil')        renderAccueil();
     if(tab==='rdvs')           renderGrid();
     if(tab==='ateliers')       renderAteliersGrid();
     if(tab==='exposants-list') renderExposantsList();
     if(tab==='plan-visiteur')  renderPlanVisiteur();
-    applyModeUI();
   });
 }
 
@@ -1846,7 +1846,7 @@ async function renderPlan() {
     const newVal = !DATA.config.planPublic;
     loader(true);
     try {
-      await setDoc(doc(db,'config','siteConfig'), {...DATA.config, mode:PLATFORM_MODE, planPublic:newVal}, {merge:true});
+      await setDoc(doc(db,'config','platform'), {mode:PLATFORM_MODE, planPublic:newVal, updatedAt:Date.now()}, {merge:true});
       DATA.config.planPublic = newVal;
       const btn = el('plan-publish-btn');
       if(btn){
@@ -2517,7 +2517,7 @@ async function saveMode() {
   if(!selected) { toast('Choisissez un mode.'); return; }
   loader(true);
   try {
-    const cfgRef = doc(db,'config','siteConfig');
+    const cfgRef = doc(db,'config','platform');
     await setDoc(cfgRef, { mode: selected, lectureDate: DATA.config.lectureDate || '1er juillet 2026' });
     PLATFORM_MODE = selected;
     DATA.config.mode = selected;
@@ -2532,7 +2532,7 @@ async function saveLectureDate() {
   if(!date) { toast('Saisissez une date.'); return; }
   loader(true);
   try {
-    const cfgRef = doc(db,'config','siteConfig');
+    const cfgRef = doc(db,'config','platform');
     await setDoc(cfgRef, { mode: DATA.config.mode, lectureDate: date });
     DATA.config.lectureDate = date;
     updateLecturePreview();
