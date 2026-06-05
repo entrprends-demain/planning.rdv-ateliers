@@ -88,6 +88,8 @@ const ALL_CATS = [
 const DATA = {
   exposants: [], slots: {}, bookings: [],
   visitors: [], ateliers: [], inscriptions: [],
+  waitlist: [], villages: [],
+  config: { mode: 'inscription', lectureDate: '1er juillet 2026', planPublic: false },
 };
 let selId=null, periodFilter='', atPeriodFilter='';
 let pendingExp=null, pendingSlot=null, pendingAtelierId=null;
@@ -109,7 +111,7 @@ function toast(msg) {
 async function loadAll() {
   loader(true);
   try {
-    const [eS,sS,bS,vS,aS,iS,wS,cS] = await Promise.all([
+    const [eS,sS,bS,vS,aS,iS,wS,cS,vlS] = await Promise.all([
       getDocs(query(collection(db,'exposants'), orderBy('createdAt'))),
       getDocs(query(collection(db,'slots'),     orderBy('start'))),
       getDocs(query(collection(db,'bookings'),  orderBy('slotStart'))),
@@ -118,6 +120,7 @@ async function loadAll() {
       getDocs(collection(db,'inscriptions')),
       getDocs(query(collection(db,'waitlist'),  orderBy('createdAt'))),
       getDocs(collection(db,'config')),
+      getDocs(collection(db,'villages')),
     ]);
     DATA.exposants    = eS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.bookings     = bS.docs.map(d=>({id:d.id,...d.data()}));
@@ -125,8 +128,9 @@ async function loadAll() {
     DATA.ateliers     = aS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.inscriptions = iS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.waitlist     = wS.docs.map(d=>({id:d.id,...d.data()}));
+    DATA.villages     = vlS.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order||0)-(b.order||0));
     const cfgDoc = cS.docs.find(d=>d.id==='siteConfig');
-    if(cfgDoc){ const c=cfgDoc.data(); PLATFORM_MODE=c.mode||'inscription'; DATA.config={mode:PLATFORM_MODE,lectureDate:c.lectureDate||'1er juillet 2026'}; } else { DATA.config={mode:'inscription',lectureDate:'1er juillet 2026'}; }
+    if(cfgDoc){ const c=cfgDoc.data(); PLATFORM_MODE=c.mode||'inscription'; DATA.config={mode:PLATFORM_MODE,lectureDate:c.lectureDate||'1er juillet 2026',planPublic:c.planPublic||false}; } else { DATA.config={mode:'inscription',lectureDate:'1er juillet 2026',planPublic:false}; }
     DATA.slots = {};
     sS.docs.forEach(d=>{ const s={id:d.id,...d.data()}; if(!DATA.slots[s.exposantId])DATA.slots[s.exposantId]=[]; DATA.slots[s.exposantId].push(s); });
   } catch(e) { console.error(e); toast('Erreur de connexion Firebase.'); }
@@ -390,7 +394,7 @@ async function renderWaitlistAteliers() {
 
 function switchAdminTab(tab) {
   document.querySelectorAll('.atab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
-  ['exposants','ateliers-admin','rdvs','visiteurs','waitlist-rdvs','waitlist-ateliers','parametres','equipe','historique'].forEach(t=>{
+  ['exposants','ateliers-admin','rdvs','visiteurs','waitlist-rdvs','waitlist-ateliers','parametres','equipe','historique','plan'].forEach(t=>{
     const el2=el('tab-'+t); if(el2)el2.style.display=t===tab?(t==='exposants'?'flex':'block'):'none';
   });
   loadAll().then(()=>{
@@ -435,12 +439,13 @@ function toggleAddForm(){ el('add-form').classList.toggle('open'); }
 async function addExposant() {
   const name=el('f-name').value.trim(), email=el('f-email').value.trim(),
     website=el('f-website')?.value.trim()||'', cat=el('f-cat').value,
-    expertise=el('f-expertise').value.trim(), period=el('f-period').value;
+    expertise=el('f-expertise').value.trim(), period=el('f-period').value,
+    stand=el('f-stand')?.value||'jour';
   if(!name){toast('Merci de saisir un nom.');return;}
   loader(true);
   try {
-    const ref=await addDoc(collection(db,'exposants'),{name,email,website,cat,expertise,period,createdAt:Date.now()});
-    const exp={id:ref.id,name,email,website,cat,expertise,period};
+    const ref=await addDoc(collection(db,'exposants'),{name,email,website,cat,expertise,period,stand,createdAt:Date.now()});
+    const exp={id:ref.id,name,email,website,cat,expertise,period,stand};
     DATA.exposants.push(exp);
     const created=[];
     if(period!=='aucun') for(const s of slotsForPeriod(period)){
@@ -504,13 +509,14 @@ async function saveEditExposant(expId) {
   const exp=DATA.exposants.find(e=>e.id===expId);
   const name=el('e-name').value.trim(), email=el('e-email').value.trim(),
     website=el('e-website')?.value.trim()||'', cat=el('e-cat').value,
-    expertise=el('e-expertise').value.trim(), period=el('e-period').value;
+    expertise=el('e-expertise').value.trim(), period=el('e-period').value,
+    stand=el('e-stand')?.value||'jour';
   if(!name){toast('Merci de saisir un nom.');return;}
   loader(true);
   try {
     const changed=period!==exp.period;
-    await updateDoc(doc(db,'exposants',expId),{name,email,website,cat,expertise,period});
-    Object.assign(exp,{name,email,website,cat,expertise,period});
+    await updateDoc(doc(db,'exposants',expId),{name,email,website,cat,expertise,period,stand});
+    Object.assign(exp,{name,email,website,cat,expertise,period,stand});
     if(changed){
       const batch=writeBatch(db);
       (DATA.slots[expId]||[]).forEach(s=>batch.delete(doc(db,'slots',s.id)));
@@ -1609,6 +1615,10 @@ function applyModeUI() {
     codeBanner.style.display = (PLATFORM_MODE === 'lecture') ? 'none' : 'block';
   }
 
+  // Onglet plan visiteur — visible uniquement si plan publié
+  const planTab = el('vtab-plan');
+  if(planTab) planTab.style.display = DATA.config?.planPublic ? '' : 'none';
+
   if(PLATFORM_MODE === 'inscription') return; // rien à faire pour le mode banner
 
   const banner = document.createElement('div');
@@ -1634,13 +1644,15 @@ function applyModeUI() {
 /* ── Navigation visiteur ──────────────────────────────────────── */
 function switchVisitorTab(tab){
   applyModeUI();
-  ['accueil','rdvs','ateliers','planning','exposant','exposants-list'].forEach(t=>{const e=el('tab-'+t);if(e)e.style.display=t===tab?'block':'none';});
+  ['accueil','rdvs','ateliers','planning','exposant','exposants-list','plan-visiteur'].forEach(t=>{const e=el('tab-'+t);if(e)e.style.display=t===tab?'block':'none';});
   document.querySelectorAll('.vtab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   loadAll().then(()=>{
     if(tab==='accueil')        renderAccueil();
     if(tab==='rdvs')           renderGrid();
     if(tab==='ateliers')       renderAteliersGrid();
     if(tab==='exposants-list') renderExposantsList();
+    if(tab==='plan-visiteur')  renderPlanVisiteur();
+    applyModeUI();
   });
 }
 
@@ -1777,6 +1789,292 @@ async function cancelUnconfirmed() {
     renderModeAdmin();renderStats();updateBadges();
     toast(`${preRdv.length} RDV et ${preAt.length} ateliers annulés et redistribués.`);
   }catch(e){console.error(e);toast('Erreur.');}
+  loader(false);
+}
+
+/* ── Onglet Plan ─────────────────────────────────────────────── */
+
+async function renderPlan() {
+  const listEl = el('plan-content'); if(!listEl) return;
+  const isSA = currentAdmin?.role?.toLowerCase()==='superadmin' || currentAdmin?.email===SUPER_ADMIN_EMAIL;
+  const planPublic = DATA.config?.planPublic || false;
+
+  listEl.innerHTML = `
+    <!-- Toolbar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1.5rem">
+      <div>
+        <div style="font-size:20px;font-weight:700;color:var(--ink)">🗺️ Plan de l'événement</div>
+        <div style="font-size:13px;color:var(--ink3);margin-top:2px">Organisez les villages et répartissez les exposants</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${isSA ? `<button id="plan-publish-btn" class="${planPublic?'btn-primary':'btn-ghost'}" style="${planPublic?'background:#3B6D11;border-color:#3B6D11':''}">
+          <i class="ti ti-${planPublic?'eye':'eye-off'}"></i> ${planPublic?'Plan publié':'Plan fantôme'}
+        </button>` : ''}
+        <button id="add-village-btn" class="btn-primary"><i class="ti ti-plus"></i> Nouveau village</button>
+      </div>
+    </div>
+
+    <!-- Formulaire nouveau village -->
+    <div id="add-village-form" style="display:none;background:var(--cyan-l);border:1.5px solid var(--brd2);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem">
+      <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:10px">Créer un village</div>
+      <div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:end">
+        <div class="field"><label>Nom du village *</label><input id="new-village-name" placeholder="Ex: Village Juridique" /></div>
+        <div class="field"><label>Couleur</label><input type="color" id="new-village-color" value="#3FCBD1" style="width:60px;height:38px;border-radius:8px;border:1.5px solid var(--brd2);cursor:pointer;padding:2px" /></div>
+        <div style="display:flex;gap:8px">
+          <button id="cancel-village-btn" class="btn-ghost">Annuler</button>
+          <button id="save-village-btn" class="btn-primary"><i class="ti ti-check"></i> Créer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zone villages drag & drop -->
+    <div id="villages-container" style="display:flex;flex-direction:column;gap:1rem"></div>
+
+    <!-- Exposants sans village -->
+    <div id="unassigned-block" style="margin-top:1.5rem;background:#fff;border:2px dashed var(--brd2);border-radius:14px;padding:1.25rem">
+      <div style="font-size:14px;font-weight:700;color:var(--ink3);margin-bottom:.75rem"><i class="ti ti-user-question"></i> Exposants sans village</div>
+      <div id="unassigned-list" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
+  `;
+
+  // Rendre les villages
+  renderVillagesUI();
+
+  // Bouton publier/masquer plan
+  el('plan-publish-btn')?.addEventListener('click', async () => {
+    const newVal = !DATA.config.planPublic;
+    loader(true);
+    try {
+      await setDoc(doc(db,'config','siteConfig'), {...DATA.config, mode:PLATFORM_MODE, planPublic:newVal}, {merge:true});
+      DATA.config.planPublic = newVal;
+      const btn = el('plan-publish-btn');
+      if(btn){
+        btn.innerHTML = `<i class="ti ti-${newVal?'eye':'eye-off'}"></i> ${newVal?'Plan publié':'Plan fantôme'}`;
+        btn.style.background = newVal ? '#3B6D11' : '';
+        btn.style.borderColor = newVal ? '#3B6D11' : '';
+        btn.className = newVal ? 'btn-primary' : 'btn-ghost';
+      }
+      toast(newVal ? `Plan publié — visible par les visiteurs.` : `Plan masqué.`);
+    } catch(e) { console.error(e); toast('Erreur.'); }
+    loader(false);
+  });
+
+  el('add-village-btn')?.addEventListener('click', () => {
+    el('add-village-form').style.display = el('add-village-form').style.display==='none' ? 'block' : 'none';
+    setTimeout(()=>el('new-village-name')?.focus(), 50);
+  });
+  el('cancel-village-btn')?.addEventListener('click', () => { el('add-village-form').style.display='none'; });
+  el('save-village-btn')?.addEventListener('click', createVillage);
+  el('new-village-name')?.addEventListener('keydown', e=>{ if(e.key==='Enter') createVillage(); });
+}
+
+function renderVillagesUI() {
+  const container = el('villages-container'); if(!container) return;
+  const unassigned = el('unassigned-list'); if(!unassigned) return;
+
+  // Exposants sans village
+  const assignedIds = new Set(DATA.villages.flatMap(v=>v.exposants||[]));
+  const sans = DATA.exposants.filter(e=>!assignedIds.has(e.id));
+  unassigned.innerHTML = sans.length
+    ? sans.map(e=>`<div class="exp-chip" draggable="true" data-eid="${e.id}" style="padding:5px 12px;border-radius:20px;background:#f0f0f0;border:1.5px solid #ddd;font-size:12px;font-weight:600;cursor:grab;color:var(--ink)">${e.name}</div>`).join('')
+    : `<span style="font-size:13px;color:var(--ink3);font-style:italic">Tous les exposants sont affectés à un village.</span>`;
+
+  // Villages
+  container.innerHTML = DATA.villages.map((v,vi)=>{
+    const exps = (v.exposants||[]).map(eid=>DATA.exposants.find(e=>e.id===eid)).filter(Boolean);
+    const standMatin = exps.filter(e=>e.stand==='matin'||e.stand==='jour').length;
+    const standAprem = exps.filter(e=>e.stand==='aprem'||e.stand==='jour').length;
+    return `<div class="village-block" draggable="true" data-vid="${v.id}" data-vorder="${vi}"
+      style="background:#fff;border:2.5px solid ${v.color||'#3FCBD1'};border-radius:14px;overflow:hidden">
+      <div style="background:${v.color||'#3FCBD1'}22;padding:.9rem 1.1rem;display:flex;align-items:center;gap:10px;border-bottom:2px solid ${v.color||'#3FCBD1'}33;cursor:grab">
+        <div style="width:16px;height:16px;border-radius:50%;background:${v.color||'#3FCBD1'};flex-shrink:0"></div>
+        <div style="flex:1;font-size:15px;font-weight:700;color:var(--ink)">${v.name}</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input type="color" class="village-color-input" data-vid="${v.id}" value="${v.color||'#3FCBD1'}" 
+            style="width:28px;height:28px;border:none;border-radius:6px;cursor:pointer;padding:1px" title="Changer la couleur" />
+          <button class="icon-btn delete-village-btn" data-vid="${v.id}" title="Supprimer ce village" style="color:var(--red)"><i class="ti ti-trash"></i></button>
+          <i class="ti ti-grip-vertical" style="color:var(--ink3);font-size:16px"></i>
+        </div>
+      </div>
+      <div class="village-drop-zone" data-vid="${v.id}" style="min-height:60px;padding:.75rem 1rem;display:flex;flex-wrap:wrap;gap:6px">
+        ${exps.map((e,ei)=>`<div class="exp-chip" draggable="true" data-eid="${e.id}" data-in-village="${v.id}" data-eorder="${ei}"
+          style="padding:5px 12px;border-radius:20px;background:${v.color||'#3FCBD1'}22;border:1.5px solid ${v.color||'#3FCBD1'};font-size:12px;font-weight:600;cursor:grab;color:var(--ink);display:flex;align-items:center;gap:6px">
+          ${e.name}
+          <button class="remove-from-village" data-eid="${e.id}" data-vid="${v.id}" style="background:none;border:none;cursor:pointer;color:${v.color||'#3FCBD1'};font-size:14px;line-height:1;padding:0">×</button>
+        </div>`).join('')}
+        ${exps.length===0?`<span style="font-size:12px;color:var(--ink3);font-style:italic">Glissez des exposants ici</span>`:''}
+      </div>
+      <div style="padding:.6rem 1rem;border-top:1px solid ${v.color||'#3FCBD1'}33;background:${v.color||'#3FCBD1'}11;display:flex;gap:16px">
+        <span style="font-size:12px;color:var(--ink3)"><strong style="color:var(--ink)">${standMatin}</strong> stand${standMatin>1?'s':''} matin</span>
+        <span style="font-size:12px;color:var(--ink3)"><strong style="color:var(--ink)">${standAprem}</strong> stand${standAprem>1?'s':''} après-midi</span>
+        <span style="font-size:12px;color:var(--ink3)"><strong style="color:var(--ink)">${exps.length}</strong> exposant${exps.length>1?'s':''} total</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Brancher les events
+  bindVillageEvents();
+}
+
+function bindVillageEvents() {
+  let dragEid=null, dragVid=null, dragIsVillage=false, dragVillageId=null;
+
+  // Drag exposants
+  document.querySelectorAll('.exp-chip').forEach(chip=>{
+    chip.addEventListener('dragstart', e=>{
+      dragEid=chip.dataset.eid; dragVid=chip.dataset.inVillage||null; dragIsVillage=false;
+      e.dataTransfer.effectAllowed='move';
+      setTimeout(()=>chip.style.opacity='.4',0);
+    });
+    chip.addEventListener('dragend', ()=>{ chip.style.opacity=''; });
+  });
+
+  // Drop zones villages
+  document.querySelectorAll('.village-drop-zone').forEach(zone=>{
+    zone.addEventListener('dragover', e=>{ e.preventDefault(); zone.style.background='rgba(63,203,209,.08)'; });
+    zone.addEventListener('dragleave', ()=>{ zone.style.background=''; });
+    zone.addEventListener('drop', async e=>{
+      e.preventDefault(); zone.style.background='';
+      if(dragIsVillage||!dragEid) return;
+      const targetVid = zone.dataset.vid;
+      await moveExpToVillage(dragEid, dragVid, targetVid);
+      dragEid=null; dragVid=null;
+    });
+  });
+
+  // Drop zone sans-village
+  const unassignedEl = el('unassigned-list');
+  if(unassignedEl){
+    unassignedEl.addEventListener('dragover',e=>{ e.preventDefault(); unassignedEl.style.background='rgba(0,0,0,.04)'; });
+    unassignedEl.addEventListener('dragleave',()=>{ unassignedEl.style.background=''; });
+    unassignedEl.addEventListener('drop',async e=>{
+      e.preventDefault(); unassignedEl.style.background='';
+      if(!dragEid||!dragVid) return;
+      await removeExpFromVillage(dragEid, dragVid);
+      dragEid=null; dragVid=null;
+    });
+  }
+
+  // Drag villages (réordonnancement)
+  document.querySelectorAll('.village-block').forEach(block=>{
+    block.addEventListener('dragstart', e=>{
+      if(e.target.classList.contains('exp-chip')||e.target.closest('.exp-chip')) return;
+      dragIsVillage=true; dragVillageId=block.dataset.vid;
+      e.dataTransfer.effectAllowed='move';
+      setTimeout(()=>block.style.opacity='.5',0);
+    });
+    block.addEventListener('dragend',()=>{ block.style.opacity=''; dragIsVillage=false; });
+    block.addEventListener('dragover',e=>{
+      e.preventDefault();
+      if(!dragIsVillage||dragVillageId===block.dataset.vid) return;
+      block.style.borderStyle='dashed';
+    });
+    block.addEventListener('dragleave',()=>block.style.borderStyle='solid');
+    block.addEventListener('drop',async e=>{
+      e.preventDefault(); block.style.borderStyle='solid';
+      if(!dragIsVillage||dragVillageId===block.dataset.vid) return;
+      await reorderVillages(dragVillageId, block.dataset.vid);
+      dragIsVillage=false; dragVillageId=null;
+    });
+  });
+
+  // Boutons supprimer exposant du village
+  document.querySelectorAll('.remove-from-village').forEach(btn=>{
+    btn.addEventListener('click', async e=>{
+      e.stopPropagation();
+      await removeExpFromVillage(btn.dataset.eid, btn.dataset.vid);
+    });
+  });
+
+  // Changer couleur
+  document.querySelectorAll('.village-color-input').forEach(inp=>{
+    inp.addEventListener('change', async()=>{
+      const v=DATA.villages.find(x=>x.id===inp.dataset.vid); if(!v) return;
+      v.color=inp.value;
+      await updateDoc(doc(db,'villages',inp.dataset.vid),{color:inp.value});
+      renderVillagesUI();
+    });
+  });
+
+  // Supprimer village
+  document.querySelectorAll('.delete-village-btn').forEach(btn=>{
+    btn.addEventListener('click', async e=>{
+      e.stopPropagation();
+      const v=DATA.villages.find(x=>x.id===btn.dataset.vid);
+      if(!confirm(`Supprimer le village "${v?.name}" ? Les exposants seront désaffectés.`)) return;
+      loader(true);
+      try{
+        await deleteDoc(doc(db,'villages',btn.dataset.vid));
+        DATA.villages=DATA.villages.filter(x=>x.id!==btn.dataset.vid);
+        renderVillagesUI();
+        toast(`Village "${v?.name}" supprimé.`);
+      }catch(e){ console.error(e); toast('Erreur.'); }
+      loader(false);
+    });
+  });
+}
+
+async function createVillage() {
+  const name=(el('new-village-name')?.value||'').trim();
+  const color=el('new-village-color')?.value||'#3FCBD1';
+  if(!name){ toast('Nom du village requis.'); return; }
+  loader(true);
+  try{
+    const order=DATA.villages.length;
+    const ref=await addDoc(collection(db,'villages'),{name,color,exposants:[],order,createdAt:Date.now()});
+    DATA.villages.push({id:ref.id,name,color,exposants:[],order});
+    el('add-village-form').style.display='none';
+    el('new-village-name').value='';
+    renderVillagesUI();
+    toast(`Village "${name}" créé.`);
+  }catch(e){ console.error(e); toast('Erreur.'); }
+  loader(false);
+}
+
+async function moveExpToVillage(eid, fromVid, toVid) {
+  if(fromVid===toVid) return;
+  loader(true);
+  try{
+    // Retirer de l'ancien village
+    if(fromVid){
+      const oldV=DATA.villages.find(v=>v.id===fromVid);
+      if(oldV){ oldV.exposants=(oldV.exposants||[]).filter(id=>id!==eid); await updateDoc(doc(db,'villages',fromVid),{exposants:oldV.exposants}); }
+    }
+    // Ajouter au nouveau
+    const newV=DATA.villages.find(v=>v.id===toVid);
+    if(newV){ newV.exposants=[...(newV.exposants||[]).filter(id=>id!==eid),eid]; await updateDoc(doc(db,'villages',toVid),{exposants:newV.exposants}); }
+    renderVillagesUI();
+  }catch(e){ console.error(e); toast('Erreur.'); }
+  loader(false);
+}
+
+async function removeExpFromVillage(eid, vid) {
+  const v=DATA.villages.find(x=>x.id===vid); if(!v) return;
+  loader(true);
+  try{
+    v.exposants=(v.exposants||[]).filter(id=>id!==eid);
+    await updateDoc(doc(db,'villages',vid),{exposants:v.exposants});
+    renderVillagesUI();
+  }catch(e){ console.error(e); toast('Erreur.'); }
+  loader(false);
+}
+
+async function reorderVillages(fromId, toId) {
+  const fromIdx=DATA.villages.findIndex(v=>v.id===fromId);
+  const toIdx=DATA.villages.findIndex(v=>v.id===toId);
+  if(fromIdx===-1||toIdx===-1) return;
+  // Réordonner
+  const arr=[...DATA.villages];
+  const [moved]=arr.splice(fromIdx,1);
+  arr.splice(toIdx,0,moved);
+  DATA.villages=arr;
+  loader(true);
+  try{
+    const batch=writeBatch(db);
+    arr.forEach((v,i)=>batch.update(doc(db,'villages',v.id),{order:i}));
+    await batch.commit();
+    renderVillagesUI();
+  }catch(e){ console.error(e); toast('Erreur.'); }
   loader(false);
 }
 
@@ -2065,6 +2363,37 @@ async function renderHistorique() {
       </tr>`;
     }).join('')}</tbody></table>`;
   }catch(e){console.error(e);listEl.innerHTML='<div class="empty-state"><p>Erreur chargement.</p></div>';}
+}
+
+function renderPlanVisiteur() {
+  const cont = el('plan-visiteur-content'); if(!cont) return;
+  if(!DATA.villages.length){
+    cont.innerHTML='<div class="empty-state"><i class="ti ti-map-off"></i><p>Le plan n'est pas encore disponible.</p></div>';
+    return;
+  }
+  cont.innerHTML = DATA.villages.map(v=>{
+    const exps=(v.exposants||[]).map(eid=>DATA.exposants.find(e=>e.id===eid)).filter(Boolean);
+    if(!exps.length) return '';
+    return`<div style="margin-bottom:1.5rem;border:2.5px solid ${v.color||'var(--cyan)'};border-radius:14px;overflow:hidden">
+      <div style="background:${v.color||'var(--cyan)'}22;padding:.9rem 1.25rem;border-bottom:2px solid ${v.color||'var(--cyan)'}44">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:14px;height:14px;border-radius:50%;background:${v.color||'var(--cyan)'}"></div>
+          <div style="font-size:16px;font-weight:700;color:var(--ink)">${v.name}</div>
+          <div style="margin-left:auto;font-size:12px;color:var(--ink3)">${exps.length} exposant${exps.length>1?'s':''}</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;padding:1rem">
+        ${exps.map(e=>`<div style="background:#fff;border:1.5px solid var(--brd2);border-radius:10px;padding:.9rem;display:flex;gap:10px;align-items:flex-start">
+          <div class="avatar" style="width:36px;height:36px;font-size:13px;flex-shrink:0;background:${v.color||'var(--cyan)'}22;color:${v.color||'var(--cyan)'}">${initials(e.name)}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.name}</div>
+            <div style="font-size:11px;color:var(--ink3)">${e.cat||''}</div>
+            ${e.website?`<a href="${e.website.startsWith('http')?e.website:'https://'+e.website}" target="_blank" style="font-size:11px;color:var(--cyan);text-decoration:none"><i class="ti ti-world" style="font-size:10px"></i> Site web</a>`:''}
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 /* ── Init ─────────────────────────────────────────────────────── */
