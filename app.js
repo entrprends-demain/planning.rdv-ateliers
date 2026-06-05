@@ -2368,7 +2368,7 @@ async function renderHistorique() {
 function renderPlanVisiteur() {
   const cont = el('plan-visiteur-content'); if(!cont) return;
   if(!DATA.villages.length){
-    cont.innerHTML='<div class="empty-state"><i class="ti ti-map-off"></i><p>Le plan n`est pas encore disponible.</p></div>';
+    cont.innerHTML=`<div class="empty-state"><i class="ti ti-map-off"></i><p>Le plan n'est pas encore disponible.</p></div>`;
     return;
   }
   cont.innerHTML = DATA.villages.map(v=>{
