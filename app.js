@@ -213,10 +213,12 @@ function initLogin() {
     try {
       const snap = await getDocs(collection(db,'admins'));
       const adminDoc = snap.docs.find(d => d.data().email === email);
+      // Si pas de doc et pas super admin → refusé
       if(!adminDoc && email !== SUPER_ADMIN_EMAIL) {
         el('pwd-error').textContent='Email non autorisé.'; el('pwd-error').classList.add('show'); return;
       }
-      const storedPwd = adminDoc?.data().password || 'EntrprendsDemain2026!';
+      // Mot de passe : celui en base, ou Fredtunousmanques pour le super admin sans doc
+      const storedPwd = adminDoc?.data().password || (email === SUPER_ADMIN_EMAIL ? 'Fredtunousmanques' : '');
       if(pwd !== storedPwd) {
         el('pwd-error').textContent='Mot de passe incorrect.'; el('pwd-error').classList.add('show');
         el('pwd').value=''; el('pwd').focus(); return;
