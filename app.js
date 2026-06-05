@@ -6,12 +6,12 @@ import { getFirestore,
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const fbApp = initializeApp({
-  apiKey:            'AIzaSyDcEFrfTfDOlgGy7e7JzZjeGXMsr5O4LIY',
-  authDomain:        'rdv-perso-entreprends-demain.firebaseapp.com',
-  projectId:         'rdv-perso-entreprends-demain',
-  storageBucket:     'rdv-perso-entreprends-demain.firebasestorage.app',
-  messagingSenderId: '303753000581',
-  appId:             '1:303753000581:web:ef789f95513debcfac1bec',
+  apiKey:            'AIzaSyAnQJz8hPP3T4QHWuwD0J6A-xUoBSt5z1w',
+  authDomain:        'entreprends-demain.firebaseapp.com',
+  projectId:         'entreprends-demain',
+  storageBucket:     'entreprends-demain.firebasestorage.app',
+  messagingSenderId: '808938356246',
+  appId:             '1:808938356246:web:3a7a8ef517be870298bf37',
 });
 
 const db = getFirestore(fbApp);
@@ -134,7 +134,7 @@ async function loadAll() {
 }
 
 /* ── Auth admin ───────────────────────────────────────────────── */
-const SUPER_ADMIN_EMAIL = 'titoudy2003@gmail.com';
+const SUPER_ADMIN_EMAIL = 'entreprends.demain@paris-initiative.org';
 let currentAdmin = null;
 
 async function logAction(action, details='') {
@@ -216,7 +216,7 @@ function initLogin() {
       if(!adminDoc && email !== SUPER_ADMIN_EMAIL) {
         el('pwd-error').textContent='Email non autorisé.'; el('pwd-error').classList.add('show'); return;
       }
-      const storedPwd = adminDoc?.data().password || 'Fredtunousmanques';
+      const storedPwd = adminDoc?.data().password || 'EntrprendsDemain2026!';
       if(pwd !== storedPwd) {
         el('pwd-error').textContent='Mot de passe incorrect.'; el('pwd-error').classList.add('show');
         el('pwd').value=''; el('pwd').focus(); return;
@@ -1517,7 +1517,7 @@ async function searchMonPlanning(){
         :'<div style="font-size:12px;color:#2E6B12;background:#EAF3DE;border:1px solid #6BAA38;border-radius:6px;padding:6px 10px;margin-top:8px"><i class="ti ti-lock-open"></i> Accès complet — vous pouvez annuler.</div>'}
       <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--brd);font-size:11px;color:var(--ink3)">
         Conformément au RGPD, vous pouvez demander la suppression de vos données en contactant
-        <a href="mailto:communication@paris-initiative.org" style="color:var(--cyan)">communication@paris-initiative.org</a> ·
+        <a href="mailto:entreprends.demain@paris-initiative.org" style="color:var(--cyan)">entreprends.demain@paris-initiative.org</a> ·
         <a href="rgpd.html" style="color:var(--cyan)">Politique de confidentialité</a>
       </div>
     </div>
@@ -1848,6 +1848,7 @@ async function renderEquipe() {
             <div style="font-size:12px;color:${isThisSA?'#B8940A':'var(--ink3)'};">${isThisSA?'👑 Super-administrateur':'Administrateur'}</div>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
+            ${!isThisSA?`<button class="btn-ghost" style="padding:4px 10px;font-size:12px" data-pwd-admin="${a.id}" data-pwd-email="${a.email}" data-pwd-current="${a.password||''}"><i class="ti ti-key"></i> MDP</button>`:''}
             ${!isSelf&&!isThisSA?`<button class="btn-ghost" style="padding:4px 10px;font-size:12px" data-promote="${a.id}" data-email="${a.email}"><i class="ti ti-crown"></i> Promouvoir SA</button>`:''}
             ${!isSelf?`<button class="del-booking-btn" style="padding:5px 8px" data-del-admin="${a.id}" data-del-email="${a.email}"><i class="ti ti-trash"></i></button>`:''}
           </div>
@@ -1888,6 +1889,7 @@ async function renderEquipe() {
   el('save-new-admin')?.addEventListener('click', createAdmin);
   listEl.querySelectorAll('[data-promote]').forEach(btn=>btn.addEventListener('click',()=>transfertSuperAdmin(btn.dataset.promote,btn.dataset.email)));
   listEl.querySelectorAll('[data-del-admin]').forEach(btn=>btn.addEventListener('click',()=>deleteAdmin(btn.dataset.delAdmin,btn.dataset.delEmail)));
+  listEl.querySelectorAll('[data-pwd-admin]').forEach(btn=>btn.addEventListener('click',()=>editAdminPassword(btn.dataset.pwdAdmin,btn.dataset.pwdEmail)));
 
   // Toggle droits admins existants — boutons visuels
   listEl.querySelectorAll('.droit-toggle-btn').forEach(btn=>{
@@ -1916,6 +1918,69 @@ async function renderEquipe() {
         btn.dataset.val = on ? '1' : '0';
       }
     });
+  });
+}
+
+async function editAdminPassword(adminId, adminEmail) {
+  // Recharger depuis Firebase pour avoir le vrai mot de passe
+  loader(true);
+  let currentPwd = '';
+  try {
+    const snap = await getDocs(collection(db,'admins'));
+    const adDoc = snap.docs.find(d=>d.id===adminId);
+    currentPwd = adDoc?.data().password || '';
+  } catch(e) { console.error(e); }
+  loader(false);
+
+  const existing = document.getElementById('pwd-edit-modal');
+  if(existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'pwd-edit-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:800;display:flex;align-items:center;justify-content:center;padding:1rem';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:420px;padding:1.75rem;border:2px solid var(--brd2)">
+      <div style="font-size:16px;font-weight:700;color:var(--ink);margin-bottom:.25rem"><i class="ti ti-key" style="color:var(--cyan)"></i> Mot de passe</div>
+      <div style="font-size:13px;color:var(--ink3);margin-bottom:1.25rem">${adminEmail}</div>
+      <div class="field" style="margin-bottom:10px">
+        <label>Mot de passe actuel</label>
+        <div style="font-family:monospace;background:var(--cyan-l);padding:8px 12px;border-radius:8px;font-size:14px;color:var(--cyan-d);letter-spacing:.05em;border:1.5px solid var(--brd2)">
+          ${currentPwd || '<em style="opacity:.5;font-style:italic;font-family:var(--font)">Non défini</em>'}
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:10px">
+        <label>Nouveau mot de passe</label>
+        <input id="pwd-edit-new" type="text" placeholder="8 caractères min." style="width:100%;padding:8px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px" />
+      </div>
+      <div class="field" style="margin-bottom:1.25rem">
+        <label>Confirmer</label>
+        <input id="pwd-edit-confirm" type="text" placeholder="Répétez le mot de passe" style="width:100%;padding:8px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px" />
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button id="pwd-edit-cancel" class="btn-ghost">Annuler</button>
+        <button id="pwd-edit-save" class="btn-primary"><i class="ti ti-check"></i> Enregistrer</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+  document.getElementById('pwd-edit-cancel').addEventListener('click', ()=>overlay.remove());
+  document.getElementById('pwd-edit-new').focus();
+
+  document.getElementById('pwd-edit-save').addEventListener('click', async()=>{
+    const newPwd = (document.getElementById('pwd-edit-new')?.value||'').trim();
+    const confirm = (document.getElementById('pwd-edit-confirm')?.value||'').trim();
+    if(newPwd.length < 8){ toast('Mot de passe : 8 caractères minimum.'); return; }
+    if(newPwd !== confirm){ toast('Les mots de passe ne correspondent pas.'); return; }
+    loader(true);
+    try{
+      await updateDoc(doc(db,'admins',adminId), { password: newPwd });
+      await logAction('MODIFICATION MDP', adminEmail);
+      overlay.remove();
+      toast(`Mot de passe de ${adminEmail} mis à jour.`);
+      renderEquipe();
+    }catch(e){ console.error(e); toast('Erreur.'); }
+    loader(false);
   });
 }
 
