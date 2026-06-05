@@ -408,6 +408,7 @@ function switchAdminTab(tab) {
     if(tab==='parametres')       { initParametres(); renderModeAdmin(); }
     if(tab==='equipe')           renderEquipe();
     if(tab==='historique')       renderHistorique();
+    if(tab==='plan')             renderPlan();
   });
 }
 
