@@ -509,3 +509,10 @@ body { font-family: var(--font); background: var(--bg); color: var(--ink); -webk
 .exposant-list-card:hover { border-color: var(--cyan); box-shadow: 0 4px 16px rgba(63,203,209,.1); }
 .elc-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
 .elc-footer { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* ── Plan visiteur ── */
+.village-card-visitor:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+.village-exp-chip:hover { transform: translateX(3px); box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+@media(max-width:600px){ 
+  #plan-visiteur-content > div:last-child { grid-template-columns: 1fr !important; }
+}

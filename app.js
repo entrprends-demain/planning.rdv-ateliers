@@ -2368,33 +2368,99 @@ async function renderHistorique() {
 
 function renderPlanVisiteur() {
   const cont = el('plan-visiteur-content'); if(!cont) return;
-  if(!DATA.villages.length){
-    cont.innerHTML=`<div class="empty-state"><i class="ti ti-map-off"></i><p>Le plan n'est pas encore disponible.</p></div>`;
+
+  const villages = DATA.villages.filter(v=>(v.exposants||[]).length>0);
+
+  // Zone plan photo
+  const photoZone = `<div style="background:#f5f5f5;border:2px dashed #ccc;border-radius:16px;padding:2.5rem;text-align:center;margin-bottom:2rem" id="plan-photo-zone">
+    <i class="ti ti-map-2" style="font-size:48px;color:#bbb;display:block;margin-bottom:.75rem"></i>
+    <div style="font-size:15px;font-weight:600;color:var(--ink3)">Plan de la Cité des Métiers</div>
+    <div style="font-size:13px;color:#bbb;margin-top:.25rem">Le plan détaillé sera disponible prochainement</div>
+  </div>`;
+
+  if(!villages.length){
+    cont.innerHTML = photoZone + `<div class="empty-state"><i class="ti ti-map-off"></i><p>Aucun village n'est encore défini.</p></div>`;
     return;
   }
-  cont.innerHTML = DATA.villages.map(v=>{
-    const exps=(v.exposants||[]).map(eid=>DATA.exposants.find(e=>e.id===eid)).filter(Boolean);
-    if(!exps.length) return '';
-    return`<div style="margin-bottom:1.5rem;border:2.5px solid ${v.color||'var(--cyan)'};border-radius:14px;overflow:hidden">
-      <div style="background:${v.color||'var(--cyan)'}22;padding:.9rem 1.25rem;border-bottom:2px solid ${v.color||'var(--cyan)'}44">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="width:14px;height:14px;border-radius:50%;background:${v.color||'var(--cyan)'}"></div>
-          <div style="font-size:16px;font-weight:700;color:var(--ink)">${v.name}</div>
-          <div style="margin-left:auto;font-size:12px;color:var(--ink3)">${exps.length} exposant${exps.length>1?'s':''}</div>
+
+  // Grille villages 2 par ligne
+  const villagesHTML = `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:1rem">
+    ${villages.map(v=>{
+      const exps=(v.exposants||[]).map(eid=>DATA.exposants.find(e=>e.id===eid)).filter(Boolean);
+      return `<div class="village-card-visitor" style="border:2.5px solid ${v.color||'var(--cyan)'};border-radius:14px;overflow:hidden;cursor:pointer" data-village-id="${v.id}">
+        <div style="background:${v.color||'var(--cyan)'};padding:.85rem 1.1rem;display:flex;align-items:center;gap:10px">
+          <div style="width:12px;height:12px;border-radius:50%;background:#fff;opacity:.8;flex-shrink:0"></div>
+          <div style="font-size:15px;font-weight:700;color:#fff;flex:1">${v.name}</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.8)">${exps.length} exposant${exps.length>1?'s':''}</div>
+          <i class="ti ti-chevron-down" style="color:#fff;font-size:14px;transition:.2s" id="chevron-${v.id}"></i>
         </div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;padding:1rem">
-        ${exps.map(e=>`<div style="background:#fff;border:1.5px solid var(--brd2);border-radius:10px;padding:.9rem;display:flex;gap:10px;align-items:flex-start">
-          <div class="avatar" style="width:36px;height:36px;font-size:13px;flex-shrink:0;background:${v.color||'var(--cyan)'}22;color:${v.color||'var(--cyan)'}">${initials(e.name)}</div>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.name}</div>
-            <div style="font-size:11px;color:var(--ink3)">${e.cat||''}</div>
-            ${e.website?`<a href="${e.website.startsWith('http')?e.website:'https://'+e.website}" target="_blank" style="font-size:11px;color:var(--cyan);text-decoration:none"><i class="ti ti-world" style="font-size:10px"></i> Site web</a>`:''}
+        <div class="village-exps-list" id="vexps-${v.id}" style="display:none;padding:.75rem;background:${v.color||'var(--cyan)'}0D">
+          ${exps.map(e=>`<div class="village-exp-chip" data-eid="${e.id}" data-vcolor="${v.color||'var(--cyan)'}"
+            style="display:flex;align-items:center;gap:10px;padding:.7rem .85rem;border-radius:10px;background:#fff;border:1.5px solid ${v.color||'var(--cyan)'}44;margin-bottom:6px;cursor:pointer;transition:.15s">
+            <div style="width:32px;height:32px;border-radius:50%;background:${v.color||'var(--cyan)'}22;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${v.color||'var(--cyan)'};flex-shrink:0">${initials(e.name)}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.name}</div>
+              <div style="font-size:11px;color:var(--ink3)">${e.expertise||e.cat||''}</div>
+            </div>
+            <i class="ti ti-info-circle" style="color:${v.color||'var(--cyan)'};font-size:16px;flex-shrink:0"></i>
+          </div>`).join('')}
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+
+  cont.innerHTML = photoZone + villagesHTML;
+
+  // Toggle villages (ouvrir/fermer la liste)
+  cont.querySelectorAll('.village-card-visitor').forEach(card=>{
+    const vid = card.dataset.villageId;
+    card.querySelector('[style*="background:'+card.style.borderColor]') // header
+    const header = card.querySelector('div[style*="padding:.85rem"]');
+    const list = el('vexps-'+vid);
+    const chevron = el('chevron-'+vid);
+    header?.addEventListener('click', ()=>{
+      const open = list.style.display==='block';
+      list.style.display = open ? 'none' : 'block';
+      if(chevron) chevron.style.transform = open ? '' : 'rotate(180deg)';
+    });
+  });
+
+  // Fiche exposant au clic
+  cont.querySelectorAll('.village-exp-chip').forEach(chip=>{
+    chip.addEventListener('click', e=>{
+      e.stopPropagation();
+      const exp = DATA.exposants.find(x=>x.id===chip.dataset.eid);
+      if(!exp) return;
+      const vcolor = chip.dataset.vcolor;
+      const existing = document.getElementById('exp-plan-modal');
+      if(existing) existing.remove();
+      const overlay = document.createElement('div');
+      overlay.id = 'exp-plan-modal';
+      overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:800;display:flex;align-items:center;justify-content:center;padding:1rem';
+      overlay.innerHTML=`<div style="background:#fff;border-radius:20px;width:100%;max-width:400px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+        <div style="background:${vcolor};padding:1.25rem 1.5rem;display:flex;align-items:center;gap:12px">
+          <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff">${initials(exp.name)}</div>
+          <div>
+            <div style="font-size:16px;font-weight:700;color:#fff">${exp.name}</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.8)">${exp.cat||''}</div>
           </div>
-        </div>`).join('')}
-      </div>
-    </div>`;
-  }).join('');
+          <button onclick="document.getElementById('exp-plan-modal').remove()" style="margin-left:auto;background:rgba(255,255,255,.2);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center">×</button>
+        </div>
+        <div style="padding:1.25rem 1.5rem">
+          ${exp.expertise?`<div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:.5rem"><i class="ti ti-award" style="color:${vcolor}"></i> ${exp.expertise}</div>`:''}
+          ${exp.email?`<div style="font-size:13px;color:var(--ink2);margin-bottom:.4rem"><i class="ti ti-mail" style="font-size:12px;color:var(--ink3)"></i> <a href="mailto:${exp.email}" style="color:${vcolor}">${exp.email}</a></div>`:''}
+          ${exp.website?`<div style="font-size:13px;color:var(--ink2);margin-bottom:.75rem"><i class="ti ti-world" style="font-size:12px;color:var(--ink3)"></i> <a href="${exp.website.startsWith('http')?exp.website:'https://'+exp.website}" target="_blank" style="color:${vcolor}">${exp.website}</a></div>`:''}
+          ${exp.period!=='aucun'?`<div style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--brd)">
+            <button class="btn-primary" style="width:100%;justify-content:center" onclick="document.getElementById('exp-plan-modal').remove();switchVisitorTab('rdvs');setTimeout(()=>openDrawer('${exp.id}'),400)">
+              <i class="ti ti-calendar-plus"></i> Prendre RDV
+            </button>
+          </div>`:''}
+        </div>
+      </div>`;
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+    });
+  });
 }
 
 /* ── Init ─────────────────────────────────────────────────────── */
