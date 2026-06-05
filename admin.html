@@ -44,6 +44,7 @@
     <button class="atab" data-tab="rdvs"><i class="ti ti-calendar-check"></i> RDV <span id="rdv-badge" class="rdv-badge"></span></button>
     <button class="atab" data-tab="waitlist-rdvs"><i class="ti ti-clock" style="color:#B85C1A"></i> Attente RDV <span id="wrdv-badge" class="rdv-badge" style="background:#B85C1A"></span></button>
     <button class="atab" data-tab="visiteurs"><i class="ti ti-id-badge"></i> Visiteurs <span id="vis-badge" class="rdv-badge"></span></button>
+    <button class="atab" data-tab="plan"><i class="ti ti-map"></i> Plan</button>
     <button class="atab" data-tab="equipe"><i class="ti ti-users-group"></i> Équipe</button>
     <button class="atab" data-tab="historique"><i class="ti ti-history"></i> Historique</button>
     
@@ -77,6 +78,11 @@
           <option value="matin">Matin uniquement</option>
           <option value="aprem">Après-midi uniquement</option>
           <option value="aucun">Pas de RDV</option>
+        </select>
+        <select id="f-stand">
+          <option value="jour">Stand journée complète</option>
+          <option value="matin">Stand matin uniquement</option>
+          <option value="aprem">Stand après-midi uniquement</option>
         </select>
         <div class="form-actions">
           <button id="form-cancel" class="btn-ghost">Annuler</button>
@@ -273,6 +279,11 @@
     </div>
   </div>
 
+
+  <!-- Onglet Plan -->
+  <div id="tab-plan" style="display:none;padding:1.75rem;max-width:1100px;margin:0 auto">
+    <div id="plan-content"></div>
+  </div>
 
   <!-- Onglet Équipe -->
   <div id="tab-equipe" style="display:none;padding:1.75rem;max-width:1000px;margin:0 auto">
