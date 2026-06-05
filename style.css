@@ -34,7 +34,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--ink); -webk
 .nav-link:hover { background: rgba(255,255,255,.15); }
 
 /* ── Visitor tabs ── */
-.vis-tabs { display: flex; gap: 4px; }
+.vis-tabs { display: flex; gap: 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-wrap: nowrap; }
+.vis-tabs::-webkit-scrollbar { display: none; }
 .vtab { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: var(--r); border: 1.5px solid transparent; background: transparent; font-family: var(--font); font-size: 15px; font-weight: 500; color: rgba(255,255,255,.75); cursor: pointer; transition: .15s; white-space: nowrap; }
 .vtab:hover { background: rgba(255,255,255,.15); color: #fff; }
 .vtab.active { background: #fff; color: var(--cyan); border-color: #fff; font-weight: 700; }
@@ -409,7 +410,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--ink); -webk
   .nav-brand { flex-direction: column !important; gap: 2px !important; }
   .nav-brand-main { font-size: 14px !important; }
   .nav-brand-sub { font-size: 12px !important; }
-  .vis-tabs { flex-wrap: wrap; gap: 4px; }
+  .vis-tabs { flex-wrap: nowrap; gap: 4px; }
   .vtab { font-size: 12px !important; padding: 6px 10px !important; }
   .accueil-hero-inner { flex-direction: column; gap: 1rem; text-align: center; }
   .accueil-logo { max-height: 120px !important; margin-top: 0 !important; }
@@ -516,3 +517,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--ink); -webk
 @media(max-width:600px){ 
   #plan-visiteur-content > div:last-child { grid-template-columns: 1fr !important; }
 }
+
+/* ── Nav onglets visiteur scrollable ── */
+.vtabs { display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-wrap: nowrap; }
+.vtabs::-webkit-scrollbar { display: none; }
+.vtab { white-space: nowrap; flex-shrink: 0; }
