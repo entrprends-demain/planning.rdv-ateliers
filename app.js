@@ -1944,39 +1944,232 @@ async function renderPlan() {
 function initPlanPlacement() {
   let currentMode = 'view';
   let draggedExp = null;
+  let drawing = false, startX, startY, tempRect = null;
 
-  const renderModeButtons = () => {
+  const hints = {
+    view: 'Cliquez sur une zone colorée pour voir ses exposants.',
+    zone: 'Cliquez-glissez sur le plan pour dessiner une zone, puis associez-la à un village.',
+    place: 'Glissez un exposant depuis le panneau vers une zone du plan.'
+  };
+
+  const setMode = (mode) => {
+    currentMode = mode;
     document.querySelectorAll('.plan-mode-btn').forEach(b=>{
-      const active = b.dataset.mode===currentMode;
-      b.style.background=active?'var(--cyan)':'#fff';
-      b.style.color=active?'#fff':'var(--ink)';
-      b.style.borderColor=active?'var(--cyan)':'var(--brd2)';
+      const active = b.dataset.mode===mode;
+      b.style.background = active?'var(--cyan)':'#fff';
+      b.style.color = active?'#fff':'var(--ink)';
+      b.style.borderColor = active?'var(--cyan)':'var(--brd2)';
     });
-    const hints = {view:'Cliquez sur une zone pour voir ses exposants.',zone:'Cliquez-glissez pour dessiner une zone village.',place:'Glissez un exposant depuis le panneau vers le plan.'};
-    const h=el('plan-hint'); if(h) h.textContent=hints[currentMode];
-    const sp=el('plan-side-panel'); if(sp) sp.style.display=currentMode==='place'?'block':'none';
-    renderPlanOverlay(currentMode);
-    if(currentMode==='place') renderExpsPool();
+    const h=el('plan-hint'); if(h) h.textContent=hints[mode]||'';
+    const sp=el('plan-side-panel'); if(sp) sp.style.display=mode==='place'?'block':'none';
+    doRenderOverlay();
+    if(mode==='place') renderExpsPool();
   };
 
   document.querySelectorAll('.plan-mode-btn').forEach(btn=>{
-    btn.addEventListener('click',()=>{ currentMode=btn.dataset.mode; renderModeButtons(); });
+    btn.addEventListener('click',()=>setMode(btn.dataset.mode));
   });
 
-  renderPlanOverlay('view');
+  const getScale = () => {
+    const container=el('plan-container');
+    const img=el('plan-img');
+    if(!container||!img||!img.naturalWidth) return {sx:1,sy:1};
+    return { sx: container.offsetWidth/img.naturalWidth, sy: img.offsetHeight/img.naturalHeight };
+  };
+
+  const doRenderOverlay = () => {
+    const overlay=el('plan-overlay'); if(!overlay) return;
+    const {sx,sy} = getScale();
+    const zones  = DATA.planZones.filter(z=>z.type==='zone');
+    const stands = DATA.planZones.filter(z=>z.type==='stand');
+    overlay.style.pointerEvents = 'all';
+    overlay.innerHTML = '';
+
+    // Dessiner les zones existantes
+    zones.forEach(zone=>{
+      const village = DATA.villages.find(v=>v.id===zone.villageId);
+      const color = village?.color||'#3FCBD1';
+      const div = document.createElement('div');
+      div.style.cssText=`position:absolute;left:${zone.x*sx}px;top:${zone.y*sy}px;width:${zone.w*sx}px;height:${zone.h*sy}px;background:${color}33;border:2.5px solid ${color};border-radius:6px;box-sizing:border-box;`;
+      const lbl = document.createElement('div');
+      lbl.style.cssText=`position:absolute;top:3px;left:6px;font-size:11px;font-weight:700;color:${color};pointer-events:none;white-space:nowrap`;
+      lbl.textContent = village?.name||zone.label||'Zone';
+      div.appendChild(lbl);
+
+      // Stands dans cette zone
+      stands.filter(s=>s.zoneId===zone.id).forEach(stand=>{
+        const exp=DATA.exposants.find(e=>e.id===stand.exposantId); if(!exp) return;
+        const sd=document.createElement('div');
+        sd.style.cssText=`position:absolute;left:${(stand.relX||.5)*zone.w*sx-36}px;top:${(stand.relY||.5)*zone.h*sy-12}px;background:${color};color:#fff;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;white-space:nowrap;pointer-events:${currentMode==='place'?'all':'none'};cursor:${currentMode==='place'?'pointer':'default'};box-shadow:0 2px 6px rgba(0,0,0,.25);z-index:2`;
+        sd.textContent=exp.name.length>18?exp.name.slice(0,16)+'…':exp.name;
+        if(currentMode==='place'){
+          sd.title=`Retirer ${exp.name}`;
+          sd.addEventListener('click',async e2=>{
+            e2.stopPropagation();
+            if(!confirm(`Retirer ${exp.name} ?`)) return;
+            await deleteDoc(doc(db,'planZones',stand.id));
+            DATA.planZones=DATA.planZones.filter(z=>z.id!==stand.id);
+            doRenderOverlay(); renderExpsPool();
+          });
+        }
+        div.appendChild(sd);
+      });
+
+      // Drop exposant (mode place)
+      if(currentMode==='place'){
+        div.style.cursor='copy';
+        div.addEventListener('dragover',e=>{ e.preventDefault(); div.style.background=`${color}55`; });
+        div.addEventListener('dragleave',()=>{ div.style.background=`${color}33`; });
+        div.addEventListener('drop',async e=>{
+          e.preventDefault(); div.style.background=`${color}33`;
+          if(!draggedExp) return;
+          const rect=div.getBoundingClientRect();
+          const relX=Math.min(Math.max((e.clientX-rect.left)/rect.width,.05),.95);
+          const relY=Math.min(Math.max((e.clientY-rect.top)/rect.height,.1),.9);
+          loader(true);
+          try{
+            const ref=await addDoc(collection(db,'planZones'),{type:'stand',zoneId:zone.id,villageId:zone.villageId,exposantId:draggedExp,relX,relY,createdAt:Date.now()});
+            DATA.planZones.push({id:ref.id,type:'stand',zoneId:zone.id,villageId:zone.villageId,exposantId:draggedExp,relX,relY});
+            draggedExp=null; doRenderOverlay(); renderExpsPool(); toast('Exposant placé.');
+          }catch(err){console.error(err);toast('Erreur.');}
+          loader(false);
+        });
+      }
+
+      // Clic vue → modal
+      if(currentMode==='view'){
+        div.style.cursor='pointer';
+        div.addEventListener('mouseenter',()=>div.style.background=`${color}55`);
+        div.addEventListener('mouseleave',()=>div.style.background=`${color}33`);
+        div.addEventListener('click',()=>{
+          const zoneStands=stands.filter(s=>s.zoneId===zone.id);
+          const exps=zoneStands.map(s=>DATA.exposants.find(e=>e.id===s.exposantId)).filter(Boolean);
+          const existing=document.getElementById('zone-view-modal'); if(existing) existing.remove();
+          const ov=document.createElement('div');
+          ov.id='zone-view-modal';
+          ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:1rem';
+          ov.innerHTML=`<div style="background:#fff;border-radius:16px;width:100%;max-width:420px;overflow:hidden">
+            <div style="background:${color};padding:1rem 1.25rem;display:flex;align-items:center;gap:10px">
+              <div style="font-size:15px;font-weight:700;color:#fff;flex:1">${village?.name||'Zone'}</div>
+              <span style="font-size:12px;color:rgba(255,255,255,.8)">${exps.length} exposant${exps.length>1?'s':''}</span>
+              <button onclick="document.getElementById('zone-view-modal').remove()" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;color:#fff;font-size:16px">×</button>
+            </div>
+            <div style="padding:1rem">
+              ${exps.map(exp=>`<div style="display:flex;align-items:center;gap:10px;padding:.6rem .75rem;border-radius:8px;border:1.5px solid ${color}33;margin-bottom:6px">
+                <div style="width:30px;height:30px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff">${initials(exp.name)}</div>
+                <div><div style="font-size:13px;font-weight:700">${exp.name}</div><div style="font-size:11px;color:var(--ink3)">${exp.expertise||exp.cat||''}</div></div>
+              </div>`).join('')||'<div style="font-size:13px;color:var(--ink3);font-style:italic">Aucun exposant placé. Utilisez le mode Placer.</div>'}
+            </div>
+          </div>`;
+          document.body.appendChild(ov);
+          ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
+        });
+      }
+      overlay.appendChild(div);
+    });
+
+    // Mode zone : dessin de rectangle
+    if(currentMode==='zone'){
+      overlay.style.cursor='crosshair';
+      overlay.addEventListener('mousedown', onMouseDown);
+      overlay.addEventListener('mousemove', onMouseMove);
+      overlay.addEventListener('mouseup', onMouseUp);
+    }
+  };
+
+  const onMouseDown = e => {
+    if(e.target!==el('plan-overlay')) return;
+    const rect=e.currentTarget.getBoundingClientRect();
+    startX=e.clientX-rect.left; startY=e.clientY-rect.top;
+    drawing=true;
+    tempRect=document.createElement('div');
+    tempRect.style.cssText=`position:absolute;left:${startX}px;top:${startY}px;width:0;height:0;background:rgba(63,203,209,.2);border:2px dashed var(--cyan);pointer-events:none;box-sizing:border-box;z-index:10`;
+    el('plan-overlay').appendChild(tempRect);
+  };
+  const onMouseMove = e => {
+    if(!drawing||!tempRect) return;
+    const rect=e.currentTarget.getBoundingClientRect();
+    const cx=e.clientX-rect.left, cy=e.clientY-rect.top;
+    tempRect.style.left=`${Math.min(cx,startX)}px`;
+    tempRect.style.top=`${Math.min(cy,startY)}px`;
+    tempRect.style.width=`${Math.abs(cx-startX)}px`;
+    tempRect.style.height=`${Math.abs(cy-startY)}px`;
+  };
+  const onMouseUp = async e => {
+    if(!drawing) return; drawing=false;
+    const rect=e.currentTarget.getBoundingClientRect();
+    const cx=e.clientX-rect.left, cy=e.clientY-rect.top;
+    const px=Math.min(cx,startX), py=Math.min(cy,startY);
+    const pw=Math.abs(cx-startX), ph=Math.abs(cy-startY);
+    if(tempRect){tempRect.remove();tempRect=null;}
+    if(pw<20||ph<20){toast('Zone trop petite, recommencez.');return;}
+    const {sx,sy}=getScale();
+    const nx=px/sx, ny=py/sy, nw=pw/sx, nh=ph/sy;
+    // Modal assignation village
+    const existing=document.getElementById('zone-assign-modal'); if(existing) existing.remove();
+    const ov=document.createElement('div');
+    ov.id='zone-assign-modal';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:1rem';
+    ov.innerHTML=`<div style="background:#fff;border-radius:16px;width:100%;max-width:380px;padding:1.5rem">
+      <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:1rem">📐 Associer la zone</div>
+      <div class="field" style="margin-bottom:10px"><label>Type</label>
+        <select id="za-type" style="width:100%;padding:8px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px">
+          <option value="village">Village exposants</option>
+          <option value="rdv">RDV individuels</option>
+          <option value="accueil">Accueil / Info</option>
+          <option value="cafe">Café / Terrasse</option>
+          <option value="atelier">Ateliers</option>
+        </select>
+      </div>
+      <div class="field" id="za-village-wrap" style="margin-bottom:10px"><label>Village</label>
+        <select id="za-village" style="width:100%;padding:8px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px">
+          ${DATA.villages.map(v=>`<option value="${v.id}">${v.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field" id="za-label-wrap" style="display:none;margin-bottom:10px"><label>Libellé</label>
+        <input id="za-label" placeholder="Ex: Espace accueil" style="width:100%;padding:8px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px" />
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-ghost" onclick="document.getElementById('zone-assign-modal').remove()">Annuler</button>
+        <button id="za-save" class="btn-primary"><i class="ti ti-check"></i> Créer la zone</button>
+      </div>
+    </div>`;
+    document.body.appendChild(ov);
+    el('za-type')?.addEventListener('change',()=>{
+      const t=el('za-type').value;
+      el('za-village-wrap').style.display=t==='village'?'block':'none';
+      el('za-label-wrap').style.display=t!=='village'?'block':'none';
+    });
+    el('za-save')?.addEventListener('click', async()=>{
+      const type=el('za-type').value;
+      const villageId=type==='village'?el('za-village')?.value:null;
+      const label=el('za-label')?.value||type;
+      loader(true);
+      try{
+        const ref=await addDoc(collection(db,'planZones'),{type:'zone',zoneType:type,villageId,label,x:nx,y:ny,w:nw,h:nh,createdAt:Date.now()});
+        DATA.planZones.push({id:ref.id,type:'zone',zoneType:type,villageId,label,x:nx,y:ny,w:nw,h:nh});
+        ov.remove(); doRenderOverlay(); toast('Zone créée.');
+      }catch(err){console.error(err);toast('Erreur.');}
+      loader(false);
+    });
+    ov.addEventListener('click',e2=>{ if(e2.target===ov) ov.remove(); });
+  };
 
   const renderExpsPool = () => {
     const pool=el('plan-exps-pool'); if(!pool) return;
     const placed=new Set(DATA.planZones.filter(z=>z.type==='stand').map(z=>z.exposantId));
     const unplaced=DATA.exposants.filter(e=>!placed.has(e.id));
     pool.innerHTML=unplaced.map(e=>`<div class="exp-pool-chip" draggable="true" data-eid="${e.id}"
-      style="padding:4px 10px;border-radius:16px;background:#fff;border:1.5px solid var(--brd2);font-size:12px;font-weight:600;cursor:grab">${e.name}</div>`).join('')
+      style="padding:5px 12px;border-radius:16px;background:#fff;border:1.5px solid var(--brd2);font-size:12px;font-weight:600;cursor:grab;color:var(--ink)">${e.name}</div>`).join('')
       ||'<span style="font-size:12px;color:var(--ink3);font-style:italic">Tous placés.</span>';
     pool.querySelectorAll('.exp-pool-chip').forEach(chip=>{
-      chip.addEventListener('dragstart',e=>{ draggedExp=chip.dataset.eid; e.dataTransfer.effectAllowed='copy'; });
-      chip.addEventListener('dragend',()=>{ draggedExp=null; });
+      chip.addEventListener('dragstart',e=>{ draggedExp=chip.dataset.eid; e.dataTransfer.effectAllowed='copy'; setTimeout(()=>chip.style.opacity='.4',0); });
+      chip.addEventListener('dragend',()=>{ chip.style.opacity=''; draggedExp=null; });
     });
   };
+
+  // Init
+  doRenderOverlay();
 }
 
 
