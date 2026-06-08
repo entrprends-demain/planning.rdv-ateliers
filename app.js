@@ -1992,7 +1992,7 @@ function initPlanPlacement() {
       const div = document.createElement('div');
       div.style.cssText=`position:absolute;left:${zone.x*sx}px;top:${zone.y*sy}px;width:${zone.w*sx}px;height:${zone.h*sy}px;background:${color}33;border:2.5px solid ${color};border-radius:6px;box-sizing:border-box;`;
       const lbl = document.createElement('div');
-      lbl.style.cssText=`position:absolute;top:4px;left:6px;right:4px;font-size:13px;font-weight:800;color:${color};pointer-events:none;white-space:normal;word-break:break-word;line-height:1.2;text-shadow:0 1px 2px rgba(255,255,255,.8)`;
+      lbl.style.cssText=`position:absolute;top:3px;left:6px;font-size:11px;font-weight:700;color:${color};pointer-events:none;white-space:nowrap`;
       lbl.textContent = village?.name||zone.label||'Zone';
       div.appendChild(lbl);
 
@@ -2000,9 +2000,8 @@ function initPlanPlacement() {
       stands.filter(s=>s.zoneId===zone.id).forEach(stand=>{
         const exp=DATA.exposants.find(e=>e.id===stand.exposantId); if(!exp) return;
         const sd=document.createElement('div');
-        const sdW=Math.min(zone.w*sx-8, 90);
-        sd.style.cssText=`position:absolute;left:${(stand.relX||.5)*zone.w*sx-sdW/2}px;top:${(stand.relY||.5)*zone.h*sy-16}px;width:${sdW}px;background:${color};color:#fff;border-radius:5px;padding:3px 6px;font-size:11px;font-weight:700;white-space:normal;word-break:break-word;line-height:1.3;text-align:center;pointer-events:${currentMode==='place'?'all':'none'};cursor:${currentMode==='place'?'pointer':'default'};box-shadow:0 2px 6px rgba(0,0,0,.3);z-index:2`;
-        sd.textContent=exp.name;
+        sd.style.cssText=`position:absolute;left:${(stand.relX||.5)*zone.w*sx-36}px;top:${(stand.relY||.5)*zone.h*sy-12}px;background:${color};color:#fff;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;white-space:nowrap;pointer-events:${currentMode==='place'?'all':'none'};cursor:${currentMode==='place'?'pointer':'default'};box-shadow:0 2px 6px rgba(0,0,0,.25);z-index:2`;
+        sd.textContent=exp.name.length>18?exp.name.slice(0,16)+'…':exp.name;
         if(currentMode==='place'){
           sd.title=`Retirer ${exp.name}`;
           sd.addEventListener('click',async e2=>{
@@ -2721,8 +2720,8 @@ function renderPlanVisiteur() {
   const stands = DATA.planZones.filter(z=>z.type==='stand');
 
   // Pas encore de zones définies → afficher les villages existants
-  const villages = DATA.villages.filter(v=>(v.exposants||[]).length>0);
   if(!bgZone?.url && !zones.length) {
+    const villages = DATA.villages.filter(v=>(v.exposants||[]).length>0);
     if(!villages.length){
       cont.innerHTML=`<div style="background:#f5f5f5;border:2px dashed #ccc;border-radius:16px;padding:3rem;text-align:center">
         <i class="ti ti-map-2" style="font-size:48px;color:#bbb;display:block;margin-bottom:.75rem"></i>
