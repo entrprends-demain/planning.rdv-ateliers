@@ -1628,34 +1628,11 @@ function applyModeUI() {
   const planPublic = DATA.config?.planPublic;
   if(planTab) planTab.style.display = planPublic ? '' : 'none';
 
-  // Nav : ajuster quand plan visible/invisible
-  const navEl = document.querySelector('nav.nav');
+  // sub-tabs-bar (si existe)
   const subBar = el('sub-tabs-bar');
   if(subBar) subBar.style.display = planPublic ? 'flex' : 'none';
-  // Masquer vtab-plan dans le nav principal, il est dans la sub-bar
-  if(planTab) planTab.style.display = 'none'; // toujours caché dans nav, géré par sub-bar
 
-  if(PLATFORM_MODE === 'inscription') return; // rien à faire pour le mode banner
-
-  const banner = document.createElement('div');
-
-  if(PLATFORM_MODE === 'lecture') {
-    banner.className = 'mode-banner lecture';
-    banner.innerHTML = `<i class="ti ti-eye"></i>
-      <span><strong>Consultation uniquement</strong> — Les inscriptions ne sont pas encore ouvertes.
-      Elles seront disponibles à partir du <strong>${DATA.config.lectureDate||'1er juillet 2026'}</strong>.
-      Vous pouvez dès maintenant découvrir les experts et les ateliers proposés.</span>`;
-  } else if(PLATFORM_MODE === 'preinscription') {
-    banner.className = 'mode-banner preinscription';
-    banner.innerHTML = `<i class="ti ti-pencil"></i>
-      <span><strong>Préinscriptions ouvertes</strong> — Vos inscriptions sont enregistrées mais restent provisoires.
-      Elles seront confirmées définitivement à l'ouverture officielle des inscriptions.</span>`;
-  }
-
-  // Insérer après la nav
-  const nav = document.querySelector('.nav');
-  if(nav && nav.nextSibling) nav.parentNode.insertBefore(banner, nav.nextSibling);
-}
+}  // fin applyModeUI — pas de bandeau
 
 /* ── Navigation visiteur ──────────────────────────────────────── */
 function switchVisitorTab(tab){
@@ -2870,34 +2847,27 @@ function initStructureField(searchId, dropdownId, hiddenId, wrapId, societyId) {
 /* ── Paramètres admin ─────────────────────────────────────────── */
 
 function initParametres() {
-  // Afficher l'état du mode fantôme
-  const ghostBtn = el('ghost-mode-btn');
-  const ghostInput = el('ghost-mode-input');
-  if(ghostBtn){
-    const isGhost = DATA.config?.ghostMode;
-    ghostBtn.textContent = isGhost ? '🔴 Désactiver le mode fantôme' : '👻 Activer le mode fantôme';
-    ghostBtn.style.background = isGhost ? 'var(--red)' : '#555';
-    if(ghostInput) ghostInput.value = DATA.config?.ghostMessage || '';
-    ghostBtn.onclick = async () => {
-      if(DATA.config?.ghostMode){
-        await disableGhostMode(); initParametres();
-      } else {
-        const msg = ghostInput?.value?.trim();
-        if(!msg){toast('Saisissez un message à afficher aux visiteurs.');ghostInput?.focus();return;}
-        await enableGhostMode(msg); initParametres();
-      }
-    };
-  }
-  // Sélectionner le bon radio mode
-  const radio = document.querySelector(`input[name="site-mode"][value="${DATA.config.mode}"]`);
+  // Sélectionner le bon radio mode (incl. fantome)
+  const curMode = DATA.config.ghostMode ? 'fantome' : (DATA.config.mode||'inscription');
+  const radio = document.querySelector(`input[name="site-mode"][value="${curMode}"]`);
   if(radio) radio.checked = true;
   const dateInput = el('lecture-date');
   if(dateInput) dateInput.value = DATA.config.lectureDate || '1er juillet 2026';
+  if(el('ghost-mode-input')) el('ghost-mode-input').value = DATA.config.ghostMessage||'';
+  const ghostWrap = el('ghost-msg-wrap');
+  if(ghostWrap) ghostWrap.style.display = DATA.config.ghostMode ? 'block' : 'none';
   updateLecturePreview?.();
   updateModeLabel?.();
   el('lecture-date')?.addEventListener('input', updateLecturePreview);
   el('save-mode-btn')?.addEventListener('click', saveMode);
   el('save-lecture-btn')?.addEventListener('click', saveLectureDate);
+  // Afficher textarea ghost quand radio fantome sélectionné
+  document.querySelectorAll('input[name="site-mode"]').forEach(r=>{
+    r.addEventListener('change',()=>{
+      const gw = el('ghost-msg-wrap');
+      if(gw) gw.style.display = r.value==='fantome' ? 'block' : 'none';
+    });
+  });
 }
 
 // _initParametresReal merged into initParametres
@@ -2920,11 +2890,24 @@ async function saveMode() {
   loader(true);
   try {
     const cfgRef = doc(db,'config','platform');
-    await setDoc(cfgRef, { mode: selected, lectureDate: DATA.config.lectureDate || '1er juillet 2026' });
-    PLATFORM_MODE = selected;
-    DATA.config.mode = selected;
-    updateModeLabel();
-    toast(`Mode "${selected}" activé !`);
+    if(selected === 'fantome') {
+      // Mode fantôme : activer ghostMode
+      const isSA = currentAdmin?.role?.toLowerCase()==='superadmin'||currentAdmin?.email===SUPER_ADMIN_EMAIL;
+      if(!isSA){toast('Réservé au super-admin.');loader(false);return;}
+      const msg = (el('ghost-mode-input')?.value||'').trim();
+      if(!msg){toast('Saisissez un message à afficher aux visiteurs.');el('ghost-mode-input')?.focus();loader(false);return;}
+      await updateDoc(cfgRef, {ghostMode:true, ghostMessage:msg, updatedAt:Date.now()});
+      DATA.config.ghostMode=true; DATA.config.ghostMessage=msg;
+      toast('Mode fantôme activé — le site est masqué aux visiteurs.');
+    } else {
+      // Mode normal : désactiver ghostMode si actif
+      await setDoc(cfgRef, { mode:selected, lectureDate:DATA.config.lectureDate||'1er juillet 2026', ghostMode:false, updatedAt:Date.now() }, {merge:true});
+      PLATFORM_MODE = selected;
+      DATA.config.mode = selected;
+      DATA.config.ghostMode = false;
+      updateModeLabel();
+      toast(`Mode "${selected}" activé !`);
+    }
   } catch(e) { console.error(e); toast('Erreur.'); }
   loader(false);
 }

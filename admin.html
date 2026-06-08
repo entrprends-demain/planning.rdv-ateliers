@@ -256,6 +256,22 @@
           </div>
         </label>
 
+
+        <label class="mode-choice" id="mode-fantome">
+          <input type="radio" name="site-mode" value="fantome" />
+          <div class="mode-choice-inner">
+            <div class="mode-icon" style="background:#1A1816;color:#FFD82B"><i class="ti ti-ghost"></i></div>
+            <div style="flex:1">
+              <div class="mode-title" style="color:var(--ink)">Mode fantôme <span style="font-size:11px;background:#FFD82B;color:#1A1816;border-radius:4px;padding:1px 6px;margin-left:4px">Super-admin</span></div>
+              <div class="mode-desc">Masque entièrement le site et affiche uniquement un message personnalisé.</div>
+              <div id="ghost-msg-wrap" style="margin-top:8px;display:none">
+                <label style="font-size:12px;color:var(--ink3);font-weight:600">Message affiché aux visiteurs</label>
+                <textarea id="ghost-mode-input" rows="2" placeholder="Ex: Le site sera bientôt disponible…" style="width:100%;margin-top:4px;padding:8px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px;resize:vertical"></textarea>
+              </div>
+            </div>
+          </div>
+        </label>
+
       </div>
 
       <div style="margin-top:1.25rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
@@ -286,23 +302,14 @@
     <div id="plan-content"></div>
   </div>
 
-    <div style="background:#1A1816;border-radius:14px;padding:1.5rem;margin-top:1.5rem">
-      <div style="font-size:15px;font-weight:700;color:#FFD82B;margin-bottom:.5rem">👻 Mode fantôme</div>
-      <div style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:1rem">
-        Masque entièrement le site aux visiteurs et affiche uniquement un message personnalisé.
-        <strong style="color:#FFD82B">Réservé au super-admin.</strong>
-      </div>
-      <div class="field" style="margin-bottom:10px">
-        <label style="color:rgba(255,255,255,.7)">Message à afficher aux visiteurs</label>
-        <textarea id="ghost-mode-input" rows="3" placeholder="Ex: Le site sera bientôt disponible…" style="width:100%;padding:8px 12px;border-radius:8px;border:1.5px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;font-family:var(--font);font-size:13px;resize:vertical"></textarea>
-      </div>
-      <button id="ghost-mode-btn" style="padding:10px 20px;border-radius:8px;border:none;color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;background:#555">
-        👻 Activer le mode fantôme
-      </button>
-    </div>
   </div>
 
-<!-- Onglet Équipe -->
+<!-- Onglet Rétro-planning -->
+  <div id="tab-retroplanning" style="display:none;padding:1.75rem;max-width:1100px;margin:0 auto">
+    <div id="retroplanning-content"></div>
+  </div>
+
+  <!-- Onglet Équipe -->
   <div id="tab-equipe" style="display:none;padding:1.75rem;max-width:1000px;margin:0 auto">
     <div style="font-family:var(--font);font-size:20px;font-weight:700;color:var(--ink);margin-bottom:1.25rem">
       <i class="ti ti-users-group" style="color:var(--cyan)"></i> Gestion de l'équipe admin
@@ -327,6 +334,6 @@
 <div id="toast" class="toast"></div>
 <div id="loader" class="loader"><div class="loader-inner"><div class="spinner"></div><div class="loader-msg">Chargement...</div></div></div>
 
-<script type="module" src="app.js?v=1780908404"></script>
+<script type="module" src="app.js?v=1780909782"></script>
 </body>
 </html>
