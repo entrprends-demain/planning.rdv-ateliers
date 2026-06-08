@@ -88,7 +88,7 @@ const ALL_CATS = [
 const DATA = {
   exposants: [], slots: {}, bookings: [],
   visitors: [], ateliers: [], inscriptions: [],
-  waitlist: [], villages: [],
+  waitlist: [], villages: [], planZones: [],
   config: { mode: 'inscription', lectureDate: '1er juillet 2026', planPublic: false },
 };
 let selId=null, periodFilter='', atPeriodFilter='';
@@ -111,7 +111,7 @@ function toast(msg) {
 async function loadAll() {
   loader(true);
   try {
-    const [eS,sS,bS,vS,aS,iS,wS,cS,vlS] = await Promise.all([
+    const [eS,sS,bS,vS,aS,iS,wS,cS,vlS,pzS] = await Promise.all([
       getDocs(query(collection(db,'exposants'), orderBy('createdAt'))),
       getDocs(query(collection(db,'slots'),     orderBy('start'))),
       getDocs(query(collection(db,'bookings'),  orderBy('slotStart'))),
@@ -121,6 +121,7 @@ async function loadAll() {
       getDocs(query(collection(db,'waitlist'),  orderBy('createdAt'))),
       getDocs(collection(db,'config')),
       getDocs(collection(db,'villages')),
+      getDocs(collection(db,'planZones')),
     ]);
     DATA.exposants    = eS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.bookings     = bS.docs.map(d=>({id:d.id,...d.data()}));
@@ -129,6 +130,7 @@ async function loadAll() {
     DATA.inscriptions = iS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.waitlist     = wS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.villages     = vlS.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order||0)-(b.order||0));
+    DATA.planZones    = pzS.docs.map(d=>({id:d.id,...d.data()}));
     const cfgDoc = cS.docs.find(d=>d.id==='platform') || cS.docs.find(d=>d.id==='siteConfig');
     if(cfgDoc){ const c=cfgDoc.data(); PLATFORM_MODE=c.mode||'inscription'; DATA.config={mode:PLATFORM_MODE,lectureDate:c.lectureDate||'1er juillet 2026',planPublic:c.planPublic||false,ghostMode:c.ghostMode||false,ghostMessage:c.ghostMessage||''}; } else { DATA.config={mode:'inscription',lectureDate:'1er juillet 2026',planPublic:false,ghostMode:false,ghostMessage:''}; }
     DATA.slots = {};
@@ -2431,14 +2433,138 @@ async function renderHistorique() {
 function renderPlanVisiteur() {
   const cont = el('plan-visiteur-content'); if(!cont) return;
 
-  const villages = DATA.villages.filter(v=>(v.exposants||[]).length>0);
+  const bgZone = DATA.planZones.find(z=>z.type==='bg');
+  const zones  = DATA.planZones.filter(z=>z.type==='zone');
+  const stands = DATA.planZones.filter(z=>z.type==='stand');
 
-  // Zone plan photo
-  const photoZone = `<div style="background:#f5f5f5;border:2px dashed #ccc;border-radius:16px;padding:2.5rem;text-align:center;margin-bottom:2rem" id="plan-photo-zone">
-    <i class="ti ti-map-2" style="font-size:48px;color:#bbb;display:block;margin-bottom:.75rem"></i>
-    <div style="font-size:15px;font-weight:600;color:var(--ink3)">Plan de la Cité des Métiers</div>
-    <div style="font-size:13px;color:#bbb;margin-top:.25rem">Le plan détaillé sera disponible prochainement</div>
-  </div>`;
+  if(!bgZone?.url && !zones.length) {
+    cont.innerHTML=`<div style="background:#f5f5f5;border:2px dashed #ccc;border-radius:16px;padding:3rem;text-align:center">
+      <i class="ti ti-map-2" style="font-size:48px;color:#bbb;display:block;margin-bottom:.75rem"></i>
+      <div style="font-size:15px;font-weight:600;color:var(--ink3)">Plan en cours de préparation</div>
+      <div style="font-size:13px;color:#bbb;margin-top:.25rem">Revenez bientôt !</div>
+    </div>`;
+    return;
+  }
+
+  cont.innerHTML = `
+    <div style="font-size:13px;color:var(--ink3);margin-bottom:.75rem;text-align:center">
+      <i class="ti ti-hand-click"></i> Cliquez sur une zone colorée pour voir les exposants
+    </div>
+    <div style="position:relative;display:inline-block;width:100%;border:2px solid var(--brd2);border-radius:12px;overflow:hidden;background:#f9f9f9;cursor:pointer" id="plan-vis-container">
+      ${bgZone?.url ? `<img id="plan-vis-img" src="${bgZone.url}" style="width:100%;height:auto;display:block;vertical-align:top" />` : `<div style="background:#f0f0f0;padding-top:60%;"></div>`}
+      <div id="plan-vis-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%"></div>
+    </div>
+    <div id="plan-vis-zoom" style="display:none;margin-top:1.5rem"></div>
+  `;
+
+  // Attendre que l'image soit chargée pour avoir les dimensions
+  const img = el('plan-vis-img');
+  const doRender = () => renderVisZones(zones, stands);
+  if(img) { if(img.complete) doRender(); else img.addEventListener('load', doRender); }
+  else doRender();
+
+  function renderVisZones(zones, stands) {
+    const overlay = el('plan-vis-overlay'); if(!overlay) return;
+    const container = el('plan-vis-container');
+    const img2 = el('plan-vis-img');
+    const natW = img2?.naturalWidth||container.offsetWidth;
+    const natH = img2?.naturalHeight||container.offsetHeight;
+    const scaleX = container.offsetWidth/natW;
+    const scaleH = img2?.offsetHeight||container.offsetHeight;
+    const scaleY = scaleH/natH;
+
+    overlay.innerHTML='';
+    zones.forEach(zone=>{
+      const village = DATA.villages.find(v=>v.id===zone.villageId);
+      const isVillage = zone.zoneType==='village';
+      const color = village?.color||(isVillage?'#3FCBD1':'#888');
+      const zoneStands = stands.filter(s=>s.zoneId===zone.id);
+      const label = village?.name || zone.label || zone.zoneType;
+
+      const div = document.createElement('div');
+      div.style.cssText=`position:absolute;left:${zone.x*scaleX}px;top:${zone.y*scaleY}px;width:${zone.w*scaleX}px;height:${zone.h*scaleY}px;background:${color}${isVillage?'33':'22'};border:${isVillage?'2.5':'1.5'}px solid ${color};border-radius:6px;box-sizing:border-box;transition:.2s;${isVillage?'cursor:pointer':''}`;
+
+      const lbl = document.createElement('div');
+      lbl.style.cssText=`position:absolute;top:4px;left:6px;font-size:${isVillage?'11':'10'}px;font-weight:700;color:${color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:calc(100% - 12px);pointer-events:none`;
+      lbl.textContent = label;
+      div.appendChild(lbl);
+
+      if(isVillage) {
+        div.addEventListener('mouseenter',()=>div.style.background=`${color}55`);
+        div.addEventListener('mouseleave',()=>div.style.background=`${color}33`);
+        div.addEventListener('click',()=>showZoomVillage(zone,village,zoneStands,scaleX,scaleY));
+      }
+      overlay.appendChild(div);
+    });
+  }
+
+  function showZoomVillage(zone, village, zoneStands, scaleX, scaleY) {
+    const zoomEl = el('plan-vis-zoom'); if(!zoomEl) return;
+    const color = village?.color||'var(--cyan)';
+    const exps = zoneStands.map(s=>DATA.exposants.find(e=>e.id===s.exposantId)).filter(Boolean);
+
+    // Zoom sur la zone du plan
+    const container = el('plan-vis-container');
+    const img2 = el('plan-vis-img');
+    const natW = img2?.naturalWidth||1000, natH = img2?.naturalHeight||700;
+    const scaleX2 = container.offsetWidth/natW;
+    const scaleH = img2?.offsetHeight||container.offsetHeight;
+    const scaleY2 = scaleH/natH;
+
+    // Calculer crop en %
+    const pad = 30;
+    const cropX = Math.max(0, zone.x*scaleX2 - pad);
+    const cropY = Math.max(0, zone.y*scaleY2 - pad);
+    const cropW = zone.w*scaleX2 + pad*2;
+    const cropH = zone.h*scaleY2 + pad*2;
+    const totalW = container.offsetWidth;
+    const totalH = img2?.offsetHeight||400;
+    const zoom = Math.min(totalW/cropW, 360/cropH, 3);
+
+    zoomEl.style.display='block';
+    zoomEl.innerHTML=`
+      <div style="border:2.5px solid ${color};border-radius:16px;overflow:hidden">
+        <div style="background:${color};padding:.85rem 1.25rem;display:flex;align-items:center;gap:10px">
+          <div style="width:12px;height:12px;border-radius:50%;background:#fff;opacity:.8"></div>
+          <div style="font-size:15px;font-weight:700;color:#fff;flex:1">${village?.name||'Village'}</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.8)">${exps.length} exposant${exps.length>1?'s':''}</div>
+          <button onclick="el('plan-vis-zoom').style.display='none'" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;color:#fff;font-size:16px">×</button>
+        </div>
+        <!-- Zoom visuel -->
+        ${img2?.src ? `<div style="position:relative;overflow:hidden;height:220px;background:#f9f9f9">
+          <img src="${img2.src}" style="position:absolute;transform-origin:top left;transform:scale(${zoom}) translate(-${cropX/zoom}px,-${cropY/zoom}px);height:auto;max-width:none" />
+          <!-- Stands superposés -->
+          ${zoneStands.map(s=>{
+            const exp2=DATA.exposants.find(e=>e.id===s.exposantId); if(!exp2) return '';
+            const sx=(zone.x*scaleX2 + s.relX*zone.w*scaleX2 - cropX)*zoom;
+            const sy=(zone.y*scaleY2 + s.relY*zone.h*scaleY2 - cropY)*zoom;
+            return `<div style="position:absolute;left:${sx}px;top:${sy}px;transform:translate(-50%,-50%);background:${color};color:#fff;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.3);z-index:2">${exp2.name.length>16?exp2.name.slice(0,14)+'…':exp2.name}</div>`;
+          }).join('')}
+        </div>`:``}
+        <!-- Liste exposants -->
+        <div style="padding:.85rem 1.1rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
+          ${exps.map(exp2=>`<div style="display:flex;align-items:center;gap:8px;padding:.6rem .8rem;border-radius:8px;background:${color}11;border:1.5px solid ${color}33;cursor:pointer" onclick="document.getElementById('plan-vis-zoom').style.display='none';switchVisitorTab('rdvs');setTimeout(()=>openDrawer('${exp2.id}'),300)">
+            <div style="width:30px;height:30px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">${initials(exp2.name)}</div>
+            <div style="min-width:0">
+              <div style="font-size:12px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${exp2.name}</div>
+              <div style="font-size:10px;color:var(--ink3)">${exp2.expertise||exp2.cat||''}</div>
+            </div>
+          </div>`).join('')}
+          ${!exps.length?`<div style="grid-column:1/-1;font-size:13px;color:var(--ink3);font-style:italic">Aucun exposant placé encore.</div>`:''}
+        </div>
+      </div>`;
+
+    zoomEl.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+  // Fallback : villages sans plan image
+  const villages = DATA.villages.filter(v=>(v.exposants||[]).length>0);
+  if(!bgZone?.url && villages.length) {
+    cont.innerHTML += `<div style="margin-top:2rem"><div style="font-size:14px;font-weight:700;color:var(--ink3);margin-bottom:.75rem">Villages</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:1rem">
+        ${villages.map(v=>{const exps=(v.exposants||[]).map(id=>DATA.exposants.find(e=>e.id===id)).filter(Boolean);return renderVillageCard(v,exps);}).join('')}
+      </div></div>`;
+  }
+}
 
   if(!villages.length){
     cont.innerHTML = photoZone + `<div class="empty-state"><i class="ti ti-map-off"></i><p>Aucun village n'est encore défini.</p></div>`;
@@ -2548,6 +2674,360 @@ async function disableGhostMode() {
   loader(false);
 }
 
+
+
+/* ── Plan interactif ─────────────────────────────────────────── */
+
+async function renderPlan() {
+  const listEl = el('plan-content'); if(!listEl) return;
+  const isSA = currentAdmin?.role?.toLowerCase()==='superadmin' || currentAdmin?.email===SUPER_ADMIN_EMAIL;
+  const planPublic = DATA.config?.planPublic || false;
+
+  listEl.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1.25rem">
+      <div>
+        <div style="font-size:20px;font-weight:700;color:var(--ink)">🗺️ Plan interactif</div>
+        <div style="font-size:13px;color:var(--ink3);margin-top:2px">Définissez les zones villages sur le plan, puis placez les exposants</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${isSA?`<button id="plan-publish-btn" class="${planPublic?'btn-primary':'btn-ghost'}" style="${planPublic?'background:#3B6D11;border-color:#3B6D11':''}">
+          <i class="ti ti-${planPublic?'eye':'eye-off'}"></i> ${planPublic?'Plan publié':'Plan fantôme'}
+        </button>`:''}
+        <label class="btn-primary" style="cursor:pointer"><i class="ti ti-upload"></i> Uploader le plan
+          <input type="file" id="plan-img-upload" accept="image/*" style="display:none" />
+        </label>
+        <button id="add-zone-btn" class="btn-ghost"><i class="ti ti-vector-bezier-2"></i> Ajouter zone</button>
+        <button id="plan-save-zones-btn" class="btn-primary" style="display:none"><i class="ti ti-check"></i> Enregistrer zones</button>
+      </div>
+    </div>
+
+    <!-- Modes -->
+    <div style="display:flex;gap:8px;margin-bottom:1rem" id="plan-mode-bar">
+      <button class="plan-mode-btn active" data-mode="view" style="padding:6px 14px;border-radius:6px;border:1.5px solid var(--cyan);background:var(--cyan);color:#fff;font-size:12px;font-weight:600;cursor:pointer">👁 Vue</button>
+      <button class="plan-mode-btn" data-mode="zone" style="padding:6px 14px;border-radius:6px;border:1.5px solid var(--brd2);background:#fff;color:var(--ink);font-size:12px;font-weight:600;cursor:pointer">📐 Définir zones</button>
+      <button class="plan-mode-btn" data-mode="place" style="padding:6px 14px;border-radius:6px;border:1.5px solid var(--brd2);background:#fff;color:var(--ink);font-size:12px;font-weight:600;cursor:pointer">📍 Placer exposants</button>
+    </div>
+
+    <div style="font-size:12px;color:var(--ink3);margin-bottom:.75rem" id="plan-hint">Uploadez le plan PNG puis sélectionnez un mode.</div>
+
+    <!-- Conteneur plan -->
+    <div style="position:relative;display:inline-block;max-width:100%;border:2px solid var(--brd2);border-radius:12px;overflow:hidden;background:#f9f9f9" id="plan-container">
+      <img id="plan-img" src="" alt="Plan" style="display:${DATA.planZones.find(z=>z.type==='bg')?.url?'block':'none'};max-width:100%;height:auto;vertical-align:top" />
+      <div id="plan-no-img" style="padding:3rem;text-align:center;color:var(--ink3);${DATA.planZones.find(z=>z.type==='bg')?.url?'display:none':''}">
+        <i class="ti ti-map-2" style="font-size:48px;display:block;margin-bottom:.75rem"></i>
+        <div>Uploadez le plan de l'événement pour commencer</div>
+      </div>
+      <div id="plan-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></div>
+    </div>
+
+    <!-- Panel latéral exposants (mode place) -->
+    <div id="plan-side-panel" style="display:none;margin-top:1rem;background:var(--cyan-l);border:1.5px solid var(--brd2);border-radius:12px;padding:1rem">
+      <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:.5rem">Exposants sans position</div>
+      <div id="plan-exps-pool" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
+  `;
+
+  // Charger image de fond
+  const bgZone = DATA.planZones.find(z=>z.type==='bg');
+  if(bgZone?.url) {
+    el('plan-img').src = bgZone.url;
+    el('plan-img').style.display = 'block';
+    el('plan-no-img').style.display = 'none';
+  }
+
+  // Publication
+  el('plan-publish-btn')?.addEventListener('click', async()=>{
+    const newVal = !DATA.config.planPublic;
+    loader(true);
+    try {
+      await setDoc(doc(db,'config','platform'),{planPublic:newVal,updatedAt:Date.now()},{merge:true});
+      DATA.config.planPublic = newVal;
+      renderPlan();
+      toast(newVal?`Plan publié.`:`Plan masqué.`);
+    } catch(e){console.error(e);toast('Erreur.');}
+    loader(false);
+  });
+
+  // Upload image
+  el('plan-img-upload')?.addEventListener('change', async(ev)=>{
+    const file = ev.target.files[0]; if(!file) return;
+    loader(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async(e)=>{
+        const dataUrl = e.target.result;
+        // Sauvegarder URL en base64 dans Firestore (doc planZones/bg)
+        const existing = DATA.planZones.find(z=>z.type==='bg');
+        if(existing) {
+          await updateDoc(doc(db,'planZones',existing.id),{url:dataUrl});
+          existing.url = dataUrl;
+        } else {
+          const ref = await addDoc(collection(db,'planZones'),{type:'bg',url:dataUrl,createdAt:Date.now()});
+          DATA.planZones.push({id:ref.id,type:'bg',url:dataUrl});
+        }
+        el('plan-img').src = dataUrl;
+        el('plan-img').style.display = 'block';
+        el('plan-no-img').style.display = 'none';
+        renderPlanOverlay(currentPlanMode);
+        toast('Plan uploadé.');
+        loader(false);
+      };
+      reader.readAsDataURL(file);
+    } catch(e){console.error(e);toast('Erreur upload.');loader(false);}
+  });
+
+  // Modes
+  let currentPlanMode = 'view';
+  let drawingZone = null;
+  let draggedExp = null;
+
+  listEl.querySelectorAll('.plan-mode-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      currentPlanMode = btn.dataset.mode;
+      listEl.querySelectorAll('.plan-mode-btn').forEach(b=>{
+        const active = b===btn;
+        b.style.background = active?'var(--cyan)':'#fff';
+        b.style.color = active?'#fff':'var(--ink)';
+        b.style.borderColor = active?'var(--cyan)':'var(--brd2)';
+      });
+      const hints = {
+        view:'Cliquez sur une zone colorée pour voir les exposants.',
+        zone:'Cliquez et glissez sur le plan pour dessiner une zone village. Associez-la à un village existant.',
+        place:'Glissez un exposant depuis le panneau vers sa position sur le plan.'
+      };
+      el('plan-hint').textContent = hints[currentPlanMode]||'';
+      el('plan-side-panel').style.display = currentPlanMode==='place'?'block':'none';
+      el('plan-save-zones-btn').style.display = currentPlanMode==='zone'?'flex':'none';
+      renderPlanOverlay(currentPlanMode);
+      if(currentPlanMode==='place') renderExpsPool();
+    });
+  });
+
+  renderPlanOverlay('view');
+  renderExpsPool();
+
+  function renderExpsPool() {
+    const pool = el('plan-exps-pool'); if(!pool) return;
+    const placed = new Set(DATA.planZones.filter(z=>z.type==='stand').map(z=>z.exposantId));
+    const unplaced = DATA.exposants.filter(e=>!placed.has(e.id));
+    pool.innerHTML = unplaced.map(e=>`
+      <div class="exp-pool-chip" draggable="true" data-eid="${e.id}"
+        style="padding:4px 10px;border-radius:16px;background:#fff;border:1.5px solid var(--brd2);font-size:12px;font-weight:600;cursor:grab;color:var(--ink)">
+        ${e.name}
+      </div>`).join('') || '<span style="font-size:12px;color:var(--ink3);font-style:italic">Tous les exposants sont placés.</span>';
+
+    pool.querySelectorAll('.exp-pool-chip').forEach(chip=>{
+      chip.addEventListener('dragstart',e=>{ draggedExp=chip.dataset.eid; e.dataTransfer.effectAllowed='copy'; });
+      chip.addEventListener('dragend',()=>{ draggedExp=null; });
+    });
+  }
+
+  function renderPlanOverlay(mode) {
+    const overlay = el('plan-overlay'); if(!overlay) return;
+    const img = el('plan-img'); if(!img||!img.naturalWidth) { overlay.innerHTML=''; return; }
+    const zones = DATA.planZones.filter(z=>z.type==='zone');
+    const stands = DATA.planZones.filter(z=>z.type==='stand');
+    const container = el('plan-container');
+    const scaleX = container.offsetWidth / img.naturalWidth;
+    const scaleY = (container.offsetHeight||img.offsetHeight) / img.naturalHeight;
+
+    overlay.style.pointerEvents = mode!=='view' ? 'all' : 'all';
+    overlay.innerHTML = '';
+
+    // Dessiner les zones villages
+    zones.forEach(zone=>{
+      const village = DATA.villages.find(v=>v.id===zone.villageId);
+      const color = village?.color||'#3FCBD1';
+      const div = document.createElement('div');
+      div.style.cssText=`position:absolute;left:${zone.x*scaleX}px;top:${zone.y*scaleY}px;width:${zone.w*scaleX}px;height:${zone.h*scaleY}px;background:${color}33;border:2.5px solid ${color};border-radius:6px;cursor:pointer;box-sizing:border-box;transition:.2s`;
+      div.title = village?.name||'Zone';
+
+      // Label village
+      const label = document.createElement('div');
+      label.style.cssText=`position:absolute;top:4px;left:6px;font-size:11px;font-weight:700;color:${color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:calc(100% - 12px)`;
+      label.textContent = village?.name||'Zone';
+      div.appendChild(label);
+
+      // Stands dans cette zone
+      const zoneStands = stands.filter(s=>s.zoneId===zone.id);
+      zoneStands.forEach(stand=>{
+        const exp = DATA.exposants.find(e=>e.id===stand.exposantId);
+        if(!exp) return;
+        const sDiv = document.createElement('div');
+        sDiv.style.cssText=`position:absolute;left:${(stand.relX||.5)*zone.w*scaleX - 30}px;top:${(stand.relY||.5)*zone.h*scaleY - 14}px;background:${color};color:#fff;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700;white-space:nowrap;cursor:default;box-shadow:0 2px 6px rgba(0,0,0,.2)`;
+        sDiv.textContent = exp.name.length>18 ? exp.name.slice(0,16)+'…' : exp.name;
+        if(mode==='place') {
+          sDiv.style.cursor='pointer';
+          sDiv.title='Cliquer pour retirer';
+          sDiv.addEventListener('click',async(e)=>{
+            e.stopPropagation();
+            if(!confirm(`Retirer ${exp.name} de sa position ?`)) return;
+            await deleteDoc(doc(db,'planZones',stand.id));
+            DATA.planZones = DATA.planZones.filter(z=>z.id!==stand.id);
+            renderPlanOverlay(mode); renderExpsPool();
+          });
+        }
+        div.appendChild(sDiv);
+      });
+
+      // Drop exposant dans la zone
+      if(mode==='place') {
+        div.addEventListener('dragover',e=>{ e.preventDefault(); div.style.background=`${color}55`; });
+        div.addEventListener('dragleave',()=>{ div.style.background=`${color}33`; });
+        div.addEventListener('drop',async(e)=>{
+          e.preventDefault(); div.style.background=`${color}33`;
+          if(!draggedExp) return;
+          const rect = div.getBoundingClientRect();
+          const relX = Math.min(Math.max((e.clientX-rect.left)/rect.width,.05),.95);
+          const relY = Math.min(Math.max((e.clientY-rect.top)/rect.height,.1),.9);
+          loader(true);
+          try {
+            const ref = await addDoc(collection(db,'planZones'),{
+              type:'stand',zoneId:zone.id,villageId:zone.villageId,
+              exposantId:draggedExp,relX,relY,createdAt:Date.now()
+            });
+            DATA.planZones.push({id:ref.id,type:'stand',zoneId:zone.id,villageId:zone.villageId,exposantId:draggedExp,relX,relY});
+            draggedExp=null;
+            renderPlanOverlay(mode); renderExpsPool();
+            toast('Exposant placé.');
+          } catch(err){console.error(err);toast('Erreur.');}
+          loader(false);
+        });
+
+        // Clic vue mode : ouvrir modal zone
+      } else if(mode==='view') {
+        div.addEventListener('mouseenter',()=>div.style.background=`${color}55`);
+        div.addEventListener('mouseleave',()=>div.style.background=`${color}33`);
+        div.addEventListener('click',()=>openZoneModal(zone,village,zoneStands));
+      }
+
+      overlay.appendChild(div);
+    });
+
+    // Mode zone : dessiner nouvelle zone
+    if(mode==='zone') {
+      let startX,startY,drawing=false,tempRect=null;
+      overlay.addEventListener('mousedown',e=>{
+        if(e.target!==overlay) return;
+        const rect=overlay.getBoundingClientRect();
+        startX=e.clientX-rect.left; startY=e.clientY-rect.top;
+        drawing=true;
+        tempRect=document.createElement('div');
+        tempRect.style.cssText=`position:absolute;left:${startX}px;top:${startY}px;width:0;height:0;background:rgba(63,203,209,.2);border:2px dashed var(--cyan);pointer-events:none;box-sizing:border-box`;
+        overlay.appendChild(tempRect);
+      });
+      overlay.addEventListener('mousemove',e=>{
+        if(!drawing||!tempRect) return;
+        const rect=overlay.getBoundingClientRect();
+        const cx=e.clientX-rect.left, cy=e.clientY-rect.top;
+        tempRect.style.left=`${Math.min(cx,startX)}px`;
+        tempRect.style.top=`${Math.min(cy,startY)}px`;
+        tempRect.style.width=`${Math.abs(cx-startX)}px`;
+        tempRect.style.height=`${Math.abs(cy-startY)}px`;
+      });
+      overlay.addEventListener('mouseup',async e=>{
+        if(!drawing) return; drawing=false;
+        const rect=overlay.getBoundingClientRect();
+        const cx=e.clientX-rect.left, cy=e.clientY-rect.top;
+        const x=Math.min(cx,startX), y=Math.min(cy,startY);
+        const w=Math.abs(cx-startX), h=Math.abs(cy-startY);
+        if(tempRect) tempRect.remove(); tempRect=null;
+        if(w<20||h<20){ toast('Zone trop petite.'); return; }
+        // Convertir en coords naturelles
+        const nx=x/scaleX, ny=y/scaleY, nw=w/scaleX, nh=h/scaleY;
+        // Choisir le village
+        openZoneAssign(nx,ny,nw,nh, ()=>renderPlanOverlay(mode));
+      });
+    }
+  }
+
+  function openZoneModal(zone, village, stands) {
+    const existing = document.getElementById('zone-modal'); if(existing) existing.remove();
+    const overlay2 = document.createElement('div');
+    overlay2.id='zone-modal';
+    overlay2.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:800;display:flex;align-items:center;justify-content:center;padding:1rem';
+    const exps = stands.map(s=>DATA.exposants.find(e=>e.id===s.exposantId)).filter(Boolean);
+    overlay2.innerHTML=`<div style="background:#fff;border-radius:20px;width:100%;max-width:480px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+      <div style="background:${village?.color||'var(--cyan)'};padding:1.25rem 1.5rem;display:flex;align-items:center;gap:12px">
+        <div style="width:16px;height:16px;border-radius:50%;background:#fff;opacity:.7"></div>
+        <div style="font-size:17px;font-weight:700;color:#fff;flex:1">${village?.name||'Village'}</div>
+        <button onclick="document.getElementById('zone-modal').remove()" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;color:#fff;font-size:18px">×</button>
+      </div>
+      <div style="padding:1.25rem 1.5rem">
+        <div style="font-size:13px;font-weight:600;color:var(--ink3);margin-bottom:.75rem">${exps.length} exposant${exps.length>1?'s':''} dans ce village</div>
+        ${exps.map(exp=>`<div style="display:flex;align-items:center;gap:10px;padding:.6rem .8rem;border-radius:8px;background:${village?.color||'var(--cyan)'}11;border:1.5px solid ${village?.color||'var(--cyan)'}33;margin-bottom:6px">
+          <div style="width:32px;height:32px;border-radius:50%;background:${village?.color||'var(--cyan)'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">${initials(exp.name)}</div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--ink)">${exp.name}</div>
+            <div style="font-size:11px;color:var(--ink3)">${exp.expertise||exp.cat||''}</div>
+          </div>
+          ${exp.period!=='aucun'?`<button class="btn-primary" style="margin-left:auto;padding:4px 10px;font-size:11px" onclick="document.getElementById('zone-modal').remove();switchAdminTab('exposants')">RDV</button>`:''}
+        </div>`).join('')}
+        ${!exps.length?'<div style="font-size:13px;color:var(--ink3);font-style:italic">Aucun exposant placé dans ce village. Utilisez le mode "Placer exposants".</div>':''}
+      </div>
+    </div>`;
+    document.body.appendChild(overlay2);
+    overlay2.addEventListener('click',e=>{if(e.target===overlay2)overlay2.remove();});
+  }
+
+  function openZoneAssign(x,y,w,h,cb) {
+    const existing = document.getElementById('zone-assign-modal'); if(existing) existing.remove();
+    const overlay2 = document.createElement('div');
+    overlay2.id='zone-assign-modal';
+    overlay2.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:800;display:flex;align-items:center;justify-content:center;padding:1rem';
+    overlay2.innerHTML=`<div style="background:#fff;border-radius:16px;width:100%;max-width:400px;padding:1.5rem">
+      <div style="font-size:16px;font-weight:700;color:var(--ink);margin-bottom:1rem">📐 Nouvelle zone</div>
+      <div class="field" style="margin-bottom:10px">
+        <label>Type de zone</label>
+        <select id="zone-type-sel" style="width:100%;padding:8px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px">
+          <option value="village">Village exposants</option>
+          <option value="rdv">RDV individuels</option>
+          <option value="accueil">Accueil / Information</option>
+          <option value="cafe">Café / Terrasse</option>
+          <option value="atelier">Zone ateliers</option>
+        </select>
+      </div>
+      <div class="field" id="village-sel-wrap" style="margin-bottom:10px">
+        <label>Village associé</label>
+        <select id="zone-village-sel" style="width:100%;padding:8px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px">
+          ${DATA.villages.map(v=>`<option value="${v.id}">${v.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field" id="zone-label-wrap" style="display:none;margin-bottom:10px">
+        <label>Libellé</label>
+        <input id="zone-label-inp" placeholder="Ex: Accueil principal" style="width:100%;padding:8px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px" />
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-ghost" onclick="document.getElementById('zone-assign-modal').remove()">Annuler</button>
+        <button id="zone-save-btn" class="btn-primary"><i class="ti ti-check"></i> Créer la zone</button>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay2);
+
+    el('zone-type-sel')?.addEventListener('change',()=>{
+      const t=el('zone-type-sel').value;
+      el('village-sel-wrap').style.display=t==='village'?'block':'none';
+      el('zone-label-wrap').style.display=t!=='village'?'block':'none';
+    });
+
+    el('zone-save-btn')?.addEventListener('click',async()=>{
+      const type=el('zone-type-sel').value;
+      const villageId=type==='village'?el('zone-village-sel')?.value:null;
+      const label=el('zone-label-inp')?.value||type;
+      loader(true);
+      try {
+        const ref=await addDoc(collection(db,'planZones'),{type:'zone',zoneType:type,villageId,label,x,y,w,h,createdAt:Date.now()});
+        DATA.planZones.push({id:ref.id,type:'zone',zoneType:type,villageId,label,x,y,w,h});
+        overlay2.remove();
+        cb();
+        toast('Zone créée.');
+      } catch(err){console.error(err);toast('Erreur.');}
+      loader(false);
+    });
+
+    overlay2.addEventListener('click',e=>{if(e.target===overlay2)overlay2.remove();});
+  }
+}
 
 /* ── Onglet Rétro-planning ───────────────────────────────────── */
 
