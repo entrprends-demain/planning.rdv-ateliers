@@ -492,10 +492,16 @@ function openEditPanel(expId) {
       <div class="field"><label>Site internet</label><input id="e-website" value="${exp.website||''}" placeholder="https://..." /></div>
       <div class="field"><label>Catégorie</label><select id="e-cat">${ALL_CATS.slice(0,7).map(c=>`<option value="${c}"${exp.cat===c?' selected':''}>${c}</option>`).join('')}</select></div>
       <div class="field"><label>Expertise</label><input id="e-expertise" value="${exp.expertise||''}" /></div>
-      <div class="field"><label>Disponibilité</label><select id="e-period">
+      <div class="field"><label>Disponibilité RDV</label><select id="e-period">
         <option value="jour"${exp.period==='jour'?' selected':''}>Journée complète</option>
         <option value="matin"${exp.period==='matin'?' selected':''}>Matin uniquement</option>
         <option value="aprem"${exp.period==='aprem'?' selected':''}>Après-midi uniquement</option>
+        <option value="aucun"${exp.period==='aucun'?' selected':''}>Pas de RDV</option>
+      </select></div>
+      <div class="field"><label>Stand</label><select id="e-stand">
+        <option value="jour"${(exp.stand||'jour')==='jour'?' selected':''}>Toute la journée</option>
+        <option value="matin"${exp.stand==='matin'?' selected':''}>Matin uniquement</option>
+        <option value="aprem"${exp.stand==='aprem'?' selected':''}>Après-midi uniquement</option>
       </select></div>
       <div class="edit-actions">
         <button id="edit-cancel" class="btn-ghost"><i class="ti ti-x"></i> Annuler</button>
@@ -1621,19 +1627,12 @@ function applyModeUI() {
   const planPublic = DATA.config?.planPublic;
   if(planTab) planTab.style.display = planPublic ? '' : 'none';
 
-  // Quand le plan est visible : brand à gauche compact, onglets à droite
-  const navInner = el('nav-inner');
-  const navBrand = navInner?.querySelector('.nav-brand');
-  const visTabs  = navInner?.querySelector('.vis-tabs');
-  if(navInner && planPublic) {
-    navInner.style.justifyContent = 'space-between';
-    if(navBrand) { navBrand.style.flexShrink = '0'; navBrand.style.marginRight = 'auto'; }
-    if(visTabs)  { visTabs.style.flexShrink = '0'; visTabs.style.overflowX = 'visible'; visTabs.style.flexWrap = 'nowrap'; }
-  } else if(navInner) {
-    navInner.style.justifyContent = '';
-    if(navBrand) { navBrand.style.flexShrink = ''; navBrand.style.marginRight = ''; }
-    if(visTabs)  { visTabs.style.flexShrink = ''; visTabs.style.overflowX = ''; visTabs.style.flexWrap = ''; }
-  }
+  // Nav : ajuster quand plan visible/invisible
+  const navEl = document.querySelector('nav.nav');
+  const subBar = el('sub-tabs-bar');
+  if(subBar) subBar.style.display = planPublic ? 'flex' : 'none';
+  // Masquer vtab-plan dans le nav principal, il est dans la sub-bar
+  if(planTab) planTab.style.display = 'none'; // toujours caché dans nav, géré par sub-bar
 
   if(PLATFORM_MODE === 'inscription') return; // rien à faire pour le mode banner
 
@@ -1674,9 +1673,10 @@ function switchVisitorTab(tab){
 
 /* ── Répertoire exposants ───────────────────────────────────────── */
 function renderExposantsList() {
-  const search = (el('el-search')?.value||'').toLowerCase();
-  const catF   = el('el-cat')?.value||'';
-  const grid   = el('exposants-list-grid'); if(!grid) return;
+  const search  = (el('el-search')?.value||'').toLowerCase();
+  const catF    = el('el-cat')?.value||'';
+  const periodeF= el('el-periode')?.value||'';
+  const grid    = el('exposants-list-grid'); if(!grid) return;
 
   // Populer filtre catégorie
   const catSel = el('el-cat');
@@ -1687,43 +1687,71 @@ function renderExposantsList() {
       cats.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
   }
 
+  // Filtre présence : stand couvre la période
+  const matchPeriode = (exp) => {
+    if(!periodeF) return true;
+    const s = exp.stand||'jour';
+    if(periodeF==='matin') return s==='matin'||s==='jour';
+    if(periodeF==='aprem') return s==='aprem'||s==='jour';
+    return true;
+  };
+
   const list = DATA.exposants
     .filter(exp => {
       const ms = !search || (exp.name+' '+exp.cat+' '+(exp.expertise||'')).toLowerCase().includes(search);
       const mc = !catF || exp.cat === catF;
-      return ms && mc;
+      return ms && mc && matchPeriode(exp);
     })
-    .sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    .sort((a,b)=>(a.cat||'').localeCompare(b.cat||'') || (a.name||'').localeCompare(b.name||''));
 
   if(!list.length){
     grid.innerHTML='<div class="empty-state"><i class="ti ti-building-community"></i><p>Aucun exposant trouvé.</p></div>';
     return;
   }
 
-  grid.innerHTML = list.map(exp=>{
-    const hasRdv = exp.period !== 'aucun';
-    const slots  = hasRdv ? getSlots(exp.id) : [];
-    const free   = slots.filter(s=>s.enabled&&!getBooking(exp.id,s.start)).length;
-    return`<div class="exposant-list-card">
-      <div class="elc-header">
-        <div class="avatar" style="width:48px;height:48px;font-size:15px;flex-shrink:0">${initials(exp.name)}</div>
-        <div style="flex:1">
-          <div style="font-size:15px;font-weight:700;color:var(--ink)">${exp.name}</div>
-          <div style="font-size:12px;color:var(--cyan-d);font-weight:500">${exp.cat||''}</div>
-          ${exp.expertise?`<div style="font-size:12px;color:var(--ink3)">${exp.expertise}</div>`:''}
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-          ${hasRdv?`<span style="font-size:11px;padding:3px 8px;border-radius:6px;background:var(--cyan-l);color:var(--cyan-d);font-weight:600">${free} créneau${free>1?'x':''} libre${free>1?'s':''}</span>`:'<span style="font-size:11px;padding:3px 8px;border-radius:6px;background:#f5f5f5;color:var(--ink3)">Présence seule</span>'}
-        </div>
-      </div>
-      <div class="elc-footer">
-        ${exp.website?`<a href="${exp.website.startsWith('http')?exp.website:'https://'+exp.website}" target="_blank" rel="noopener" class="btn-ghost" style="padding:5px 12px;font-size:12px;text-decoration:none"><i class="ti ti-world"></i> Site web</a>`:''}
-        ${hasRdv?`<button class="btn-primary" data-exp-id="${exp.id}" style="padding:5px 12px;font-size:12px"><i class="ti ti-calendar-plus"></i> Prendre RDV</button>`:''}
-      </div>
-    </div>`;
-  }).join('');
+  // Grouper par catégorie
+  const byCat = {};
+  list.forEach(exp => {
+    const cat = exp.cat||'Autre';
+    if(!byCat[cat]) byCat[cat]=[];
+    byCat[cat].push(exp);
+  });
 
-  // Brancher boutons RDV
+  const standLabel = s => s==='matin'?'🌅 Matin':s==='aprem'?'🌆 Après-midi':'🗓️ Toute la journée';
+
+  grid.innerHTML = Object.entries(byCat).map(([cat, exps])=>`
+    <div style="margin-bottom:2rem">
+      <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--cyan);border-bottom:2px solid var(--cyan-l);padding-bottom:.4rem;margin-bottom:.75rem">
+        <i class="ti ti-tag" style="font-size:12px"></i> ${cat}
+        <span style="font-weight:400;font-size:11px;opacity:.6">(${exps.length})</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+        ${exps.map(exp=>{
+          const hasRdv = exp.period !== 'aucun';
+          const slots  = hasRdv ? getSlots(exp.id) : [];
+          const free   = slots.filter(s=>s.enabled&&!getBooking(exp.id,s.start)).length;
+          return`<div class="exposant-list-card">
+            <div class="elc-header">
+              <div class="avatar" style="width:44px;height:44px;font-size:14px;flex-shrink:0">${initials(exp.name)}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:14px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${exp.name}</div>
+                ${exp.expertise?`<div style="font-size:11px;color:var(--ink3)">${exp.expertise}</div>`:''}
+                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">
+                  <span style="font-size:10px;padding:2px 6px;border-radius:4px;background:#f0f0f0;color:var(--ink3)">${standLabel(exp.stand||'jour')}</span>
+                  ${hasRdv?`<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:var(--cyan-l);color:var(--cyan-d)">${free} créneau${free>1?'x':''}</span>`:'<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:#f5f5f5;color:var(--ink3)">Présence</span>'}
+                </div>
+              </div>
+            </div>
+            <div class="elc-footer">
+              ${exp.website?`<a href="${exp.website.startsWith('http')?exp.website:'https://'+exp.website}" target="_blank" rel="noopener" class="btn-ghost" style="padding:4px 10px;font-size:12px;text-decoration:none"><i class="ti ti-world"></i> Site web</a>`:''}
+              ${hasRdv?`<button class="btn-primary" data-exp-id="${exp.id}" style="padding:4px 10px;font-size:12px"><i class="ti ti-calendar-plus"></i> RDV</button>`:''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `).join('');
+
   grid.querySelectorAll('[data-exp-id]').forEach(btn=>{
     btn.addEventListener('click',()=>{
       switchVisitorTab('rdvs');
@@ -2105,13 +2133,13 @@ async function renderEquipe() {
 
   const snap = await getDocs(collection(db,'admins'));
   const admins = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.email.localeCompare(b.email));
-  const ALL_TABS = ['exposants','ateliers-admin','rdvs','visiteurs','waitlist-rdvs','waitlist-ateliers','parametres','historique'];
-  const LABELS = {'exposants':'Exposants','ateliers-admin':'Ateliers','rdvs':'RDV','visiteurs':'Visiteurs','waitlist-rdvs':'Att. RDV','waitlist-ateliers':'Att. Ateliers','parametres':'Paramètres','historique':'Historique'};
+  const ALL_TABS = ['exposants','ateliers-admin','rdvs','visiteurs','waitlist-rdvs','waitlist-ateliers','plan','parametres','historique'];
+  const LABELS = {'exposants':'Exposants','ateliers-admin':'Ateliers','rdvs':'RDV','visiteurs':'Visiteurs','waitlist-rdvs':'Att. RDV','waitlist-ateliers':'Att. Ateliers','plan':'Plan','parametres':'Paramètres','historique':'Historique'};
 
   // Droits par défaut pour un nouvel admin (historique et paramètres désactivés)
   const DEFAULT_DROITS = {
     'exposants':true,'ateliers-admin':true,'rdvs':true,'visiteurs':true,
-    'waitlist-rdvs':true,'waitlist-ateliers':true,'parametres':false,'historique':false
+    'waitlist-rdvs':true,'waitlist-ateliers':true,'plan':true,'parametres':false,'historique':false
   };
 
   listEl.innerHTML = `
@@ -2358,13 +2386,54 @@ async function transfertSuperAdmin(newId, newEmail) {
 
 /* ── Onglet Historique ───────────────────────────────────────── */
 
+async function exportHistorique() {
+  try {
+    const snap = await getDocs(query(collection(db,'logs'), orderBy('timestamp','desc')));
+    const logs = snap.docs.map(d=>({id:d.id,...d.data()}));
+    const csv = ['Date,Admin,Rôle,Action,Détail',
+      ...logs.map(l=>{
+        const d = new Date(l.timestamp).toLocaleString('fr-FR');
+        const esc = s => `"${(s||'').replace(/"/g,'""')}"`;
+        return [esc(d),esc(l.adminEmail),esc(l.adminRole),esc(l.action),esc(l.details)].join(',');
+      })
+    ].join('
+');
+    const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href=url; a.download=`historique-${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('Historique exporté en CSV.');
+  } catch(e){console.error(e);toast('Erreur export.');}
+}
+
+async function clearHistorique() {
+  if(!confirm('Supprimer tout l'historique ? Cette action est irréversible.')) return;
+  loader(true);
+  try {
+    const snap = await getDocs(collection(db,'logs'));
+    const batch = writeBatch(db);
+    snap.docs.forEach(d=>batch.delete(doc(db,'logs',d.id)));
+    await batch.commit();
+    toast('Historique effacé.');
+    renderHistorique();
+  } catch(e){console.error(e);toast('Erreur.');}
+  loader(false);
+}
+
 async function renderHistorique() {
   const listEl=el('historique-list'); if(!listEl) return;
   try{
     const snap=await getDocs(query(collection(db,'logs'),orderBy('timestamp','desc')));
     const logs=snap.docs.map(d=>({id:d.id,...d.data()})).slice(0,200);
-    if(!logs.length){listEl.innerHTML='<div class="empty-state"><i class="ti ti-history"></i><p>Aucun historique.</p></div>';return;}
-    listEl.innerHTML=`<table class="rdv-table"><thead><tr>
+    const isSA = currentAdmin?.role?.toLowerCase()==='superadmin'||currentAdmin?.email===SUPER_ADMIN_EMAIL;
+    const toolbar = isSA ? `<div style="display:flex;gap:8px;margin-bottom:1rem">
+      <button onclick="exportHistorique()" class="btn-primary" style="font-size:13px"><i class="ti ti-download"></i> Exporter CSV</button>
+      <button onclick="clearHistorique()" class="btn-ghost" style="font-size:13px;border-color:var(--red);color:var(--red)"><i class="ti ti-trash"></i> Vider l'historique</button>
+    </div>` : '';
+    if(!logs.length){listEl.innerHTML=toolbar+'<div class="empty-state"><i class="ti ti-history"></i><p>Aucun historique.</p></div>';return;}
+    listEl.innerHTML=toolbar+`<table class="rdv-table"><thead><tr>
       <th>Date</th><th>Admin</th><th>Rôle</th><th>Action</th><th>Détail</th>
     </tr></thead><tbody>${logs.map(l=>{
       const d=new Date(l.timestamp);
@@ -2379,6 +2448,7 @@ async function renderHistorique() {
       </tr>`;
     }).join('')}</tbody></table>`;
   }catch(e){console.error(e);listEl.innerHTML='<div class="empty-state"><p>Erreur chargement.</p></div>';}
+}
 }
 
 function renderPlanVisiteur() {
@@ -2477,6 +2547,31 @@ function renderPlanVisiteur() {
   });
 }
 
+/* ── Mode fantôme site ──────────────────────────────────────── */
+async function enableGhostMode(message) {
+  loader(true);
+  try {
+    await setDoc(doc(db,'config','platform'), {
+      mode: PLATFORM_MODE, planPublic: DATA.config?.planPublic||false,
+      ghostMode: true, ghostMessage: message, updatedAt: Date.now()
+    }, {merge:true});
+    DATA.config.ghostMode = true;
+    DATA.config.ghostMessage = message;
+    toast('Mode fantôme activé.');
+  } catch(e){console.error(e);toast('Erreur.');}
+  loader(false);
+}
+
+async function disableGhostMode() {
+  loader(true);
+  try {
+    await setDoc(doc(db,'config','platform'), {ghostMode:false, updatedAt:Date.now()}, {merge:true});
+    DATA.config.ghostMode = false;
+    toast('Mode fantôme désactivé.');
+  } catch(e){console.error(e);toast('Erreur.');}
+  loader(false);
+}
+
 /* ── Init ─────────────────────────────────────────────────────── */
 /* ── Statuts juridiques ───────────────────────────────────────── */
 const STATUTS = [
@@ -2567,18 +2662,37 @@ function initStructureField(searchId, dropdownId, hiddenId, wrapId, societyId) {
 /* ── Paramètres admin ─────────────────────────────────────────── */
 
 function initParametres() {
-  // Sélectionner le bon radio
+  // Afficher l'état du mode fantôme
+  const ghostBtn = el('ghost-mode-btn');
+  const ghostInput = el('ghost-mode-input');
+  if(ghostBtn){
+    const isGhost = DATA.config?.ghostMode;
+    ghostBtn.textContent = isGhost ? '🔴 Désactiver le mode fantôme' : '👻 Activer le mode fantôme';
+    ghostBtn.style.background = isGhost ? 'var(--red)' : '#555';
+    if(ghostInput) ghostInput.value = DATA.config?.ghostMessage || '';
+    ghostBtn.onclick = async () => {
+      if(DATA.config?.ghostMode){
+        await disableGhostMode(); initParametres();
+      } else {
+        const msg = ghostInput?.value?.trim();
+        if(!msg){toast('Saisissez un message à afficher aux visiteurs.');ghostInput?.focus();return;}
+        await enableGhostMode(msg); initParametres();
+      }
+    };
+  }
+  // Sélectionner le bon radio mode
   const radio = document.querySelector(`input[name="site-mode"][value="${DATA.config.mode}"]`);
   if(radio) radio.checked = true;
   const dateInput = el('lecture-date');
   if(dateInput) dateInput.value = DATA.config.lectureDate || '1er juillet 2026';
-  updateLecturePreview();
-  updateModeLabel();
-
+  updateLecturePreview?.();
+  updateModeLabel?.();
   el('lecture-date')?.addEventListener('input', updateLecturePreview);
   el('save-mode-btn')?.addEventListener('click', saveMode);
   el('save-lecture-btn')?.addEventListener('click', saveLectureDate);
 }
+
+// _initParametresReal merged into initParametres
 
 function updateLecturePreview() {
   const date = el('lecture-date')?.value || '1er juillet 2026';
@@ -2663,6 +2777,7 @@ if(IS_VISITOR){
   el('at-search')?.addEventListener('input',renderAteliersGrid);
   el('el-search')?.addEventListener('input',renderExposantsList);
   el('el-cat')?.addEventListener('change',renderExposantsList);
+  el('el-periode')?.addEventListener('change',renderExposantsList);
   el('at-cat')?.addEventListener('change',renderAteliersGrid);
   el('overlay').addEventListener('click',closeDrawer);
   el('drawer-close').addEventListener('click',closeDrawer);
@@ -2683,5 +2798,17 @@ if(IS_VISITOR){
   el('exp-search-btn')?.addEventListener('click',searchExposantPlanning);
   el('exp-email-input')?.addEventListener('keydown',e=>{if(e.key==='Enter')searchExposantPlanning();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeDrawer();el('modal-atelier')?.classList.remove('open');}});
-  loadAll().then(()=>{applyModeUI();renderAccueil();renderGrid();renderAteliersGrid();});
+  loadAll().then(()=>{
+    // Mode fantôme
+    if(DATA.config?.ghostMode && DATA.config?.ghostMessage) {
+      document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg,#F8F7F4);padding:2rem">
+        <div style="max-width:500px;text-align:center;background:#fff;border-radius:20px;padding:3rem;box-shadow:0 8px 40px rgba(0,0,0,.1)">
+          <img src="logo.png" style="max-width:200px;margin-bottom:1.5rem;opacity:.8" onerror="this.style.display='none'" />
+          <div style="font-size:16px;color:#4A4A4A;line-height:1.8;font-family:'Montserrat',sans-serif">${DATA.config.ghostMessage}</div>
+        </div>
+      </div>`;
+      return;
+    }
+    applyModeUI();renderAccueil();renderGrid();renderAteliersGrid();
+  });
 }

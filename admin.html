@@ -285,7 +285,23 @@
     <div id="plan-content"></div>
   </div>
 
-  <!-- Onglet Équipe -->
+    <div style="background:#1A1816;border-radius:14px;padding:1.5rem;margin-top:1.5rem">
+      <div style="font-size:15px;font-weight:700;color:#FFD82B;margin-bottom:.5rem">👻 Mode fantôme</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:1rem">
+        Masque entièrement le site aux visiteurs et affiche uniquement un message personnalisé.
+        <strong style="color:#FFD82B">Réservé au super-admin.</strong>
+      </div>
+      <div class="field" style="margin-bottom:10px">
+        <label style="color:rgba(255,255,255,.7)">Message à afficher aux visiteurs</label>
+        <textarea id="ghost-mode-input" rows="3" placeholder="Ex: Le site sera bientôt disponible…" style="width:100%;padding:8px 12px;border-radius:8px;border:1.5px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;font-family:var(--font);font-size:13px;resize:vertical"></textarea>
+      </div>
+      <button id="ghost-mode-btn" style="padding:10px 20px;border-radius:8px;border:none;color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;background:#555">
+        👻 Activer le mode fantôme
+      </button>
+    </div>
+  </div>
+
+<!-- Onglet Équipe -->
   <div id="tab-equipe" style="display:none;padding:1.75rem;max-width:1000px;margin:0 auto">
     <div style="font-family:var(--font);font-size:20px;font-weight:700;color:var(--ink);margin-bottom:1.25rem">
       <i class="ti ti-users-group" style="color:var(--cyan)"></i> Gestion de l'équipe admin
