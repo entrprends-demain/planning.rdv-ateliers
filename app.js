@@ -553,7 +553,7 @@ function renderCal() {
   el('cal-periods').innerHTML=opts.map(o=>`<button class="psw${exp.period===o.val?' '+o.cls:''}" data-p="${o.val}">${o.label}</button>`).join('');
   el('cal-periods').querySelectorAll('.psw').forEach(b=>b.addEventListener('click',()=>setPeriod(b.dataset.p)));
   const slots=getSlots(exp.id), ms=slots.filter(s=>s.period==='matin'), ps=slots.filter(s=>s.period==='aprem');
-  function block(list,cls){
+  const block = (list,cls) => {
     if(!list.length)return '';
     const free=list.filter(s=>s.enabled&&!getBooking(exp.id,s.start)).length;
     const head=cls==='am'?'Matin · 10h–13h':'Après-midi · 14h–17h';
@@ -1078,7 +1078,7 @@ async function openDrawer(expId){
   const slots=getSlots(expId), ms=slots.filter(s=>s.period==='matin'), ps=slots.filter(s=>s.period==='aprem');
   el('d-name').textContent=exp.name; el('d-cat').textContent=exp.cat+(exp.expertise?' · '+exp.expertise:'');
   el('d-confirm').innerHTML='';
-  function fillSlots(list,cid,fcls){
+  const fillSlots = (list,cid,fcls) => {
     const c=el(cid);if(!list.length){c.innerHTML='<span style="font-size:12px;color:var(--ink3)">Non disponible</span>';return;}
     c.innerHTML=list.map(s=>{
       const b=getBooking(expId,s.start);
@@ -1160,7 +1160,7 @@ async function applyQuickCode(codeInputId,statusId,fieldPrefix){
   let prev=DATA.bookings.find(b=>(b.email||'').toLowerCase()===visitor.email);
   if(!prev){try{const snap=await getDocs(query(collection(db,'bookings'),orderBy('slotStart')));DATA.bookings=snap.docs.map(d=>({id:d.id,...d.data()}));prev=DATA.bookings.find(b=>(b.email||'').toLowerCase()===visitor.email);}catch(e){console.error(e);}}
   if(!prev){const ins=DATA.inscriptions.find(i=>(i.email||'').toLowerCase()===visitor.email);if(ins)prev=ins;}
-  function fillLock(prenom,nom,email,societe,structure){
+  const fillLock = (prenom,nom,email,societe,structure) => {
     ['prenom','nom','email','societe'].forEach(f=>{
       const e=el(fieldPrefix+'-'+f);
       if(e){e.value=f==='prenom'?prenom:f==='nom'?nom:f==='email'?email:societe;e.readOnly=true;e.style.background='var(--cyan-l)';e.style.color='var(--cyan-d)';e.style.fontWeight='600';}
@@ -2858,7 +2858,7 @@ function initStructureField(searchId, dropdownId, hiddenId, wrapId, societyId) {
   const societyEl  = el(societyId);
   if (!searchEl || !dropEl || !hiddenEl) return;
 
-  function renderDropdown(filter) {
+  const renderDropdown = (filter) => {
     const q = filter.toLowerCase();
     const filtered = STATUTS.filter(s => !q || s.label.toLowerCase().includes(q) || s.cat.toLowerCase().includes(q));
     if (!filtered.length) { dropEl.innerHTML = '<div class="structure-opt">Aucun résultat</div>'; }
