@@ -2448,8 +2448,6 @@ async function renderHistorique() {
     }).join('')}</tbody></table>`;
   }catch(e){console.error(e);listEl.innerHTML='<div class="empty-state"><p>Erreur chargement.</p></div>';}
 }
-}
-
 function renderPlanVisiteur() {
   const cont = el('plan-visiteur-content'); if(!cont) return;
 
