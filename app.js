@@ -2463,7 +2463,7 @@ function renderPlanVisiteur() {
   if(img) { if(img.complete) doRender(); else img.addEventListener('load', doRender); }
   else doRender();
 
-  function renderVisZones(zones, stands) {
+  const renderVisZones = (zones, stands) => {
     const overlay = el('plan-vis-overlay'); if(!overlay) return;
     const container = el('plan-vis-container');
     const img2 = el('plan-vis-img');
@@ -2498,7 +2498,7 @@ function renderPlanVisiteur() {
     });
   }
 
-  function showZoomVillage(zone, village, zoneStands, scaleX, scaleY) {
+  const showZoomVillage = (zone, village, zoneStands, scaleX, scaleY) => {
     const zoomEl = el('plan-vis-zoom'); if(!zoomEl) return;
     const color = village?.color||'var(--cyan)';
     const exps = zoneStands.map(s=>DATA.exposants.find(e=>e.id===s.exposantId)).filter(Boolean);
