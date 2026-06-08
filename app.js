@@ -2390,14 +2390,13 @@ async function exportHistorique() {
   try {
     const snap = await getDocs(query(collection(db,'logs'), orderBy('timestamp','desc')));
     const logs = snap.docs.map(d=>({id:d.id,...d.data()}));
-    const csv = ['Date,Admin,Rôle,Action,Détail',
-      ...logs.map(l=>{
-        const d = new Date(l.timestamp).toLocaleString('fr-FR');
-        const esc = s => `"${(s||'').replace(/"/g,'""')}"`;
-        return [esc(d),esc(l.adminEmail),esc(l.adminRole),esc(l.action),esc(l.details)].join(',');
-      })
-    ].join('
-');
+    const esc = s => '"'+(s||'').replace(/"/g,'""')+'"';
+    const rows = ['Date,Admin,Role,Action,Detail'];
+    logs.forEach(l=>{
+      const d = new Date(l.timestamp).toLocaleString('fr-FR');
+      rows.push([esc(d),esc(l.adminEmail),esc(l.adminRole),esc(l.action),esc(l.details)].join(','));
+    });
+    const csv = rows.join(String.fromCharCode(13,10));
     const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
