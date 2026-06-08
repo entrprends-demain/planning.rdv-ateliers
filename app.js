@@ -2,7 +2,7 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFirestore,
-  collection, doc, getDocs, addDoc, updateDoc, deleteDoc, setDoc, writeBatch, query, orderBy }
+  collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc, setDoc, writeBatch, query, orderBy }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const fbApp = initializeApp({
@@ -394,7 +394,7 @@ async function renderWaitlistAteliers() {
 
 function switchAdminTab(tab) {
   document.querySelectorAll('.atab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
-  ['exposants','ateliers-admin','rdvs','visiteurs','waitlist-rdvs','waitlist-ateliers','parametres','equipe','historique','plan'].forEach(t=>{
+  ['exposants','ateliers-admin','rdvs','visiteurs','waitlist-rdvs','waitlist-ateliers','parametres','equipe','historique','plan','retroplanning'].forEach(t=>{
     const el2=el('tab-'+t); if(el2)el2.style.display=t===tab?(t==='exposants'?'flex':'block'):'none';
   });
   loadAll().then(()=>{
@@ -409,6 +409,7 @@ function switchAdminTab(tab) {
     if(tab==='equipe')           renderEquipe();
     if(tab==='historique')       renderHistorique();
     if(tab==='plan')             renderPlan();
+    if(tab==='retroplanning')    renderRetroPlanning();
   });
 }
 
@@ -2448,6 +2449,8 @@ async function renderHistorique() {
     }).join('')}</tbody></table>`;
   }catch(e){console.error(e);listEl.innerHTML='<div class="empty-state"><p>Erreur chargement.</p></div>';}
 }
+}
+
 function renderPlanVisiteur() {
   const cont = el('plan-visiteur-content'); if(!cont) return;
 
@@ -2566,6 +2569,217 @@ async function disableGhostMode() {
     toast('Mode fantôme désactivé.');
   } catch(e){console.error(e);toast('Erreur.');}
   loader(false);
+}
+
+
+/* ── Onglet Rétro-planning ───────────────────────────────────── */
+
+const RETRO_CATS = ['Organisation','Communication','Partenaires','Logistique','Contenu','Autre'];
+const RETRO_STATUS = ['todo','en-cours','fait'];
+const RETRO_STATUS_LABELS = {todo:'À faire', 'en-cours':'En cours', fait:'Fait'};
+const RETRO_STATUS_COLORS = {todo:'#f0f0f0', 'en-cours':'#FFF8E6', fait:'#F0FFF4'};
+const RETRO_STATUS_TEXT = {todo:'#555', 'en-cours':'#B8940A', fait:'#2E6B12'};
+
+async function renderRetroPlanning() {
+  const cont = el('retroplanning-content'); if(!cont) return;
+  cont.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1.5rem">
+    <div>
+      <div style="font-size:20px;font-weight:700;color:var(--ink)">📋 Rétro-planning</div>
+      <div style="font-size:13px;color:var(--ink3);margin-top:2px">Tâches de préparation de l'événement</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <select id="rp-filter-cat" style="padding:7px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px">
+        <option value="">Toutes catégories</option>
+        ${RETRO_CATS.map(c=>`<option value="${c}">${c}</option>`).join('')}
+      </select>
+      <select id="rp-filter-status" style="padding:7px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px">
+        <option value="">Tous statuts</option>
+        ${RETRO_STATUS.map(s=>`<option value="${s}">${RETRO_STATUS_LABELS[s]}</option>`).join('')}
+      </select>
+      <button id="rp-add-btn" class="btn-primary"><i class="ti ti-plus"></i> Ajouter</button>
+    </div>
+  </div>
+  <div id="rp-add-form" style="display:none;background:var(--cyan-l);border:1.5px solid var(--brd2);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem">
+    <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:10px">Nouvelle tâche</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="field" style="grid-column:1/-1"><label>Titre *</label><input id="rp-new-titre" placeholder="Titre de la tâche" /></div>
+      <div class="field"><label>Catégorie</label><select id="rp-new-cat">${RETRO_CATS.map(c=>`<option value="${c}">${c}</option>`).join('')}</select></div>
+      <div class="field"><label>Date limite</label><input type="date" id="rp-new-date" /></div>
+      <div class="field"><label>Responsable</label><input id="rp-new-resp" placeholder="Ex: TD, MM…" /></div>
+      <div class="field"><label>Statut</label><select id="rp-new-status">${RETRO_STATUS.map(s=>`<option value="${s}">${RETRO_STATUS_LABELS[s]}</option>`).join('')}</select></div>
+      <div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="rp-new-notes" rows="2" placeholder="Informations complémentaires…" style="width:100%;resize:vertical;padding:8px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px"></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button id="rp-cancel-btn" class="btn-ghost">Annuler</button>
+      <button id="rp-save-btn" class="btn-primary"><i class="ti ti-check"></i> Créer</button>
+    </div>
+  </div>
+  <div id="rp-list"></div>`;
+
+  el('rp-add-btn')?.addEventListener('click',()=>{ const f=el('rp-add-form'); f.style.display=f.style.display==='none'?'block':'none'; });
+  el('rp-cancel-btn')?.addEventListener('click',()=>{ el('rp-add-form').style.display='none'; });
+  el('rp-save-btn')?.addEventListener('click', createTache);
+  el('rp-filter-cat')?.addEventListener('change',()=>loadTaches());
+  el('rp-filter-status')?.addEventListener('change',()=>loadTaches());
+  loadTaches();
+}
+
+async function loadTaches() {
+  const listEl = el('rp-list'); if(!listEl) return;
+  const catF = el('rp-filter-cat')?.value||'';
+  const statusF = el('rp-filter-status')?.value||'';
+  loader(true);
+  try {
+    const snap = await getDocs(query(collection(db,'retroplanning'), orderBy('createdAt')));
+    let taches = snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(catF) taches=taches.filter(t=>t.cat===catF);
+    if(statusF) taches=taches.filter(t=>t.status===statusF);
+
+    if(!taches.length){
+      listEl.innerHTML=`<div class="empty-state"><i class="ti ti-checklist"></i><p>Aucune tâche. Cliquez sur "+ Ajouter" pour commencer.</p></div>`;
+      loader(false); return;
+    }
+
+    // Grouper par catégorie
+    const byCat = {};
+    taches.forEach(t=>{ if(!byCat[t.cat||'Autre']) byCat[t.cat||'Autre']=[]; byCat[t.cat||'Autre'].push(t); });
+
+    const today = new Date().toISOString().slice(0,10);
+
+    listEl.innerHTML = Object.entries(byCat).map(([cat, tasks])=>`
+      <div style="margin-bottom:1.5rem">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--cyan);padding-bottom:.4rem;margin-bottom:.75rem;border-bottom:2px solid var(--cyan-l)">
+          ${cat} <span style="opacity:.5;font-weight:400">(${tasks.length})</span>
+        </div>
+        ${tasks.map(t=>{
+          const overdue = t.date && t.date < today && t.status !== 'fait';
+          const dateStr = t.date ? new Date(t.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) : '';
+          return `<div class="rp-task" data-id="${t.id}" style="background:${RETRO_STATUS_COLORS[t.status||'todo']};border:1.5px solid ${overdue?'var(--red)':'var(--brd2)'};border-radius:10px;padding:.9rem 1rem;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px">
+            <button class="rp-status-btn" data-id="${t.id}" data-status="${t.status||'todo'}" title="Changer le statut"
+              style="flex-shrink:0;width:28px;height:28px;border-radius:50%;border:2px solid;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;
+              background:${ t.status==='fait'?'#2E6B12':t.status==='en-cours'?'#B8940A':'#ccc'};
+              border-color:${ t.status==='fait'?'#2E6B12':t.status==='en-cours'?'#B8940A':'#ccc'};color:#fff">
+              ${ t.status==='fait'?'✓':t.status==='en-cours'?'…':'○'}
+            </button>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px;font-weight:700;color:var(--ink);${t.status==='fait'?'text-decoration:line-through;opacity:.6':''}">${t.titre||''}</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+                ${dateStr?`<span style="font-size:11px;color:${overdue?'var(--red)':'var(--ink3)'}"><i class="ti ti-calendar" style="font-size:10px"></i> ${dateStr}${overdue?' ⚠️':''}</span>`:''}
+                ${t.responsable?`<span style="font-size:11px;color:var(--ink3)"><i class="ti ti-user" style="font-size:10px"></i> ${t.responsable}</span>`:''}
+                <span style="font-size:10px;padding:1px 7px;border-radius:4px;font-weight:600;background:${RETRO_STATUS_COLORS[t.status||'todo']};color:${RETRO_STATUS_TEXT[t.status||'todo']};border:1px solid ${t.status==='fait'?'#6BAA38':t.status==='en-cours'?'#FFD82B':'#ddd'}">${RETRO_STATUS_LABELS[t.status||'todo']}</span>
+              </div>
+              ${t.notes?`<div style="font-size:12px;color:var(--ink3);margin-top:4px">${t.notes}</div>`:''}
+            </div>
+            <div style="display:flex;gap:4px;flex-shrink:0">
+              <button class="rp-edit-btn icon-btn" data-id="${t.id}" title="Modifier"><i class="ti ti-pencil"></i></button>
+              <button class="rp-del-btn icon-btn" data-id="${t.id}" title="Supprimer" style="color:var(--red)"><i class="ti ti-trash"></i></button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    `).join('');
+
+    // Events
+    listEl.querySelectorAll('.rp-status-btn').forEach(btn=>btn.addEventListener('click',()=>cycleStatus(btn.dataset.id, btn.dataset.status)));
+    listEl.querySelectorAll('.rp-del-btn').forEach(btn=>btn.addEventListener('click',()=>deleteTache(btn.dataset.id)));
+    listEl.querySelectorAll('.rp-edit-btn').forEach(btn=>btn.addEventListener('click',()=>editTache(btn.dataset.id)));
+  } catch(e){ console.error(e); listEl.innerHTML=`<div class="empty-state"><p>Erreur chargement.</p></div>`; }
+  loader(false);
+}
+
+async function cycleStatus(id, current) {
+  const next = current==='todo'?'en-cours':current==='en-cours'?'fait':'todo';
+  try {
+    await updateDoc(doc(db,'retroplanning',id),{status:next});
+    loadTaches();
+  } catch(e){console.error(e);toast('Erreur.');}
+}
+
+async function createTache() {
+  const titre = (el('rp-new-titre')?.value||'').trim();
+  if(!titre){toast('Titre requis.');return;}
+  loader(true);
+  try {
+    await addDoc(collection(db,'retroplanning'),{
+      titre,
+      cat: el('rp-new-cat')?.value||'Autre',
+      date: el('rp-new-date')?.value||'',
+      responsable: el('rp-new-resp')?.value||'',
+      status: el('rp-new-status')?.value||'todo',
+      notes: el('rp-new-notes')?.value||'',
+      createdAt: Date.now()
+    });
+    el('rp-add-form').style.display='none';
+    el('rp-new-titre').value='';
+    el('rp-new-notes').value='';
+    el('rp-new-date').value='';
+    el('rp-new-resp').value='';
+    toast('Tâche créée.');
+    loadTaches();
+  } catch(e){console.error(e);toast('Erreur.');}
+  loader(false);
+}
+
+async function deleteTache(id) {
+  if(!confirm(`Supprimer cette tâche ?`)) return;
+  try { await deleteDoc(doc(db,'retroplanning',id)); loadTaches(); toast('Supprimé.'); }
+  catch(e){console.error(e);toast('Erreur.');}
+}
+
+function editTache(id) {
+  const existing = document.getElementById('rp-edit-'+id);
+  if(existing){existing.remove();return;}
+  const taskEl = document.querySelector(`.rp-task[data-id="${id}"]`);
+  if(!taskEl) return;
+
+  // Chercher la tâche dans Firestore via getDocs serait async, on prend les valeurs du DOM
+  const titre = taskEl.querySelector('div[style*="font-weight:700"]')?.textContent||'';
+  const editForm = document.createElement('div');
+  editForm.id='rp-edit-'+id;
+  editForm.style.cssText='background:var(--cyan-l);border:1.5px solid var(--brd2);border-radius:10px;padding:1rem;margin-top:6px';
+  editForm.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="field" style="grid-column:1/-1"><label>Titre</label><input id="rp-edit-titre-${id}" value="${titre.trim()}" /></div>
+      <div class="field"><label>Catégorie</label><select id="rp-edit-cat-${id}">${RETRO_CATS.map(c=>`<option value="${c}">${c}</option>`).join('')}</select></div>
+      <div class="field"><label>Date limite</label><input type="date" id="rp-edit-date-${id}" /></div>
+      <div class="field"><label>Responsable</label><input id="rp-edit-resp-${id}" placeholder="Ex: TD, MM…" /></div>
+      <div class="field"><label>Statut</label><select id="rp-edit-status-${id}">${RETRO_STATUS.map(s=>`<option value="${s}">${RETRO_STATUS_LABELS[s]}</option>`).join('')}</select></div>
+      <div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="rp-edit-notes-${id}" rows="2" style="width:100%;resize:vertical;padding:8px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px"></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-ghost" onclick="this.closest('#rp-edit-${id}').remove()">Annuler</button>
+      <button class="btn-primary" id="rp-edit-save-${id}"><i class="ti ti-check"></i> Enregistrer</button>
+    </div>`;
+  taskEl.after(editForm);
+
+  // Pré-charger depuis Firebase
+  getDoc(doc(db,'retroplanning',id)).then(d=>{
+    const t=d.data();
+    const ti=el(`rp-edit-titre-${id}`); if(ti)ti.value=t.titre||'';
+    const ca=el(`rp-edit-cat-${id}`); if(ca)ca.value=t.cat||'Autre';
+    const da=el(`rp-edit-date-${id}`); if(da)da.value=t.date||'';
+    const re=el(`rp-edit-resp-${id}`); if(re)re.value=t.responsable||'';
+    const st=el(`rp-edit-status-${id}`); if(st)st.value=t.status||'todo';
+    const no=el(`rp-edit-notes-${id}`); if(no)no.value=t.notes||'';
+  });
+
+  el(`rp-edit-save-${id}`)?.addEventListener('click', async()=>{
+    loader(true);
+    try {
+      await updateDoc(doc(db,'retroplanning',id),{
+        titre:(el(`rp-edit-titre-${id}`)?.value||'').trim(),
+        cat:el(`rp-edit-cat-${id}`)?.value||'Autre',
+        date:el(`rp-edit-date-${id}`)?.value||'',
+        responsable:el(`rp-edit-resp-${id}`)?.value||'',
+        status:el(`rp-edit-status-${id}`)?.value||'todo',
+        notes:el(`rp-edit-notes-${id}`)?.value||'',
+      });
+      editForm.remove();
+      toast('Tâche mise à jour.');
+      loadTaches();
+    } catch(e){console.error(e);toast('Erreur.');}
+    loader(false);
+  });
 }
 
 /* ── Init ─────────────────────────────────────────────────────── */
