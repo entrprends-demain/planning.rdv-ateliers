@@ -2767,54 +2767,6 @@ async function deleteTache(id) {
   catch(e){console.error(e);toast('Erreur.');}
 }
 
-function editTache(id) {
-  const existing = document.getElementById('rp-edit-'+id);
-  if(existing){existing.remove();return;}
-  const taskEl = document.querySelector(`.rp-task[data-id="${id}"]`);
-  if(!taskEl) return;
-  const editForm = document.createElement('div');
-  editForm.id='rp-edit-'+id;
-  editForm.style.cssText='background:var(--cyan-l);border:1.5px solid var(--brd2);border-radius:10px;padding:1rem;margin-top:6px';
-  editForm.innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-      <div class="field" style="grid-column:1/-1"><label>Titre</label><input id="rpe-titre-${id}" /></div>
-      <div class="field"><label>Catégorie</label><select id="rpe-cat-${id}">${RETRO_CATS.map(c=>`<option value="${c}">${c}</option>`).join('')}</select></div>
-      <div class="field"><label>Date limite</label><input type="date" id="rpe-date-${id}" /></div>
-      <div class="field"><label>Responsable</label><input id="rpe-resp-${id}" /></div>
-      <div class="field"><label>Statut</label><select id="rpe-status-${id}">${RETRO_STATUS.map(s=>`<option value="${s}">${RETRO_STATUS_LABELS[s]}</option>`).join('')}</select></div>
-      <div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="rpe-notes-${id}" rows="2" style="width:100%;resize:vertical;padding:8px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px"></textarea></div>
-    </div>
-    <div style="display:flex;gap:8px">
-      <button class="btn-ghost" onclick="this.closest('[id]').remove()">Annuler</button>
-      <button class="btn-primary" id="rpe-save-${id}"><i class="ti ti-check"></i> Enregistrer</button>
-    </div>`;
-  taskEl.after(editForm);
-  getDoc(doc(db,'retroplanning',id)).then(d=>{
-    const t=d.data();
-    const g=id=>{const e=el(id);if(e)return e;};
-    const ti=el(`rpe-titre-${id}`);if(ti)ti.value=t.titre||'';
-    const ca=el(`rpe-cat-${id}`);if(ca)ca.value=t.cat||'Autre';
-    const da=el(`rpe-date-${id}`);if(da)da.value=t.date||'';
-    const re=el(`rpe-resp-${id}`);if(re)re.value=t.responsable||'';
-    const st=el(`rpe-status-${id}`);if(st)st.value=t.status||'todo';
-    const no=el(`rpe-notes-${id}`);if(no)no.value=t.notes||'';
-  });
-  el(`rpe-save-${id}`)?.addEventListener('click',async()=>{
-    loader(true);
-    try {
-      await updateDoc(doc(db,'retroplanning',id),{
-        titre:(el(`rpe-titre-${id}`)?.value||'').trim(),
-        cat:el(`rpe-cat-${id}`)?.value||'Autre',
-        date:el(`rpe-date-${id}`)?.value||'',
-        responsable:el(`rpe-resp-${id}`)?.value||'',
-        status:el(`rpe-status-${id}`)?.value||'todo',
-        notes:el(`rpe-notes-${id}`)?.value||'',
-      });
-      editForm.remove(); toast('Mis à jour.'); loadTaches();
-    } catch(e){console.error(e);toast('Erreur.');}
-    loader(false);
-  });
-}
 
 /* ── Init ─────────────────────────────────────────────────────── */
 /* ── Statuts juridiques ───────────────────────────────────────── */
