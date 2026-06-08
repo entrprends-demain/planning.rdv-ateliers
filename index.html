@@ -20,15 +20,29 @@
       </div>
       <div class="nav-brand-sub">Mardi 22 septembre 2026 à la Cité des Métiers de Paris</div>
     </div>
-    <div class="vis-tabs">
+    <div style="display:flex;align-items:center;gap:4px">
+    <button id="nav-prev" onclick="scrollTabs(-1)" title="Onglet précédent" style="flex-shrink:0;width:32px;height:32px;border-radius:50%;border:1.5px solid rgba(255,255,255,.4);background:rgba(255,255,255,.15);color:#fff;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:.15s" onmouseover="this.style.background='rgba(255,255,255,.3)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">‹</button>
+    <div class="vis-tabs" id="vis-tabs-scroll">
       <button class="vtab active" data-tab="accueil"><i class="ti ti-home"></i> Accueil</button>
       <button class="vtab" data-tab="rdvs"><i class="ti ti-users"></i> RDV Experts</button>
       <button class="vtab" data-tab="ateliers"><i class="ti ti-school"></i> Ateliers</button>
       <button class="vtab vtab-yellow" data-tab="planning"><i class="ti ti-calendar-check"></i> Mon Planning</button>
       <button class="vtab" id="vtab-plan" data-tab="plan-visiteur" style="display:none"><i class="ti ti-map"></i> Plan</button>
     </div>
+    <button id="nav-next" onclick="scrollTabs(1)" title="Onglet suivant" style="flex-shrink:0;width:32px;height:32px;border-radius:50%;border:1.5px solid rgba(255,255,255,.4);background:rgba(255,255,255,.15);color:#fff;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:.15s" onmouseover="this.style.background='rgba(255,255,255,.3)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">›</button>
+    </div>
   </div>
 </nav>
+<script>
+function scrollTabs(dir) {
+  const tabs = document.getElementById('vis-tabs-scroll');
+  if(!tabs) return;
+  const allTabs = [...tabs.querySelectorAll('.vtab')].filter(t=>t.style.display!=='none');
+  const activeIdx = allTabs.findIndex(t=>t.classList.contains('active'));
+  const target = allTabs[activeIdx + dir];
+  if(target) target.click();
+}
+</script>
 
 <!-- ── Accueil ── -->
 <div id="tab-accueil">
