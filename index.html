@@ -20,15 +20,34 @@
       </div>
       <div class="nav-brand-sub">Mardi 22 septembre 2026 à la Cité des Métiers de Paris</div>
     </div>
-    <div class="vis-tabs">
+    <div class="nav-tabs-wrap">
+    <button class="nav-arr" id="arr-prev" title="Onglet précédent">‹</button>
+    <div class="vis-tabs" id="vis-tabs">
       <button class="vtab active" data-tab="accueil"><i class="ti ti-home"></i> Accueil</button>
       <button class="vtab" data-tab="rdvs"><i class="ti ti-users"></i> RDV Experts</button>
       <button class="vtab" data-tab="ateliers"><i class="ti ti-school"></i> Ateliers</button>
       <button class="vtab vtab-yellow" data-tab="planning"><i class="ti ti-calendar-check"></i> Mon Planning</button>
       <button class="vtab" id="vtab-plan" data-tab="plan-visiteur" style="display:none"><i class="ti ti-map"></i> Plan</button>
     </div>
+    <button class="nav-arr" id="arr-next" title="Onglet suivant">›</button>
+    </div>
   </div>
 </nav>
+<script>
+(function(){
+  function getVisible() {
+    return [...document.querySelectorAll('#vis-tabs .vtab')].filter(t=>t.style.display!=='none');
+  }
+  document.getElementById('arr-prev')?.addEventListener('click',()=>{
+    const tabs=getVisible(), active=tabs.findIndex(t=>t.classList.contains('active'));
+    if(active>0) tabs[active-1].click();
+  });
+  document.getElementById('arr-next')?.addEventListener('click',()=>{
+    const tabs=getVisible(), active=tabs.findIndex(t=>t.classList.contains('active'));
+    if(active<tabs.length-1) tabs[active+1].click();
+  });
+})();
+</script>
 
 <!-- ── Accueil ── -->
 <div id="tab-accueil">

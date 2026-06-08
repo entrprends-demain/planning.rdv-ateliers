@@ -2424,6 +2424,8 @@ async function renderHistorique() {
         <td style="font-size:12px;color:var(--ink3);max-width:200px">${l.details||'–'}</td>
       </tr>`;
     }).join('')}</tbody></table>`;
+  el('btn-export-hist')?.addEventListener('click', exportHistorique);
+  el('btn-clear-hist')?.addEventListener('click', clearHistorique);
   }catch(e){console.error(e);listEl.innerHTML='<div class="empty-state"><p>Erreur chargement.</p></div>';}
 }
 function renderPlanVisiteur() {

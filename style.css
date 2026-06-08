@@ -525,3 +525,10 @@ body { font-family: var(--font); background: var(--bg); color: var(--ink); -webk
 
 /* ── Nav avec plan publié ── */
 .vtab { white-space: nowrap; flex-shrink: 0; }
+
+/* ── Flèches navigation onglets ── */
+.nav-tabs-wrap { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
+.nav-tabs-wrap .vis-tabs { flex: 1; min-width: 0; }
+.nav-arr { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.4); background: rgba(255,255,255,.12); color: #fff; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: .15s; line-height: 1; user-select: none; }
+.nav-arr:hover { background: rgba(255,255,255,.28); }
+.nav-arr:active { background: rgba(255,255,255,.4); transform: scale(.93); }
