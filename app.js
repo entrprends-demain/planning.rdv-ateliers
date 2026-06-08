@@ -2566,622 +2566,6 @@ function renderPlanVisiteur() {
   }
 }
 
-  if(!villages.length){
-    cont.innerHTML = photoZone + `<div class="empty-state"><i class="ti ti-map-off"></i><p>Aucun village n'est encore défini.</p></div>`;
-    return;
-  }
-
-  // Grille villages 2 par ligne
-  const villagesHTML = `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:1rem">
-    ${villages.map(v=>{
-      const exps=(v.exposants||[]).map(eid=>DATA.exposants.find(e=>e.id===eid)).filter(Boolean);
-      return `<div class="village-card-visitor" style="border:2.5px solid ${v.color||'var(--cyan)'};border-radius:14px;overflow:hidden;cursor:pointer" data-village-id="${v.id}">
-        <div style="background:${v.color||'var(--cyan)'};padding:.85rem 1.1rem;display:flex;align-items:center;gap:10px">
-          <div style="width:12px;height:12px;border-radius:50%;background:#fff;opacity:.8;flex-shrink:0"></div>
-          <div style="font-size:15px;font-weight:700;color:#fff;flex:1">${v.name}</div>
-          <div style="font-size:12px;color:rgba(255,255,255,.8)">${exps.length} exposant${exps.length>1?'s':''}</div>
-          <i class="ti ti-chevron-down" style="color:#fff;font-size:14px;transition:.2s" id="chevron-${v.id}"></i>
-        </div>
-        <div class="village-exps-list" id="vexps-${v.id}" style="display:none;padding:.75rem;background:${v.color||'var(--cyan)'}0D">
-          ${exps.map(e=>`<div class="village-exp-chip" data-eid="${e.id}" data-vcolor="${v.color||'var(--cyan)'}"
-            style="display:flex;align-items:center;gap:10px;padding:.7rem .85rem;border-radius:10px;background:#fff;border:1.5px solid ${v.color||'var(--cyan)'}44;margin-bottom:6px;cursor:pointer;transition:.15s">
-            <div style="width:32px;height:32px;border-radius:50%;background:${v.color||'var(--cyan)'}22;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${v.color||'var(--cyan)'};flex-shrink:0">${initials(e.name)}</div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.name}</div>
-              <div style="font-size:11px;color:var(--ink3)">${e.expertise||e.cat||''}</div>
-            </div>
-            <i class="ti ti-info-circle" style="color:${v.color||'var(--cyan)'};font-size:16px;flex-shrink:0"></i>
-          </div>`).join('')}
-        </div>
-      </div>`;
-    }).join('')}
-  </div>`;
-
-  cont.innerHTML = photoZone + villagesHTML;
-
-  // Toggle villages (ouvrir/fermer la liste)
-  cont.querySelectorAll('.village-card-visitor').forEach(card=>{
-    const vid = card.dataset.villageId;
-    const header = card.querySelector('div[style*="padding:.85rem"]');
-    const list = el('vexps-'+vid);
-    const chevron = el('chevron-'+vid);
-    header?.addEventListener('click', ()=>{
-      const open = list.style.display==='block';
-      list.style.display = open ? 'none' : 'block';
-      if(chevron) chevron.style.transform = open ? '' : 'rotate(180deg)';
-    });
-  });
-
-  // Fiche exposant au clic
-  cont.querySelectorAll('.village-exp-chip').forEach(chip=>{
-    chip.addEventListener('click', e=>{
-      e.stopPropagation();
-      const exp = DATA.exposants.find(x=>x.id===chip.dataset.eid);
-      if(!exp) return;
-      const vcolor = chip.dataset.vcolor;
-      const existing = document.getElementById('exp-plan-modal');
-      if(existing) existing.remove();
-      const overlay = document.createElement('div');
-      overlay.id = 'exp-plan-modal';
-      overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:800;display:flex;align-items:center;justify-content:center;padding:1rem';
-      overlay.innerHTML=`<div style="background:#fff;border-radius:20px;width:100%;max-width:400px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2)">
-        <div style="background:${vcolor};padding:1.25rem 1.5rem;display:flex;align-items:center;gap:12px">
-          <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff">${initials(exp.name)}</div>
-          <div>
-            <div style="font-size:16px;font-weight:700;color:#fff">${exp.name}</div>
-            <div style="font-size:12px;color:rgba(255,255,255,.8)">${exp.cat||''}</div>
-          </div>
-          <button onclick="document.getElementById('exp-plan-modal').remove()" style="margin-left:auto;background:rgba(255,255,255,.2);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center">×</button>
-        </div>
-        <div style="padding:1.25rem 1.5rem">
-          ${exp.expertise?`<div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:.5rem"><i class="ti ti-award" style="color:${vcolor}"></i> ${exp.expertise}</div>`:''}
-          ${exp.email?`<div style="font-size:13px;color:var(--ink2);margin-bottom:.4rem"><i class="ti ti-mail" style="font-size:12px;color:var(--ink3)"></i> <a href="mailto:${exp.email}" style="color:${vcolor}">${exp.email}</a></div>`:''}
-          ${exp.website?`<div style="font-size:13px;color:var(--ink2);margin-bottom:.75rem"><i class="ti ti-world" style="font-size:12px;color:var(--ink3)"></i> <a href="${exp.website.startsWith('http')?exp.website:'https://'+exp.website}" target="_blank" style="color:${vcolor}">${exp.website}</a></div>`:''}
-          ${exp.period!=='aucun'?`<div style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--brd)">
-            <button class="btn-primary" style="width:100%;justify-content:center" onclick="document.getElementById('exp-plan-modal').remove();switchVisitorTab('rdvs');setTimeout(()=>openDrawer('${exp.id}'),400)">
-              <i class="ti ti-calendar-plus"></i> Prendre RDV
-            </button>
-          </div>`:''}
-        </div>
-      </div>`;
-      document.body.appendChild(overlay);
-      overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
-    });
-  });
-}
-
-/* ── Mode fantôme site ──────────────────────────────────────── */
-async function enableGhostMode(message) {
-  loader(true);
-  try {
-    await setDoc(doc(db,'config','platform'), {
-      ghostMode: true, ghostMessage: message, updatedAt: Date.now()
-    }, {merge:true});
-    DATA.config.ghostMode = true;
-    DATA.config.ghostMessage = message;
-    toast('Mode fantôme activé.');
-  } catch(e){console.error(e);toast('Erreur.');}
-  loader(false);
-}
-
-async function disableGhostMode() {
-  loader(true);
-  try {
-    await updateDoc(doc(db,'config','platform'), {ghostMode:false, updatedAt:Date.now()});
-    DATA.config.ghostMode = false;
-    toast('Mode fantôme désactivé.');
-  } catch(e){console.error(e);toast('Erreur.');}
-  loader(false);
-}
-
-
-
-/* ── Plan interactif ─────────────────────────────────────────── */
-
-async function renderPlan() {
-  const listEl = el('plan-content'); if(!listEl) return;
-  const isSA = currentAdmin?.role?.toLowerCase()==='superadmin' || currentAdmin?.email===SUPER_ADMIN_EMAIL;
-  const planPublic = DATA.config?.planPublic || false;
-
-  listEl.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1.25rem">
-      <div>
-        <div style="font-size:20px;font-weight:700;color:var(--ink)">🗺️ Plan interactif</div>
-        <div style="font-size:13px;color:var(--ink3);margin-top:2px">Définissez les zones villages sur le plan, puis placez les exposants</div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        ${isSA?`<button id="plan-publish-btn" class="${planPublic?'btn-primary':'btn-ghost'}" style="${planPublic?'background:#3B6D11;border-color:#3B6D11':''}">
-          <i class="ti ti-${planPublic?'eye':'eye-off'}"></i> ${planPublic?'Plan publié':'Plan fantôme'}
-        </button>`:''}
-        <label class="btn-primary" style="cursor:pointer"><i class="ti ti-upload"></i> Uploader le plan
-          <input type="file" id="plan-img-upload" accept="image/*" style="display:none" />
-        </label>
-        <button id="add-zone-btn" class="btn-ghost"><i class="ti ti-vector-bezier-2"></i> Ajouter zone</button>
-        <button id="plan-save-zones-btn" class="btn-primary" style="display:none"><i class="ti ti-check"></i> Enregistrer zones</button>
-      </div>
-    </div>
-
-    <!-- Modes -->
-    <div style="display:flex;gap:8px;margin-bottom:1rem" id="plan-mode-bar">
-      <button class="plan-mode-btn active" data-mode="view" style="padding:6px 14px;border-radius:6px;border:1.5px solid var(--cyan);background:var(--cyan);color:#fff;font-size:12px;font-weight:600;cursor:pointer">👁 Vue</button>
-      <button class="plan-mode-btn" data-mode="zone" style="padding:6px 14px;border-radius:6px;border:1.5px solid var(--brd2);background:#fff;color:var(--ink);font-size:12px;font-weight:600;cursor:pointer">📐 Définir zones</button>
-      <button class="plan-mode-btn" data-mode="place" style="padding:6px 14px;border-radius:6px;border:1.5px solid var(--brd2);background:#fff;color:var(--ink);font-size:12px;font-weight:600;cursor:pointer">📍 Placer exposants</button>
-    </div>
-
-    <div style="font-size:12px;color:var(--ink3);margin-bottom:.75rem" id="plan-hint">Uploadez le plan PNG puis sélectionnez un mode.</div>
-
-    <!-- Conteneur plan -->
-    <div style="position:relative;display:inline-block;max-width:100%;border:2px solid var(--brd2);border-radius:12px;overflow:hidden;background:#f9f9f9" id="plan-container">
-      <img id="plan-img" src="" alt="Plan" style="display:${DATA.planZones.find(z=>z.type==='bg')?.url?'block':'none'};max-width:100%;height:auto;vertical-align:top" />
-      <div id="plan-no-img" style="padding:3rem;text-align:center;color:var(--ink3);${DATA.planZones.find(z=>z.type==='bg')?.url?'display:none':''}">
-        <i class="ti ti-map-2" style="font-size:48px;display:block;margin-bottom:.75rem"></i>
-        <div>Uploadez le plan de l'événement pour commencer</div>
-      </div>
-      <div id="plan-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></div>
-    </div>
-
-    <!-- Panel latéral exposants (mode place) -->
-    <div id="plan-side-panel" style="display:none;margin-top:1rem;background:var(--cyan-l);border:1.5px solid var(--brd2);border-radius:12px;padding:1rem">
-      <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:.5rem">Exposants sans position</div>
-      <div id="plan-exps-pool" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-    </div>
-  `;
-
-  // Charger image de fond
-  const bgZone = DATA.planZones.find(z=>z.type==='bg');
-  if(bgZone?.url) {
-    el('plan-img').src = bgZone.url;
-    el('plan-img').style.display = 'block';
-    el('plan-no-img').style.display = 'none';
-  }
-
-  // Publication
-  el('plan-publish-btn')?.addEventListener('click', async()=>{
-    const newVal = !DATA.config.planPublic;
-    loader(true);
-    try {
-      await setDoc(doc(db,'config','platform'),{planPublic:newVal,updatedAt:Date.now()},{merge:true});
-      DATA.config.planPublic = newVal;
-      renderPlan();
-      toast(newVal?`Plan publié.`:`Plan masqué.`);
-    } catch(e){console.error(e);toast('Erreur.');}
-    loader(false);
-  });
-
-  // Upload image
-  el('plan-img-upload')?.addEventListener('change', async(ev)=>{
-    const file = ev.target.files[0]; if(!file) return;
-    loader(true);
-    try {
-      const reader = new FileReader();
-      reader.onload = async(e)=>{
-        const dataUrl = e.target.result;
-        // Sauvegarder URL en base64 dans Firestore (doc planZones/bg)
-        const existing = DATA.planZones.find(z=>z.type==='bg');
-        if(existing) {
-          await updateDoc(doc(db,'planZones',existing.id),{url:dataUrl});
-          existing.url = dataUrl;
-        } else {
-          const ref = await addDoc(collection(db,'planZones'),{type:'bg',url:dataUrl,createdAt:Date.now()});
-          DATA.planZones.push({id:ref.id,type:'bg',url:dataUrl});
-        }
-        el('plan-img').src = dataUrl;
-        el('plan-img').style.display = 'block';
-        el('plan-no-img').style.display = 'none';
-        renderPlanOverlay(currentPlanMode);
-        toast('Plan uploadé.');
-        loader(false);
-      };
-      reader.readAsDataURL(file);
-    } catch(e){console.error(e);toast('Erreur upload.');loader(false);}
-  });
-
-  // Modes
-  let currentPlanMode = 'view';
-  let drawingZone = null;
-  let draggedExp = null;
-
-  listEl.querySelectorAll('.plan-mode-btn').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      currentPlanMode = btn.dataset.mode;
-      listEl.querySelectorAll('.plan-mode-btn').forEach(b=>{
-        const active = b===btn;
-        b.style.background = active?'var(--cyan)':'#fff';
-        b.style.color = active?'#fff':'var(--ink)';
-        b.style.borderColor = active?'var(--cyan)':'var(--brd2)';
-      });
-      const hints = {
-        view:'Cliquez sur une zone colorée pour voir les exposants.',
-        zone:'Cliquez et glissez sur le plan pour dessiner une zone village. Associez-la à un village existant.',
-        place:'Glissez un exposant depuis le panneau vers sa position sur le plan.'
-      };
-      el('plan-hint').textContent = hints[currentPlanMode]||'';
-      el('plan-side-panel').style.display = currentPlanMode==='place'?'block':'none';
-      el('plan-save-zones-btn').style.display = currentPlanMode==='zone'?'flex':'none';
-      renderPlanOverlay(currentPlanMode);
-      if(currentPlanMode==='place') renderExpsPool();
-    });
-  });
-
-  renderPlanOverlay('view');
-  renderExpsPool();
-
-  function renderExpsPool() {
-    const pool = el('plan-exps-pool'); if(!pool) return;
-    const placed = new Set(DATA.planZones.filter(z=>z.type==='stand').map(z=>z.exposantId));
-    const unplaced = DATA.exposants.filter(e=>!placed.has(e.id));
-    pool.innerHTML = unplaced.map(e=>`
-      <div class="exp-pool-chip" draggable="true" data-eid="${e.id}"
-        style="padding:4px 10px;border-radius:16px;background:#fff;border:1.5px solid var(--brd2);font-size:12px;font-weight:600;cursor:grab;color:var(--ink)">
-        ${e.name}
-      </div>`).join('') || '<span style="font-size:12px;color:var(--ink3);font-style:italic">Tous les exposants sont placés.</span>';
-
-    pool.querySelectorAll('.exp-pool-chip').forEach(chip=>{
-      chip.addEventListener('dragstart',e=>{ draggedExp=chip.dataset.eid; e.dataTransfer.effectAllowed='copy'; });
-      chip.addEventListener('dragend',()=>{ draggedExp=null; });
-    });
-  }
-
-  function renderPlanOverlay(mode) {
-    const overlay = el('plan-overlay'); if(!overlay) return;
-    const img = el('plan-img'); if(!img||!img.naturalWidth) { overlay.innerHTML=''; return; }
-    const zones = DATA.planZones.filter(z=>z.type==='zone');
-    const stands = DATA.planZones.filter(z=>z.type==='stand');
-    const container = el('plan-container');
-    const scaleX = container.offsetWidth / img.naturalWidth;
-    const scaleY = (container.offsetHeight||img.offsetHeight) / img.naturalHeight;
-
-    overlay.style.pointerEvents = mode!=='view' ? 'all' : 'all';
-    overlay.innerHTML = '';
-
-    // Dessiner les zones villages
-    zones.forEach(zone=>{
-      const village = DATA.villages.find(v=>v.id===zone.villageId);
-      const color = village?.color||'#3FCBD1';
-      const div = document.createElement('div');
-      div.style.cssText=`position:absolute;left:${zone.x*scaleX}px;top:${zone.y*scaleY}px;width:${zone.w*scaleX}px;height:${zone.h*scaleY}px;background:${color}33;border:2.5px solid ${color};border-radius:6px;cursor:pointer;box-sizing:border-box;transition:.2s`;
-      div.title = village?.name||'Zone';
-
-      // Label village
-      const label = document.createElement('div');
-      label.style.cssText=`position:absolute;top:4px;left:6px;font-size:11px;font-weight:700;color:${color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:calc(100% - 12px)`;
-      label.textContent = village?.name||'Zone';
-      div.appendChild(label);
-
-      // Stands dans cette zone
-      const zoneStands = stands.filter(s=>s.zoneId===zone.id);
-      zoneStands.forEach(stand=>{
-        const exp = DATA.exposants.find(e=>e.id===stand.exposantId);
-        if(!exp) return;
-        const sDiv = document.createElement('div');
-        sDiv.style.cssText=`position:absolute;left:${(stand.relX||.5)*zone.w*scaleX - 30}px;top:${(stand.relY||.5)*zone.h*scaleY - 14}px;background:${color};color:#fff;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700;white-space:nowrap;cursor:default;box-shadow:0 2px 6px rgba(0,0,0,.2)`;
-        sDiv.textContent = exp.name.length>18 ? exp.name.slice(0,16)+'…' : exp.name;
-        if(mode==='place') {
-          sDiv.style.cursor='pointer';
-          sDiv.title='Cliquer pour retirer';
-          sDiv.addEventListener('click',async(e)=>{
-            e.stopPropagation();
-            if(!confirm(`Retirer ${exp.name} de sa position ?`)) return;
-            await deleteDoc(doc(db,'planZones',stand.id));
-            DATA.planZones = DATA.planZones.filter(z=>z.id!==stand.id);
-            renderPlanOverlay(mode); renderExpsPool();
-          });
-        }
-        div.appendChild(sDiv);
-      });
-
-      // Drop exposant dans la zone
-      if(mode==='place') {
-        div.addEventListener('dragover',e=>{ e.preventDefault(); div.style.background=`${color}55`; });
-        div.addEventListener('dragleave',()=>{ div.style.background=`${color}33`; });
-        div.addEventListener('drop',async(e)=>{
-          e.preventDefault(); div.style.background=`${color}33`;
-          if(!draggedExp) return;
-          const rect = div.getBoundingClientRect();
-          const relX = Math.min(Math.max((e.clientX-rect.left)/rect.width,.05),.95);
-          const relY = Math.min(Math.max((e.clientY-rect.top)/rect.height,.1),.9);
-          loader(true);
-          try {
-            const ref = await addDoc(collection(db,'planZones'),{
-              type:'stand',zoneId:zone.id,villageId:zone.villageId,
-              exposantId:draggedExp,relX,relY,createdAt:Date.now()
-            });
-            DATA.planZones.push({id:ref.id,type:'stand',zoneId:zone.id,villageId:zone.villageId,exposantId:draggedExp,relX,relY});
-            draggedExp=null;
-            renderPlanOverlay(mode); renderExpsPool();
-            toast('Exposant placé.');
-          } catch(err){console.error(err);toast('Erreur.');}
-          loader(false);
-        });
-
-        // Clic vue mode : ouvrir modal zone
-      } else if(mode==='view') {
-        div.addEventListener('mouseenter',()=>div.style.background=`${color}55`);
-        div.addEventListener('mouseleave',()=>div.style.background=`${color}33`);
-        div.addEventListener('click',()=>openZoneModal(zone,village,zoneStands));
-      }
-
-      overlay.appendChild(div);
-    });
-
-    // Mode zone : dessiner nouvelle zone
-    if(mode==='zone') {
-      let startX,startY,drawing=false,tempRect=null;
-      overlay.addEventListener('mousedown',e=>{
-        if(e.target!==overlay) return;
-        const rect=overlay.getBoundingClientRect();
-        startX=e.clientX-rect.left; startY=e.clientY-rect.top;
-        drawing=true;
-        tempRect=document.createElement('div');
-        tempRect.style.cssText=`position:absolute;left:${startX}px;top:${startY}px;width:0;height:0;background:rgba(63,203,209,.2);border:2px dashed var(--cyan);pointer-events:none;box-sizing:border-box`;
-        overlay.appendChild(tempRect);
-      });
-      overlay.addEventListener('mousemove',e=>{
-        if(!drawing||!tempRect) return;
-        const rect=overlay.getBoundingClientRect();
-        const cx=e.clientX-rect.left, cy=e.clientY-rect.top;
-        tempRect.style.left=`${Math.min(cx,startX)}px`;
-        tempRect.style.top=`${Math.min(cy,startY)}px`;
-        tempRect.style.width=`${Math.abs(cx-startX)}px`;
-        tempRect.style.height=`${Math.abs(cy-startY)}px`;
-      });
-      overlay.addEventListener('mouseup',async e=>{
-        if(!drawing) return; drawing=false;
-        const rect=overlay.getBoundingClientRect();
-        const cx=e.clientX-rect.left, cy=e.clientY-rect.top;
-        const x=Math.min(cx,startX), y=Math.min(cy,startY);
-        const w=Math.abs(cx-startX), h=Math.abs(cy-startY);
-        if(tempRect) tempRect.remove(); tempRect=null;
-        if(w<20||h<20){ toast('Zone trop petite.'); return; }
-        // Convertir en coords naturelles
-        const nx=x/scaleX, ny=y/scaleY, nw=w/scaleX, nh=h/scaleY;
-        // Choisir le village
-        openZoneAssign(nx,ny,nw,nh, ()=>renderPlanOverlay(mode));
-      });
-    }
-  }
-
-  function openZoneModal(zone, village, stands) {
-    const existing = document.getElementById('zone-modal'); if(existing) existing.remove();
-    const overlay2 = document.createElement('div');
-    overlay2.id='zone-modal';
-    overlay2.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:800;display:flex;align-items:center;justify-content:center;padding:1rem';
-    const exps = stands.map(s=>DATA.exposants.find(e=>e.id===s.exposantId)).filter(Boolean);
-    overlay2.innerHTML=`<div style="background:#fff;border-radius:20px;width:100%;max-width:480px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2)">
-      <div style="background:${village?.color||'var(--cyan)'};padding:1.25rem 1.5rem;display:flex;align-items:center;gap:12px">
-        <div style="width:16px;height:16px;border-radius:50%;background:#fff;opacity:.7"></div>
-        <div style="font-size:17px;font-weight:700;color:#fff;flex:1">${village?.name||'Village'}</div>
-        <button onclick="document.getElementById('zone-modal').remove()" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;color:#fff;font-size:18px">×</button>
-      </div>
-      <div style="padding:1.25rem 1.5rem">
-        <div style="font-size:13px;font-weight:600;color:var(--ink3);margin-bottom:.75rem">${exps.length} exposant${exps.length>1?'s':''} dans ce village</div>
-        ${exps.map(exp=>`<div style="display:flex;align-items:center;gap:10px;padding:.6rem .8rem;border-radius:8px;background:${village?.color||'var(--cyan)'}11;border:1.5px solid ${village?.color||'var(--cyan)'}33;margin-bottom:6px">
-          <div style="width:32px;height:32px;border-radius:50%;background:${village?.color||'var(--cyan)'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">${initials(exp.name)}</div>
-          <div>
-            <div style="font-size:13px;font-weight:700;color:var(--ink)">${exp.name}</div>
-            <div style="font-size:11px;color:var(--ink3)">${exp.expertise||exp.cat||''}</div>
-          </div>
-          ${exp.period!=='aucun'?`<button class="btn-primary" style="margin-left:auto;padding:4px 10px;font-size:11px" onclick="document.getElementById('zone-modal').remove();switchAdminTab('exposants')">RDV</button>`:''}
-        </div>`).join('')}
-        ${!exps.length?'<div style="font-size:13px;color:var(--ink3);font-style:italic">Aucun exposant placé dans ce village. Utilisez le mode "Placer exposants".</div>':''}
-      </div>
-    </div>`;
-    document.body.appendChild(overlay2);
-    overlay2.addEventListener('click',e=>{if(e.target===overlay2)overlay2.remove();});
-  }
-
-  function openZoneAssign(x,y,w,h,cb) {
-    const existing = document.getElementById('zone-assign-modal'); if(existing) existing.remove();
-    const overlay2 = document.createElement('div');
-    overlay2.id='zone-assign-modal';
-    overlay2.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:800;display:flex;align-items:center;justify-content:center;padding:1rem';
-    overlay2.innerHTML=`<div style="background:#fff;border-radius:16px;width:100%;max-width:400px;padding:1.5rem">
-      <div style="font-size:16px;font-weight:700;color:var(--ink);margin-bottom:1rem">📐 Nouvelle zone</div>
-      <div class="field" style="margin-bottom:10px">
-        <label>Type de zone</label>
-        <select id="zone-type-sel" style="width:100%;padding:8px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px">
-          <option value="village">Village exposants</option>
-          <option value="rdv">RDV individuels</option>
-          <option value="accueil">Accueil / Information</option>
-          <option value="cafe">Café / Terrasse</option>
-          <option value="atelier">Zone ateliers</option>
-        </select>
-      </div>
-      <div class="field" id="village-sel-wrap" style="margin-bottom:10px">
-        <label>Village associé</label>
-        <select id="zone-village-sel" style="width:100%;padding:8px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px">
-          ${DATA.villages.map(v=>`<option value="${v.id}">${v.name}</option>`).join('')}
-        </select>
-      </div>
-      <div class="field" id="zone-label-wrap" style="display:none;margin-bottom:10px">
-        <label>Libellé</label>
-        <input id="zone-label-inp" placeholder="Ex: Accueil principal" style="width:100%;padding:8px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px" />
-      </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn-ghost" onclick="document.getElementById('zone-assign-modal').remove()">Annuler</button>
-        <button id="zone-save-btn" class="btn-primary"><i class="ti ti-check"></i> Créer la zone</button>
-      </div>
-    </div>`;
-    document.body.appendChild(overlay2);
-
-    el('zone-type-sel')?.addEventListener('change',()=>{
-      const t=el('zone-type-sel').value;
-      el('village-sel-wrap').style.display=t==='village'?'block':'none';
-      el('zone-label-wrap').style.display=t!=='village'?'block':'none';
-    });
-
-    el('zone-save-btn')?.addEventListener('click',async()=>{
-      const type=el('zone-type-sel').value;
-      const villageId=type==='village'?el('zone-village-sel')?.value:null;
-      const label=el('zone-label-inp')?.value||type;
-      loader(true);
-      try {
-        const ref=await addDoc(collection(db,'planZones'),{type:'zone',zoneType:type,villageId,label,x,y,w,h,createdAt:Date.now()});
-        DATA.planZones.push({id:ref.id,type:'zone',zoneType:type,villageId,label,x,y,w,h});
-        overlay2.remove();
-        cb();
-        toast('Zone créée.');
-      } catch(err){console.error(err);toast('Erreur.');}
-      loader(false);
-    });
-
-    overlay2.addEventListener('click',e=>{if(e.target===overlay2)overlay2.remove();});
-  }
-}
-
-/* ── Onglet Rétro-planning ───────────────────────────────────── */
-
-const RETRO_CATS = ['Organisation','Communication','Partenaires','Logistique','Contenu','Autre'];
-const RETRO_STATUS = ['todo','en-cours','fait'];
-const RETRO_STATUS_LABELS = {todo:'À faire', 'en-cours':'En cours', fait:'Fait'};
-const RETRO_STATUS_COLORS = {todo:'#f0f0f0', 'en-cours':'#FFF8E6', fait:'#F0FFF4'};
-const RETRO_STATUS_TEXT = {todo:'#555', 'en-cours':'#B8940A', fait:'#2E6B12'};
-
-async function renderRetroPlanning() {
-  const cont = el('retroplanning-content'); if(!cont) return;
-  cont.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1.5rem">
-    <div>
-      <div style="font-size:20px;font-weight:700;color:var(--ink)">📋 Rétro-planning</div>
-      <div style="font-size:13px;color:var(--ink3);margin-top:2px">Tâches de préparation de l'événement</div>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <select id="rp-filter-cat" style="padding:7px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px">
-        <option value="">Toutes catégories</option>
-        ${RETRO_CATS.map(c=>`<option value="${c}">${c}</option>`).join('')}
-      </select>
-      <select id="rp-filter-status" style="padding:7px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px">
-        <option value="">Tous statuts</option>
-        ${RETRO_STATUS.map(s=>`<option value="${s}">${RETRO_STATUS_LABELS[s]}</option>`).join('')}
-      </select>
-      <button id="rp-add-btn" class="btn-primary"><i class="ti ti-plus"></i> Ajouter</button>
-    </div>
-  </div>
-  <div id="rp-add-form" style="display:none;background:var(--cyan-l);border:1.5px solid var(--brd2);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem">
-    <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:10px">Nouvelle tâche</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-      <div class="field" style="grid-column:1/-1"><label>Titre *</label><input id="rp-new-titre" placeholder="Titre de la tâche" /></div>
-      <div class="field"><label>Catégorie</label><select id="rp-new-cat">${RETRO_CATS.map(c=>`<option value="${c}">${c}</option>`).join('')}</select></div>
-      <div class="field"><label>Date limite</label><input type="date" id="rp-new-date" /></div>
-      <div class="field"><label>Responsable</label><input id="rp-new-resp" placeholder="Ex: TD, MM…" /></div>
-      <div class="field"><label>Statut</label><select id="rp-new-status">${RETRO_STATUS.map(s=>`<option value="${s}">${RETRO_STATUS_LABELS[s]}</option>`).join('')}</select></div>
-      <div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="rp-new-notes" rows="2" placeholder="Informations complémentaires…" style="width:100%;resize:vertical;padding:8px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px"></textarea></div>
-    </div>
-    <div style="display:flex;gap:8px">
-      <button id="rp-cancel-btn" class="btn-ghost">Annuler</button>
-      <button id="rp-save-btn" class="btn-primary"><i class="ti ti-check"></i> Créer</button>
-    </div>
-  </div>
-  <div id="rp-list"></div>`;
-
-  el('rp-add-btn')?.addEventListener('click',()=>{ const f=el('rp-add-form'); f.style.display=f.style.display==='none'?'block':'none'; });
-  el('rp-cancel-btn')?.addEventListener('click',()=>{ el('rp-add-form').style.display='none'; });
-  el('rp-save-btn')?.addEventListener('click', createTache);
-  el('rp-filter-cat')?.addEventListener('change',()=>loadTaches());
-  el('rp-filter-status')?.addEventListener('change',()=>loadTaches());
-  loadTaches();
-}
-
-async function loadTaches() {
-  const listEl = el('rp-list'); if(!listEl) return;
-  const catF = el('rp-filter-cat')?.value||'';
-  const statusF = el('rp-filter-status')?.value||'';
-  loader(true);
-  try {
-    const snap = await getDocs(query(collection(db,'retroplanning'), orderBy('createdAt')));
-    let taches = snap.docs.map(d=>({id:d.id,...d.data()}));
-    if(catF) taches=taches.filter(t=>t.cat===catF);
-    if(statusF) taches=taches.filter(t=>t.status===statusF);
-
-    if(!taches.length){
-      listEl.innerHTML=`<div class="empty-state"><i class="ti ti-checklist"></i><p>Aucune tâche. Cliquez sur "+ Ajouter" pour commencer.</p></div>`;
-      loader(false); return;
-    }
-
-    // Grouper par catégorie
-    const byCat = {};
-    taches.forEach(t=>{ if(!byCat[t.cat||'Autre']) byCat[t.cat||'Autre']=[]; byCat[t.cat||'Autre'].push(t); });
-
-    const today = new Date().toISOString().slice(0,10);
-
-    listEl.innerHTML = Object.entries(byCat).map(([cat, tasks])=>`
-      <div style="margin-bottom:1.5rem">
-        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--cyan);padding-bottom:.4rem;margin-bottom:.75rem;border-bottom:2px solid var(--cyan-l)">
-          ${cat} <span style="opacity:.5;font-weight:400">(${tasks.length})</span>
-        </div>
-        ${tasks.map(t=>{
-          const overdue = t.date && t.date < today && t.status !== 'fait';
-          const dateStr = t.date ? new Date(t.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) : '';
-          return `<div class="rp-task" data-id="${t.id}" style="background:${RETRO_STATUS_COLORS[t.status||'todo']};border:1.5px solid ${overdue?'var(--red)':'var(--brd2)'};border-radius:10px;padding:.9rem 1rem;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px">
-            <button class="rp-status-btn" data-id="${t.id}" data-status="${t.status||'todo'}" title="Changer le statut"
-              style="flex-shrink:0;width:28px;height:28px;border-radius:50%;border:2px solid;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;
-              background:${ t.status==='fait'?'#2E6B12':t.status==='en-cours'?'#B8940A':'#ccc'};
-              border-color:${ t.status==='fait'?'#2E6B12':t.status==='en-cours'?'#B8940A':'#ccc'};color:#fff">
-              ${ t.status==='fait'?'✓':t.status==='en-cours'?'…':'○'}
-            </button>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:14px;font-weight:700;color:var(--ink);${t.status==='fait'?'text-decoration:line-through;opacity:.6':''}">${t.titre||''}</div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
-                ${dateStr?`<span style="font-size:11px;color:${overdue?'var(--red)':'var(--ink3)'}"><i class="ti ti-calendar" style="font-size:10px"></i> ${dateStr}${overdue?' ⚠️':''}</span>`:''}
-                ${t.responsable?`<span style="font-size:11px;color:var(--ink3)"><i class="ti ti-user" style="font-size:10px"></i> ${t.responsable}</span>`:''}
-                <span style="font-size:10px;padding:1px 7px;border-radius:4px;font-weight:600;background:${RETRO_STATUS_COLORS[t.status||'todo']};color:${RETRO_STATUS_TEXT[t.status||'todo']};border:1px solid ${t.status==='fait'?'#6BAA38':t.status==='en-cours'?'#FFD82B':'#ddd'}">${RETRO_STATUS_LABELS[t.status||'todo']}</span>
-              </div>
-              ${t.notes?`<div style="font-size:12px;color:var(--ink3);margin-top:4px">${t.notes}</div>`:''}
-            </div>
-            <div style="display:flex;gap:4px;flex-shrink:0">
-              <button class="rp-edit-btn icon-btn" data-id="${t.id}" title="Modifier"><i class="ti ti-pencil"></i></button>
-              <button class="rp-del-btn icon-btn" data-id="${t.id}" title="Supprimer" style="color:var(--red)"><i class="ti ti-trash"></i></button>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
-    `).join('');
-
-    // Events
-    listEl.querySelectorAll('.rp-status-btn').forEach(btn=>btn.addEventListener('click',()=>cycleStatus(btn.dataset.id, btn.dataset.status)));
-    listEl.querySelectorAll('.rp-del-btn').forEach(btn=>btn.addEventListener('click',()=>deleteTache(btn.dataset.id)));
-    listEl.querySelectorAll('.rp-edit-btn').forEach(btn=>btn.addEventListener('click',()=>editTache(btn.dataset.id)));
-  } catch(e){ console.error(e); listEl.innerHTML=`<div class="empty-state"><p>Erreur chargement.</p></div>`; }
-  loader(false);
-}
-
-async function cycleStatus(id, current) {
-  const next = current==='todo'?'en-cours':current==='en-cours'?'fait':'todo';
-  try {
-    await updateDoc(doc(db,'retroplanning',id),{status:next});
-    loadTaches();
-  } catch(e){console.error(e);toast('Erreur.');}
-}
-
-async function createTache() {
-  const titre = (el('rp-new-titre')?.value||'').trim();
-  if(!titre){toast('Titre requis.');return;}
-  loader(true);
-  try {
-    await addDoc(collection(db,'retroplanning'),{
-      titre,
-      cat: el('rp-new-cat')?.value||'Autre',
-      date: el('rp-new-date')?.value||'',
-      responsable: el('rp-new-resp')?.value||'',
-      status: el('rp-new-status')?.value||'todo',
-      notes: el('rp-new-notes')?.value||'',
-      createdAt: Date.now()
-    });
-    el('rp-add-form').style.display='none';
-    el('rp-new-titre').value='';
-    el('rp-new-notes').value='';
-    el('rp-new-date').value='';
-    el('rp-new-resp').value='';
-    toast('Tâche créée.');
-    loadTaches();
-  } catch(e){console.error(e);toast('Erreur.');}
-  loader(false);
-}
-
-async function deleteTache(id) {
-  if(!confirm(`Supprimer cette tâche ?`)) return;
-  try { await deleteDoc(doc(db,'retroplanning',id)); loadTaches(); toast('Supprimé.'); }
-  catch(e){console.error(e);toast('Erreur.');}
-}
 
 function editTache(id) {
   const existing = document.getElementById('rp-edit-'+id);
@@ -3234,6 +2618,199 @@ function editTache(id) {
       editForm.remove();
       toast('Tâche mise à jour.');
       loadTaches();
+    } catch(e){console.error(e);toast('Erreur.');}
+    loader(false);
+  });
+}
+
+
+/* ── Onglet Rétro-planning ───────────────────────────────────── */
+
+const RETRO_CATS = ['Organisation','Communication','Partenaires','Logistique','Contenu','Autre'];
+const RETRO_STATUS = ['todo','en-cours','fait'];
+const RETRO_STATUS_LABELS = {todo:'À faire','en-cours':'En cours',fait:'Fait'};
+const RETRO_STATUS_COLORS = {todo:'#f0f0f0','en-cours':'#FFF8E6',fait:'#F0FFF4'};
+const RETRO_STATUS_TEXT   = {todo:'#555','en-cours':'#B8940A',fait:'#2E6B12'};
+
+async function renderRetroPlanning() {
+  const cont = el('retroplanning-content'); if(!cont) return;
+  cont.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1.5rem">
+    <div>
+      <div style="font-size:20px;font-weight:700;color:var(--ink)">📋 Rétro-planning</div>
+      <div style="font-size:13px;color:var(--ink3);margin-top:2px">Tâches de préparation de l'événement</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <select id="rp-filter-cat" style="padding:7px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px">
+        <option value="">Toutes catégories</option>
+        ${RETRO_CATS.map(c=>`<option value="${c}">${c}</option>`).join('')}
+      </select>
+      <select id="rp-filter-status" style="padding:7px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px">
+        <option value="">Tous statuts</option>
+        ${RETRO_STATUS.map(s=>`<option value="${s}">${RETRO_STATUS_LABELS[s]}</option>`).join('')}
+      </select>
+      <button id="rp-add-btn" class="btn-primary"><i class="ti ti-plus"></i> Ajouter</button>
+    </div>
+  </div>
+  <div id="rp-add-form" style="display:none;background:var(--cyan-l);border:1.5px solid var(--brd2);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem">
+    <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:10px">Nouvelle tâche</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="field" style="grid-column:1/-1"><label>Titre *</label><input id="rp-new-titre" placeholder="Titre de la tâche" /></div>
+      <div class="field"><label>Catégorie</label><select id="rp-new-cat">${RETRO_CATS.map(c=>`<option value="${c}">${c}</option>`).join('')}</select></div>
+      <div class="field"><label>Date limite</label><input type="date" id="rp-new-date" /></div>
+      <div class="field"><label>Responsable</label><input id="rp-new-resp" placeholder="Ex: TD, MM…" /></div>
+      <div class="field"><label>Statut</label><select id="rp-new-status">${RETRO_STATUS.map(s=>`<option value="${s}">${RETRO_STATUS_LABELS[s]}</option>`).join('')}</select></div>
+      <div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="rp-new-notes" rows="2" style="width:100%;resize:vertical;padding:8px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px"></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button id="rp-cancel-btn" class="btn-ghost">Annuler</button>
+      <button id="rp-save-btn" class="btn-primary"><i class="ti ti-check"></i> Créer</button>
+    </div>
+  </div>
+  <div id="rp-list"></div>`;
+
+  el('rp-add-btn')?.addEventListener('click',()=>{ const f=el('rp-add-form'); f.style.display=f.style.display==='none'?'block':'none'; });
+  el('rp-cancel-btn')?.addEventListener('click',()=>{ el('rp-add-form').style.display='none'; });
+  el('rp-save-btn')?.addEventListener('click', createTache);
+  el('rp-filter-cat')?.addEventListener('change', loadTaches);
+  el('rp-filter-status')?.addEventListener('change', loadTaches);
+  loadTaches();
+}
+
+async function loadTaches() {
+  const listEl = el('rp-list'); if(!listEl) return;
+  const catF    = el('rp-filter-cat')?.value||'';
+  const statusF = el('rp-filter-status')?.value||'';
+  loader(true);
+  try {
+    const snap = await getDocs(query(collection(db,'retroplanning'), orderBy('createdAt')));
+    let taches = snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(catF)    taches = taches.filter(t=>t.cat===catF);
+    if(statusF) taches = taches.filter(t=>t.status===statusF);
+
+    if(!taches.length) {
+      listEl.innerHTML=`<div class="empty-state"><i class="ti ti-checklist"></i><p>Aucune tâche.</p></div>`;
+      loader(false); return;
+    }
+
+    const today = new Date().toISOString().slice(0,10);
+    const byCat = {};
+    taches.forEach(t=>{ const c=t.cat||'Autre'; if(!byCat[c]) byCat[c]=[]; byCat[c].push(t); });
+
+    listEl.innerHTML = Object.entries(byCat).map(([cat,tasks])=>`
+      <div style="margin-bottom:1.5rem">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--cyan);padding-bottom:.4rem;margin-bottom:.75rem;border-bottom:2px solid var(--cyan-l)">
+          ${cat} <span style="opacity:.5;font-weight:400">(${tasks.length})</span>
+        </div>
+        ${tasks.map(t=>{
+          const overdue = t.date && t.date < today && t.status!=='fait';
+          const dateStr = t.date ? new Date(t.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) : '';
+          return `<div class="rp-task" data-id="${t.id}" style="background:${RETRO_STATUS_COLORS[t.status||'todo']};border:1.5px solid ${overdue?'var(--red)':'var(--brd2)'};border-radius:10px;padding:.9rem 1rem;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px">
+            <button class="rp-status-btn" data-id="${t.id}" data-status="${t.status||'todo'}" title="Changer le statut"
+              style="flex-shrink:0;width:28px;height:28px;border-radius:50%;border:2px solid;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;
+              background:${t.status==='fait'?'#2E6B12':t.status==='en-cours'?'#B8940A':'#ccc'};
+              border-color:${t.status==='fait'?'#2E6B12':t.status==='en-cours'?'#B8940A':'#ccc'};color:#fff">
+              ${t.status==='fait'?'✓':t.status==='en-cours'?'…':'○'}
+            </button>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px;font-weight:700;color:var(--ink);${t.status==='fait'?'text-decoration:line-through;opacity:.6':''}">${t.titre||''}</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+                ${dateStr?`<span style="font-size:11px;color:${overdue?'var(--red)':'var(--ink3)'}"><i class="ti ti-calendar" style="font-size:10px"></i> ${dateStr}${overdue?' ⚠️':''}</span>`:''}
+                ${t.responsable?`<span style="font-size:11px;color:var(--ink3)"><i class="ti ti-user" style="font-size:10px"></i> ${t.responsable}</span>`:''}
+                <span style="font-size:10px;padding:1px 7px;border-radius:4px;font-weight:600;background:${RETRO_STATUS_COLORS[t.status||'todo']};color:${RETRO_STATUS_TEXT[t.status||'todo']};border:1px solid ${t.status==='fait'?'#6BAA38':t.status==='en-cours'?'#FFD82B':'#ddd'}">${RETRO_STATUS_LABELS[t.status||'todo']}</span>
+              </div>
+              ${t.notes?`<div style="font-size:12px;color:var(--ink3);margin-top:4px">${t.notes}</div>`:''}
+            </div>
+            <div style="display:flex;gap:4px;flex-shrink:0">
+              <button class="rp-edit-btn icon-btn" data-id="${t.id}"><i class="ti ti-pencil"></i></button>
+              <button class="rp-del-btn icon-btn" data-id="${t.id}" style="color:var(--red)"><i class="ti ti-trash"></i></button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`).join('');
+
+    listEl.querySelectorAll('.rp-status-btn').forEach(btn=>btn.addEventListener('click',()=>cycleStatus(btn.dataset.id,btn.dataset.status)));
+    listEl.querySelectorAll('.rp-del-btn').forEach(btn=>btn.addEventListener('click',()=>deleteTache(btn.dataset.id)));
+    listEl.querySelectorAll('.rp-edit-btn').forEach(btn=>btn.addEventListener('click',()=>editTache(btn.dataset.id)));
+  } catch(e){ console.error(e); listEl.innerHTML=`<div class="empty-state"><p>Erreur chargement.</p></div>`; }
+  loader(false);
+}
+
+async function cycleStatus(id, current) {
+  const next = current==='todo'?'en-cours':current==='en-cours'?'fait':'todo';
+  try { await updateDoc(doc(db,'retroplanning',id),{status:next}); loadTaches(); }
+  catch(e){console.error(e);toast('Erreur.');}
+}
+
+async function createTache() {
+  const titre=(el('rp-new-titre')?.value||'').trim();
+  if(!titre){toast('Titre requis.');return;}
+  loader(true);
+  try {
+    await addDoc(collection(db,'retroplanning'),{
+      titre, cat:el('rp-new-cat')?.value||'Autre',
+      date:el('rp-new-date')?.value||'',
+      responsable:el('rp-new-resp')?.value||'',
+      status:el('rp-new-status')?.value||'todo',
+      notes:el('rp-new-notes')?.value||'',
+      createdAt:Date.now()
+    });
+    el('rp-add-form').style.display='none';
+    ['rp-new-titre','rp-new-notes','rp-new-date','rp-new-resp'].forEach(id=>{const e=el(id);if(e)e.value='';});
+    toast('Tâche créée.'); loadTaches();
+  } catch(e){console.error(e);toast('Erreur.');}
+  loader(false);
+}
+
+async function deleteTache(id) {
+  if(!confirm(`Supprimer cette tâche ?`)) return;
+  try { await deleteDoc(doc(db,'retroplanning',id)); loadTaches(); toast('Supprimé.'); }
+  catch(e){console.error(e);toast('Erreur.');}
+}
+
+function editTache(id) {
+  const existing = document.getElementById('rp-edit-'+id);
+  if(existing){existing.remove();return;}
+  const taskEl = document.querySelector(`.rp-task[data-id="${id}"]`);
+  if(!taskEl) return;
+  const editForm = document.createElement('div');
+  editForm.id='rp-edit-'+id;
+  editForm.style.cssText='background:var(--cyan-l);border:1.5px solid var(--brd2);border-radius:10px;padding:1rem;margin-top:6px';
+  editForm.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="field" style="grid-column:1/-1"><label>Titre</label><input id="rpe-titre-${id}" /></div>
+      <div class="field"><label>Catégorie</label><select id="rpe-cat-${id}">${RETRO_CATS.map(c=>`<option value="${c}">${c}</option>`).join('')}</select></div>
+      <div class="field"><label>Date limite</label><input type="date" id="rpe-date-${id}" /></div>
+      <div class="field"><label>Responsable</label><input id="rpe-resp-${id}" /></div>
+      <div class="field"><label>Statut</label><select id="rpe-status-${id}">${RETRO_STATUS.map(s=>`<option value="${s}">${RETRO_STATUS_LABELS[s]}</option>`).join('')}</select></div>
+      <div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="rpe-notes-${id}" rows="2" style="width:100%;resize:vertical;padding:8px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px"></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-ghost" onclick="this.closest('[id]').remove()">Annuler</button>
+      <button class="btn-primary" id="rpe-save-${id}"><i class="ti ti-check"></i> Enregistrer</button>
+    </div>`;
+  taskEl.after(editForm);
+  getDoc(doc(db,'retroplanning',id)).then(d=>{
+    const t=d.data();
+    const g=id=>{const e=el(id);if(e)return e;};
+    const ti=el(`rpe-titre-${id}`);if(ti)ti.value=t.titre||'';
+    const ca=el(`rpe-cat-${id}`);if(ca)ca.value=t.cat||'Autre';
+    const da=el(`rpe-date-${id}`);if(da)da.value=t.date||'';
+    const re=el(`rpe-resp-${id}`);if(re)re.value=t.responsable||'';
+    const st=el(`rpe-status-${id}`);if(st)st.value=t.status||'todo';
+    const no=el(`rpe-notes-${id}`);if(no)no.value=t.notes||'';
+  });
+  el(`rpe-save-${id}`)?.addEventListener('click',async()=>{
+    loader(true);
+    try {
+      await updateDoc(doc(db,'retroplanning',id),{
+        titre:(el(`rpe-titre-${id}`)?.value||'').trim(),
+        cat:el(`rpe-cat-${id}`)?.value||'Autre',
+        date:el(`rpe-date-${id}`)?.value||'',
+        responsable:el(`rpe-resp-${id}`)?.value||'',
+        status:el(`rpe-status-${id}`)?.value||'todo',
+        notes:el(`rpe-notes-${id}`)?.value||'',
+      });
+      editForm.remove(); toast('Mis à jour.'); loadTaches();
     } catch(e){console.error(e);toast('Erreur.');}
     loader(false);
   });
