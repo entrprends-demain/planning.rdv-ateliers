@@ -26,17 +26,17 @@ body { font-family: var(--font); background: var(--bg); color: var(--ink); -webk
 
 /* ── Nav ── */
 .nav { position: sticky; top: 0; z-index: 100; background: var(--cyan); border-bottom: none; box-shadow: 0 2px 12px rgba(63,203,209,.3); }
-.nav-inner { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; height: 110px; display: flex; align-items: center; gap: 0; }
-.nav-brand { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 4px; font-family: var(--font); font-size: 30px; font-weight: 700; color: #fff; white-space: nowrap; flex-shrink: 0; }
+.nav-inner { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; height: 110px; display: flex; align-items: center; gap: 1.5rem; }
+.nav-brand { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 4px; font-family: var(--font); font-size: 30px; font-weight: 700; color: #fff; flex-shrink: 0; }
 .nav-brand i { font-size: 24px; color: var(--yellow); }
 .nav-brand em { color: var(--yellow); font-style: normal; font-weight: 700; }
 .nav-link { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--r); border: 1.5px solid rgba(255,255,255,.4); background: transparent; font-family: var(--font); font-size: 13px; color: #fff; cursor: pointer; text-decoration: none; transition: .15s; }
 .nav-link:hover { background: rgba(255,255,255,.15); }
 
 /* ── Visitor tabs ── */
-.vis-tabs { display: flex; gap: 4px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex: 1; justify-content: center; }
+.vis-tabs { display: flex; gap: 4px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex: 1; min-width: 0; justify-content: flex-end; }
 .vis-tabs::-webkit-scrollbar { display: none; }
-.vtab { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: var(--r); border: 1.5px solid transparent; background: transparent; font-family: var(--font); font-size: 15px; font-weight: 500; color: rgba(255,255,255,.75); cursor: pointer; transition: .15s; white-space: nowrap; }
+.vtab { display: inline-flex; align-items: center; gap: 5px; padding: 8px 14px; border-radius: var(--r); border: 1.5px solid transparent; background: transparent; font-family: var(--font); font-size: 13px; font-weight: 500; color: rgba(255,255,255,.75); cursor: pointer; transition: .15s; white-space: nowrap; flex-shrink: 0; }
 .vtab:hover { background: rgba(255,255,255,.15); color: #fff; }
 .vtab.active { background: #fff; color: var(--cyan); border-color: #fff; font-weight: 700; }
 .vtab-yellow { color: var(--yellow) !important; font-weight: 600; }
@@ -258,8 +258,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--ink); -webk
   .nav-brand span { display: none; }
 }
 
-.nav-brand-sub { font-size: 16px; font-weight: 400; color: rgba(255,255,255,.75); letter-spacing: .01em; }
-.nav-brand-main { display: flex; align-items: center; gap: 10px; }
+.nav-brand-sub { font-size: 12px; font-weight: 400; color: rgba(255,255,255,.75); letter-spacing: .01em; }
+.nav-brand-main { display: flex; align-items: center; gap: 8px; font-size: 20px; }
 
 /* ── Annulation visiteur ── */
 .cancel-rdv-btn {
