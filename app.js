@@ -1,4 +1,5 @@
-/* ── RDV Entreprends Demain · app.js ── */ 
+/* v=1780925827 */
+/* ── RDV Entreprends Demain · app.js ── */
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFirestore,
@@ -2434,15 +2435,89 @@ function renderPlanVisiteur() {
   const cont = el('plan-visiteur-content'); if(!cont) return;
 
   const bgZone = DATA.planZones.find(z=>z.type==='bg');
+  const planImg = bgZone?.url || 'plan.png';
   const zones  = DATA.planZones.filter(z=>z.type==='zone');
   const stands = DATA.planZones.filter(z=>z.type==='stand');
 
+  // Pas encore de zones définies → afficher les villages existants
   if(!bgZone?.url && !zones.length) {
-    cont.innerHTML=`<div style="background:#f5f5f5;border:2px dashed #ccc;border-radius:16px;padding:3rem;text-align:center">
-      <i class="ti ti-map-2" style="font-size:48px;color:#bbb;display:block;margin-bottom:.75rem"></i>
-      <div style="font-size:15px;font-weight:600;color:var(--ink3)">Plan en cours de préparation</div>
-      <div style="font-size:13px;color:#bbb;margin-top:.25rem">Revenez bientôt !</div>
+    const villages = DATA.villages.filter(v=>(v.exposants||[]).length>0);
+    if(!villages.length){
+      cont.innerHTML=`<div style="background:#f5f5f5;border:2px dashed #ccc;border-radius:16px;padding:3rem;text-align:center">
+        <i class="ti ti-map-2" style="font-size:48px;color:#bbb;display:block;margin-bottom:.75rem"></i>
+        <div style="font-size:15px;font-weight:600;color:var(--ink3)">Plan en cours de préparation</div>
+        <div style="font-size:13px;color:#bbb;margin-top:.25rem">Revenez bientôt !</div>
+      </div>`;
+      return;
+    }
+    // Grille villages avec plan.png en haut
+    cont.innerHTML = `<div style="margin-bottom:1.5rem;border-radius:12px;overflow:hidden;border:2px solid var(--brd2)">
+      <img src="plan.png" style="width:100%;height:auto;display:block" alt="Plan" />
+      <div style="padding:.75rem 1rem;background:var(--cyan-l);font-size:12px;color:var(--ink3);text-align:center"><i class="ti ti-hand-click"></i> Cliquez sur un village ci-dessous pour voir les exposants</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:1rem">
+      ${villages.map(v=>{
+        const exps=(v.exposants||[]).map(id=>DATA.exposants.find(e=>e.id===id)).filter(Boolean);
+        return `<div class="village-card-visitor" style="border:2.5px solid ${v.color||'var(--cyan)'};border-radius:14px;overflow:hidden;cursor:pointer" data-village-id="${v.id}">
+          <div style="background:${v.color||'var(--cyan)'};padding:.85rem 1.1rem;display:flex;align-items:center;gap:10px">
+            <div style="width:12px;height:12px;border-radius:50%;background:#fff;opacity:.8;flex-shrink:0"></div>
+            <div style="font-size:15px;font-weight:700;color:#fff;flex:1">${v.name}</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.8)">${exps.length} exposant${exps.length>1?'s':''}</div>
+            <i class="ti ti-chevron-down" style="color:#fff;font-size:14px;transition:.2s" id="chevron-${v.id}"></i>
+          </div>
+          <div class="village-exps-list" id="vexps-${v.id}" style="display:none;padding:.75rem;background:${v.color||'var(--cyan)'}0D">
+            ${exps.map(e=>`<div class="village-exp-chip" data-eid="${e.id}" data-vcolor="${v.color||'var(--cyan)'}"
+              style="display:flex;align-items:center;gap:10px;padding:.7rem .85rem;border-radius:10px;background:#fff;border:1.5px solid ${v.color||'var(--cyan)'}44;margin-bottom:6px;cursor:pointer">
+              <div style="width:32px;height:32px;border-radius:50%;background:${v.color||'var(--cyan)'}22;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${v.color||'var(--cyan)'};flex-shrink:0">${initials(e.name)}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:700;color:var(--ink)">${e.name}</div>
+                <div style="font-size:11px;color:var(--ink3)">${e.expertise||e.cat||''}</div>
+              </div>
+              <i class="ti ti-info-circle" style="color:${v.color||'var(--cyan)'};font-size:16px;flex-shrink:0"></i>
+            </div>`).join('')}
+          </div>
+        </div>`;
+      }).join('')}
     </div>`;
+
+    // Toggle et fiches exposants
+    cont.querySelectorAll('.village-card-visitor').forEach(card=>{
+      const vid=card.dataset.villageId;
+      const header=card.querySelector('div[style*="padding:.85rem"]');
+      const list=el('vexps-'+vid);
+      const chevron=el('chevron-'+vid);
+      header?.addEventListener('click',()=>{
+        const open=list.style.display==='block';
+        list.style.display=open?'none':'block';
+        if(chevron) chevron.style.transform=open?'':'rotate(180deg)';
+      });
+    });
+    cont.querySelectorAll('.village-exp-chip').forEach(chip=>{
+      chip.addEventListener('click',e=>{
+        e.stopPropagation();
+        const exp=DATA.exposants.find(x=>x.id===chip.dataset.eid); if(!exp) return;
+        const vcolor=chip.dataset.vcolor;
+        const existing=document.getElementById('exp-plan-modal'); if(existing) existing.remove();
+        const overlay=document.createElement('div');
+        overlay.id='exp-plan-modal';
+        overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:800;display:flex;align-items:center;justify-content:center;padding:1rem';
+        overlay.innerHTML=`<div style="background:#fff;border-radius:20px;width:100%;max-width:400px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+          <div style="background:${vcolor};padding:1.25rem 1.5rem;display:flex;align-items:center;gap:12px">
+            <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff">${initials(exp.name)}</div>
+            <div><div style="font-size:16px;font-weight:700;color:#fff">${exp.name}</div><div style="font-size:12px;color:rgba(255,255,255,.8)">${exp.cat||''}</div></div>
+            <button onclick="document.getElementById('exp-plan-modal').remove()" style="margin-left:auto;background:rgba(255,255,255,.2);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;color:#fff;font-size:18px">×</button>
+          </div>
+          <div style="padding:1.25rem 1.5rem">
+            ${exp.expertise?`<div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:.5rem">${exp.expertise}</div>`:''}
+            ${exp.email?`<div style="font-size:13px;color:var(--ink2);margin-bottom:.4rem"><a href="mailto:${exp.email}" style="color:${vcolor}">${exp.email}</a></div>`:''}
+            ${exp.website?`<div style="font-size:13px;margin-bottom:.75rem"><a href="${exp.website.startsWith('http')?exp.website:'https://'+exp.website}" target="_blank" style="color:${vcolor}">${exp.website}</a></div>`:''}
+            ${exp.period!=='aucun'?`<button class="btn-primary" style="width:100%;justify-content:center" onclick="document.getElementById('exp-plan-modal').remove();switchVisitorTab('rdvs');setTimeout(()=>openDrawer('${exp.id}'),400)"><i class="ti ti-calendar-plus"></i> Prendre RDV</button>`:''}
+          </div>
+        </div>`;
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click',e2=>{if(e2.target===overlay)overlay.remove();});
+      });
+    });
     return;
   }
 
@@ -2451,7 +2526,7 @@ function renderPlanVisiteur() {
       <i class="ti ti-hand-click"></i> Cliquez sur une zone colorée pour voir les exposants
     </div>
     <div style="position:relative;display:inline-block;width:100%;border:2px solid var(--brd2);border-radius:12px;overflow:hidden;background:#f9f9f9;cursor:pointer" id="plan-vis-container">
-      ${bgZone?.url ? `<img id="plan-vis-img" src="${bgZone.url}" style="width:100%;height:auto;display:block;vertical-align:top" />` : `<div style="background:#f0f0f0;padding-top:60%;"></div>`}
+      <img id="plan-vis-img" src="${planImg}" style="width:100%;height:auto;display:block;vertical-align:top" />
       <div id="plan-vis-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%"></div>
     </div>
     <div id="plan-vis-zoom" style="display:none;margin-top:1.5rem"></div>
@@ -2531,7 +2606,7 @@ function renderPlanVisiteur() {
           <button onclick="el('plan-vis-zoom').style.display='none'" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;color:#fff;font-size:16px">×</button>
         </div>
         <!-- Zoom visuel -->
-        ${img2?.src ? `<div style="position:relative;overflow:hidden;height:220px;background:#f9f9f9">
+        <div style="position:relative;overflow:hidden;height:220px;background:#f9f9f9">
           <img src="${img2.src}" style="position:absolute;transform-origin:top left;transform:scale(${zoom}) translate(-${cropX/zoom}px,-${cropY/zoom}px);height:auto;max-width:none" />
           <!-- Stands superposés -->
           ${zoneStands.map(s=>{
@@ -2540,7 +2615,7 @@ function renderPlanVisiteur() {
             const sy=(zone.y*scaleY2 + s.relY*zone.h*scaleY2 - cropY)*zoom;
             return `<div style="position:absolute;left:${sx}px;top:${sy}px;transform:translate(-50%,-50%);background:${color};color:#fff;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.3);z-index:2">${exp2.name.length>16?exp2.name.slice(0,14)+'…':exp2.name}</div>`;
           }).join('')}
-        </div>`:``}
+        </div>
         <!-- Liste exposants -->
         <div style="padding:.85rem 1.1rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
           ${exps.map(exp2=>`<div style="display:flex;align-items:center;gap:8px;padding:.6rem .8rem;border-radius:8px;background:${color}11;border:1.5px solid ${color}33;cursor:pointer" onclick="document.getElementById('plan-vis-zoom').style.display='none';switchVisitorTab('rdvs');setTimeout(()=>openDrawer('${exp2.id}'),300)">
