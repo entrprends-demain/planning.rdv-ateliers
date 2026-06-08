@@ -1825,73 +1825,160 @@ async function renderPlan() {
   const planPublic = DATA.config?.planPublic || false;
 
   listEl.innerHTML = `
-    <!-- Toolbar -->
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1.5rem">
       <div>
-        <div style="font-size:20px;font-weight:700;color:var(--ink)">🗺️ Plan de l'événement</div>
-        <div style="font-size:13px;color:var(--ink3);margin-top:2px">Organisez les villages et répartissez les exposants</div>
+        <div style="font-size:20px;font-weight:700;color:var(--ink)">🗺️ Plan interactif</div>
+        <div style="font-size:13px;color:var(--ink3);margin-top:2px">Gérez les villages et placez les exposants sur le plan</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        ${isSA ? `<button id="plan-publish-btn" class="${planPublic?'btn-primary':'btn-ghost'}" style="${planPublic?'background:#3B6D11;border-color:#3B6D11':''}">
+        ${isSA?`<button id="plan-publish-btn" class="${planPublic?'btn-primary':'btn-ghost'}" style="${planPublic?'background:#3B6D11;border-color:#3B6D11':''}">
           <i class="ti ti-${planPublic?'eye':'eye-off'}"></i> ${planPublic?'Plan publié':'Plan fantôme'}
-        </button>` : ''}
+        </button>`:''}
         <button id="add-village-btn" class="btn-primary"><i class="ti ti-plus"></i> Nouveau village</button>
       </div>
     </div>
 
-    <!-- Formulaire nouveau village -->
-    <div id="add-village-form" style="display:none;background:var(--cyan-l);border:1.5px solid var(--brd2);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem">
-      <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:10px">Créer un village</div>
-      <div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:end">
-        <div class="field"><label>Nom du village *</label><input id="new-village-name" placeholder="Ex: Village Juridique" /></div>
-        <div class="field"><label>Couleur</label><input type="color" id="new-village-color" value="#3FCBD1" style="width:60px;height:38px;border-radius:8px;border:1.5px solid var(--brd2);cursor:pointer;padding:2px" /></div>
-        <div style="display:flex;gap:8px">
-          <button id="cancel-village-btn" class="btn-ghost">Annuler</button>
-          <button id="save-village-btn" class="btn-primary"><i class="ti ti-check"></i> Créer</button>
+    <!-- Sous-onglets -->
+    <div style="display:flex;gap:6px;margin-bottom:1.25rem;border-bottom:2px solid var(--brd2);padding-bottom:.75rem">
+      <button class="plan-subtab active" data-subtab="villages" style="padding:7px 16px;border-radius:8px;border:1.5px solid var(--cyan);background:var(--cyan);color:#fff;font-size:13px;font-weight:600;cursor:pointer">🏘️ Villages</button>
+      <button class="plan-subtab" data-subtab="placement" style="padding:7px 16px;border-radius:8px;border:1.5px solid var(--brd2);background:#fff;color:var(--ink);font-size:13px;font-weight:600;cursor:pointer">📍 Placement sur plan</button>
+    </div>
+
+    <!-- Sous-onglet Villages -->
+    <div id="plan-subtab-villages">
+      <div id="add-village-form" style="display:none;background:var(--cyan-l);border:1.5px solid var(--brd2);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem">
+        <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:10px">Créer un village</div>
+        <div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:end">
+          <div class="field"><label>Nom *</label><input id="new-village-name" placeholder="Ex: Village Juridique" /></div>
+          <div class="field"><label>Couleur</label><input type="color" id="new-village-color" value="#3FCBD1" style="width:60px;height:38px;border-radius:8px;border:1.5px solid var(--brd2);cursor:pointer;padding:2px" /></div>
+          <div style="display:flex;gap:8px">
+            <button id="cancel-village-btn" class="btn-ghost">Annuler</button>
+            <button id="save-village-btn" class="btn-primary"><i class="ti ti-check"></i> Créer</button>
+          </div>
         </div>
+      </div>
+      <div id="villages-container" style="display:flex;flex-direction:column;gap:1rem"></div>
+      <div id="unassigned-block" style="margin-top:1.5rem;background:#fff;border:2px dashed var(--brd2);border-radius:14px;padding:1.25rem">
+        <div style="font-size:14px;font-weight:700;color:var(--ink3);margin-bottom:.75rem"><i class="ti ti-user-question"></i> Exposants sans village</div>
+        <div id="unassigned-list" style="display:flex;flex-wrap:wrap;gap:6px"></div>
       </div>
     </div>
 
-    <!-- Zone villages drag & drop -->
-    <div id="villages-container" style="display:flex;flex-direction:column;gap:1rem"></div>
-
-    <!-- Exposants sans village -->
-    <div id="unassigned-block" style="margin-top:1.5rem;background:#fff;border:2px dashed var(--brd2);border-radius:14px;padding:1.25rem">
-      <div style="font-size:14px;font-weight:700;color:var(--ink3);margin-bottom:.75rem"><i class="ti ti-user-question"></i> Exposants sans village</div>
-      <div id="unassigned-list" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    <!-- Sous-onglet Placement -->
+    <div id="plan-subtab-placement" style="display:none">
+      <div style="font-size:13px;color:var(--ink3);margin-bottom:1rem">
+        <strong>Mode Définir zones :</strong> dessinez des rectangles sur le plan pour marquer chaque village.<br>
+        <strong>Mode Placer exposants :</strong> glissez les exposants depuis le panneau vers leur zone.
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:1rem">
+        <button class="plan-mode-btn active" data-mode="view" style="padding:6px 14px;border-radius:6px;border:1.5px solid var(--cyan);background:var(--cyan);color:#fff;font-size:12px;font-weight:600;cursor:pointer">👁 Vue</button>
+        <button class="plan-mode-btn" data-mode="zone" style="padding:6px 14px;border-radius:6px;border:1.5px solid var(--brd2);background:#fff;color:var(--ink);font-size:12px;font-weight:600;cursor:pointer">📐 Zones</button>
+        <button class="plan-mode-btn" data-mode="place" style="padding:6px 14px;border-radius:6px;border:1.5px solid var(--brd2);background:#fff;color:var(--ink);font-size:12px;font-weight:600;cursor:pointer">📍 Placer</button>
+        <button id="clear-zones-btn" class="btn-ghost" style="font-size:12px;color:var(--red);border-color:var(--red);margin-left:auto"><i class="ti ti-trash"></i> Effacer zones</button>
+      </div>
+      <div id="plan-hint" style="font-size:12px;color:var(--ink3);margin-bottom:.75rem">Cliquez sur une zone pour voir les exposants.</div>
+      <div style="position:relative;display:inline-block;width:100%;border:2px solid var(--brd2);border-radius:12px;overflow:hidden;background:#f9f9f9" id="plan-container">
+        <img id="plan-img" src="plan.png" style="width:100%;height:auto;display:block;vertical-align:top" />
+        <div id="plan-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></div>
+      </div>
+      <div id="plan-side-panel" style="display:none;margin-top:1rem;background:var(--cyan-l);border:1.5px solid var(--brd2);border-radius:12px;padding:1rem">
+        <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:.5rem">Exposants sans position</div>
+        <div id="plan-exps-pool" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+      </div>
     </div>
   `;
 
-  // Rendre les villages
-  renderVillagesUI();
-
-  // Bouton publier/masquer plan
-  el('plan-publish-btn')?.addEventListener('click', async () => {
+  // Publication
+  el('plan-publish-btn')?.addEventListener('click', async()=>{
     const newVal = !DATA.config.planPublic;
     loader(true);
     try {
-      await setDoc(doc(db,'config','platform'), {mode:PLATFORM_MODE, planPublic:newVal, updatedAt:Date.now()}, {merge:true});
+      await setDoc(doc(db,'config','platform'),{planPublic:newVal,updatedAt:Date.now()},{merge:true});
       DATA.config.planPublic = newVal;
-      const btn = el('plan-publish-btn');
-      if(btn){
-        btn.innerHTML = `<i class="ti ti-${newVal?'eye':'eye-off'}"></i> ${newVal?'Plan publié':'Plan fantôme'}`;
-        btn.style.background = newVal ? '#3B6D11' : '';
-        btn.style.borderColor = newVal ? '#3B6D11' : '';
-        btn.className = newVal ? 'btn-primary' : 'btn-ghost';
-      }
-      toast(newVal ? `Plan publié — visible par les visiteurs.` : `Plan masqué.`);
-    } catch(e) { console.error(e); toast('Erreur.'); }
+      renderPlan();
+      toast(newVal?'Plan publié.':'Plan masqué.');
+    } catch(e){console.error(e);toast('Erreur.');}
     loader(false);
   });
 
-  el('add-village-btn')?.addEventListener('click', () => {
-    el('add-village-form').style.display = el('add-village-form').style.display==='none' ? 'block' : 'none';
-    setTimeout(()=>el('new-village-name')?.focus(), 50);
+  // Villages
+  renderVillagesUI();
+  el('add-village-btn')?.addEventListener('click',()=>{
+    const f=el('add-village-form'); if(!f) return;
+    f.style.display=f.style.display==='none'?'block':'none';
+    setTimeout(()=>el('new-village-name')?.focus(),50);
   });
-  el('cancel-village-btn')?.addEventListener('click', () => { el('add-village-form').style.display='none'; });
+  el('cancel-village-btn')?.addEventListener('click',()=>{ el('add-village-form').style.display='none'; });
   el('save-village-btn')?.addEventListener('click', createVillage);
-  el('new-village-name')?.addEventListener('keydown', e=>{ if(e.key==='Enter') createVillage(); });
+  el('new-village-name')?.addEventListener('keydown',e=>{ if(e.key==='Enter') createVillage(); });
+
+  // Sous-onglets
+  listEl.querySelectorAll('.plan-subtab').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      listEl.querySelectorAll('.plan-subtab').forEach(b=>{ b.style.background='#fff'; b.style.color='var(--ink)'; b.style.borderColor='var(--brd2)'; });
+      btn.style.background='var(--cyan)'; btn.style.color='#fff'; btn.style.borderColor='var(--cyan)';
+      const t=btn.dataset.subtab;
+      el('plan-subtab-villages').style.display=t==='villages'?'block':'none';
+      el('plan-subtab-placement').style.display=t==='placement'?'block':'none';
+      if(t==='placement') initPlanPlacement();
+    });
+  });
+
+  // Effacer zones
+  el('clear-zones-btn')?.addEventListener('click', async()=>{
+    if(!confirm(`Supprimer toutes les zones du plan ?`)) return;
+    loader(true);
+    try {
+      const snap = await getDocs(collection(db,'planZones'));
+      const batch = writeBatch(db);
+      snap.docs.forEach(d=>{ if(d.data().type!=='bg') batch.delete(doc(db,'planZones',d.id)); });
+      await batch.commit();
+      DATA.planZones = DATA.planZones.filter(z=>z.type==='bg');
+      renderPlanOverlay('view');
+      toast('Zones effacées.');
+    } catch(e){console.error(e);toast('Erreur.');}
+    loader(false);
+  });
 }
+
+function initPlanPlacement() {
+  let currentMode = 'view';
+  let draggedExp = null;
+
+  const renderModeButtons = () => {
+    document.querySelectorAll('.plan-mode-btn').forEach(b=>{
+      const active = b.dataset.mode===currentMode;
+      b.style.background=active?'var(--cyan)':'#fff';
+      b.style.color=active?'#fff':'var(--ink)';
+      b.style.borderColor=active?'var(--cyan)':'var(--brd2)';
+    });
+    const hints = {view:'Cliquez sur une zone pour voir ses exposants.',zone:'Cliquez-glissez pour dessiner une zone village.',place:'Glissez un exposant depuis le panneau vers le plan.'};
+    const h=el('plan-hint'); if(h) h.textContent=hints[currentMode];
+    const sp=el('plan-side-panel'); if(sp) sp.style.display=currentMode==='place'?'block':'none';
+    renderPlanOverlay(currentMode);
+    if(currentMode==='place') renderExpsPool();
+  };
+
+  document.querySelectorAll('.plan-mode-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{ currentMode=btn.dataset.mode; renderModeButtons(); });
+  });
+
+  renderPlanOverlay('view');
+
+  const renderExpsPool = () => {
+    const pool=el('plan-exps-pool'); if(!pool) return;
+    const placed=new Set(DATA.planZones.filter(z=>z.type==='stand').map(z=>z.exposantId));
+    const unplaced=DATA.exposants.filter(e=>!placed.has(e.id));
+    pool.innerHTML=unplaced.map(e=>`<div class="exp-pool-chip" draggable="true" data-eid="${e.id}"
+      style="padding:4px 10px;border-radius:16px;background:#fff;border:1.5px solid var(--brd2);font-size:12px;font-weight:600;cursor:grab">${e.name}</div>`).join('')
+      ||'<span style="font-size:12px;color:var(--ink3);font-style:italic">Tous placés.</span>';
+    pool.querySelectorAll('.exp-pool-chip').forEach(chip=>{
+      chip.addEventListener('dragstart',e=>{ draggedExp=chip.dataset.eid; e.dataTransfer.effectAllowed='copy'; });
+      chip.addEventListener('dragend',()=>{ draggedExp=null; });
+    });
+  };
+}
+
 
 function renderVillagesUI() {
   const container = el('villages-container'); if(!container) return;
