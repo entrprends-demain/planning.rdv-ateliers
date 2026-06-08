@@ -2408,7 +2408,7 @@ async function exportHistorique() {
 }
 
 async function clearHistorique() {
-  if(!confirm('Supprimer tout l'historique ? Cette action est irréversible.')) return;
+  if(!confirm(`Supprimer tout l'historique ? Cette action est irréversible.`)) return;
   loader(true);
   try {
     const snap = await getDocs(collection(db,'logs'));
