@@ -130,7 +130,7 @@ async function loadAll() {
     DATA.waitlist     = wS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.villages     = vlS.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order||0)-(b.order||0));
     const cfgDoc = cS.docs.find(d=>d.id==='platform') || cS.docs.find(d=>d.id==='siteConfig');
-    if(cfgDoc){ const c=cfgDoc.data(); PLATFORM_MODE=c.mode||'inscription'; DATA.config={mode:PLATFORM_MODE,lectureDate:c.lectureDate||'1er juillet 2026',planPublic:c.planPublic||false}; } else { DATA.config={mode:'inscription',lectureDate:'1er juillet 2026',planPublic:false}; }
+    if(cfgDoc){ const c=cfgDoc.data(); PLATFORM_MODE=c.mode||'inscription'; DATA.config={mode:PLATFORM_MODE,lectureDate:c.lectureDate||'1er juillet 2026',planPublic:c.planPublic||false,ghostMode:c.ghostMode||false,ghostMessage:c.ghostMessage||''}; } else { DATA.config={mode:'inscription',lectureDate:'1er juillet 2026',planPublic:false,ghostMode:false,ghostMessage:''}; }
     DATA.slots = {};
     sS.docs.forEach(d=>{ const s={id:d.id,...d.data()}; if(!DATA.slots[s.exposantId])DATA.slots[s.exposantId]=[]; DATA.slots[s.exposantId].push(s); });
   } catch(e) { console.error(e); toast('Erreur de connexion Firebase.'); }
@@ -2428,8 +2428,8 @@ async function renderHistorique() {
     const logs=snap.docs.map(d=>({id:d.id,...d.data()})).slice(0,200);
     const isSA = currentAdmin?.role?.toLowerCase()==='superadmin'||currentAdmin?.email===SUPER_ADMIN_EMAIL;
     const toolbar = isSA ? `<div style="display:flex;gap:8px;margin-bottom:1rem">
-      <button onclick="exportHistorique()" class="btn-primary" style="font-size:13px"><i class="ti ti-download"></i> Exporter CSV</button>
-      <button onclick="clearHistorique()" class="btn-ghost" style="font-size:13px;border-color:var(--red);color:var(--red)"><i class="ti ti-trash"></i> Vider l'historique</button>
+      <button id="btn-export-hist" class="btn-primary" style="font-size:13px"><i class="ti ti-download"></i> Exporter CSV</button>
+      <button id="btn-clear-hist" class="btn-ghost" style="font-size:13px;border-color:var(--red);color:var(--red)"><i class="ti ti-trash"></i> Vider l'historique</button>
     </div>` : '';
     if(!logs.length){listEl.innerHTML=toolbar+'<div class="empty-state"><i class="ti ti-history"></i><p>Aucun historique.</p></div>';return;}
     listEl.innerHTML=toolbar+`<table class="rdv-table"><thead><tr>
@@ -2448,6 +2448,8 @@ async function renderHistorique() {
     }).join('')}</tbody></table>`;
   }catch(e){console.error(e);listEl.innerHTML='<div class="empty-state"><p>Erreur chargement.</p></div>';}
 }
+}
+
 function renderPlanVisiteur() {
   const cont = el('plan-visiteur-content'); if(!cont) return;
 
@@ -2549,7 +2551,6 @@ async function enableGhostMode(message) {
   loader(true);
   try {
     await setDoc(doc(db,'config','platform'), {
-      mode: PLATFORM_MODE, planPublic: DATA.config?.planPublic||false,
       ghostMode: true, ghostMessage: message, updatedAt: Date.now()
     }, {merge:true});
     DATA.config.ghostMode = true;
@@ -2562,7 +2563,7 @@ async function enableGhostMode(message) {
 async function disableGhostMode() {
   loader(true);
   try {
-    await setDoc(doc(db,'config','platform'), {ghostMode:false, updatedAt:Date.now()}, {merge:true});
+    await updateDoc(doc(db,'config','platform'), {ghostMode:false, updatedAt:Date.now()});
     DATA.config.ghostMode = false;
     toast('Mode fantôme désactivé.');
   } catch(e){console.error(e);toast('Erreur.');}
