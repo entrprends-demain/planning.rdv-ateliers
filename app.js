@@ -2913,12 +2913,80 @@ function renderPlanVisiteur() {
     zoomEl.scrollIntoView({behavior:'smooth',block:'nearest'});
   }
   // Fallback : villages sans plan image
-  const villages = DATA.villages.filter(v=>(v.exposants||[]).length>0);
-  if(!bgZone?.url && villages.length) {
+  const villages2 = DATA.villages.filter(v=>(v.exposants||[]).length>0);
+  if(!bgZone?.url && villages2.length) {
     cont.innerHTML += `<div style="margin-top:2rem"><div style="font-size:14px;font-weight:700;color:var(--ink3);margin-bottom:.75rem">Villages</div>
       <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:1rem">
-        ${villages.map(v=>{const exps=(v.exposants||[]).map(id=>DATA.exposants.find(e=>e.id===id)).filter(Boolean);return renderVillageCard(v,exps);}).join('')}
+        ${villages2.map(v=>{
+          const exps=(v.exposants||[]).map(id=>DATA.exposants.find(e=>e.id===id)).filter(Boolean);
+          const color=v.color||'var(--cyan)';
+          return `<div class="village-card-visitor" style="border:2.5px solid ${color};border-radius:14px;overflow:hidden;cursor:pointer" data-village-id="${v.id}">
+            <div style="background:${color};padding:.85rem 1.1rem;display:flex;align-items:center;gap:10px">
+              <div style="width:12px;height:12px;border-radius:50%;background:#fff;opacity:.8;flex-shrink:0"></div>
+              <div style="font-size:15px;font-weight:700;color:#fff;flex:1">${v.name}</div>
+              <div style="font-size:12px;color:rgba(255,255,255,.8)">${exps.length} exposant${exps.length>1?'s':''}</div>
+              <i class="ti ti-chevron-down" style="color:#fff;font-size:14px;transition:.2s" id="chevron2-${v.id}"></i>
+            </div>
+            <div class="village-exps-list" id="vexps2-${v.id}" style="display:none;padding:.75rem;background:${color}0D">
+              ${exps.map(e=>`<div class="village-exp-chip2" data-eid="${e.id}" data-vcolor="${color}"
+                style="display:flex;align-items:center;gap:10px;padding:.7rem .85rem;border-radius:10px;background:#fff;border:1.5px solid ${color}44;margin-bottom:6px;cursor:pointer">
+                <div style="width:32px;height:32px;border-radius:50%;background:${color}22;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${color};flex-shrink:0">${initials(e.name)}</div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:13px;font-weight:700;color:var(--ink)">${e.name}</div>
+                  <div style="font-size:11px;color:var(--ink3)">${e.expertise||e.cat||''}</div>
+                </div>
+                <i class="ti ti-info-circle" style="color:${color};font-size:16px;flex-shrink:0"></i>
+              </div>`).join('')}
+            </div>
+          </div>`;
+        }).join('')}
       </div></div>`;
+
+    // Toggle accordéon et fiches exposants pour le fallback
+    cont.querySelectorAll('.village-card-visitor').forEach(card=>{
+      const vid=card.dataset.villageId;
+      const header=card.querySelector('div[style*="padding:.85rem"]');
+      const list=document.getElementById('vexps2-'+vid);
+      const chevron=document.getElementById('chevron2-'+vid);
+      header?.addEventListener('click',()=>{
+        if(!list) return;
+        const open=list.style.display==='block';
+        list.style.display=open?'none':'block';
+        if(chevron) chevron.style.transform=open?'':'rotate(180deg)';
+      });
+    });
+    cont.querySelectorAll('.village-exp-chip2').forEach(chip=>{
+      chip.addEventListener('click',e=>{
+        e.stopPropagation();
+        const exp=DATA.exposants.find(x=>x.id===chip.dataset.eid); if(!exp) return;
+        const vcolor=chip.dataset.vcolor;
+        const existing=document.getElementById('exp-plan-modal'); if(existing) existing.remove();
+        const overlay=document.createElement('div');
+        overlay.id='exp-plan-modal';
+        overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:800;display:flex;align-items:center;justify-content:center;padding:1rem';
+        overlay.innerHTML=`<div style="background:#fff;border-radius:20px;width:100%;max-width:400px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+          <div style="background:${vcolor};padding:1.25rem 1.5rem;display:flex;align-items:center;gap:12px">
+            <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff">${initials(exp.name)}</div>
+            <div><div style="font-size:16px;font-weight:700;color:#fff">${exp.name}</div><div style="font-size:12px;color:rgba(255,255,255,.8)">${exp.cat||''}</div></div>
+            <button id="close-exp-plan-modal" style="margin-left:auto;background:rgba(255,255,255,.2);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;color:#fff;font-size:18px">×</button>
+          </div>
+          <div style="padding:1.25rem 1.5rem">
+            ${exp.expertise?`<div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:.5rem">${exp.expertise}</div>`:''}
+            ${exp.email?`<div style="font-size:13px;color:var(--ink2);margin-bottom:.4rem"><a href="mailto:${exp.email}" style="color:${vcolor}">${exp.email}</a></div>`:''}
+            ${exp.website?`<div style="font-size:13px;margin-bottom:.75rem"><a href="${exp.website.startsWith('http')?exp.website:'https://'+exp.website}" target="_blank" style="color:${vcolor}">${exp.website}</a></div>`:''}
+            ${exp.period!=='aucun'?`<button class="btn-primary btn-rdv-from-plan" data-eid="${exp.id}" style="width:100%;justify-content:center"><i class="ti ti-calendar-plus"></i> Prendre RDV</button>`:''}
+          </div>
+        </div>`;
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click',e2=>{if(e2.target===overlay)overlay.remove();});
+        document.getElementById('close-exp-plan-modal')?.addEventListener('click',()=>overlay.remove());
+        overlay.querySelector('.btn-rdv-from-plan')?.addEventListener('click',()=>{
+          overlay.remove();
+          switchVisitorTab('rdvs');
+          setTimeout(()=>openDrawer(exp.id),400);
+        });
+      });
+    });
   }
 }
 
