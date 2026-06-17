@@ -1,4 +1,4 @@
-/* v=1780925827 */ 
+/* v=1780925827 */
 /* ── RDV Entreprends Demain · app.js ── */
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -133,7 +133,7 @@ async function loadAll() {
     DATA.villages     = vlS.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order||0)-(b.order||0));
     DATA.planZones    = pzS.docs.map(d=>({id:d.id,...d.data()}));
     const cfgDoc = cS.docs.find(d=>d.id==='platform') || cS.docs.find(d=>d.id==='siteConfig');
-    if(cfgDoc){ const c=cfgDoc.data(); PLATFORM_MODE=c.mode||'inscription'; DATA.config={mode:PLATFORM_MODE,lectureDate:c.lectureDate||'1er juillet 2026',planPublic:c.planPublic||false,ghostMode:c.ghostMode||false,ghostMessage:c.ghostMessage||''}; } else { DATA.config={mode:'inscription',lectureDate:'1er juillet 2026',planPublic:false,ghostMode:false,ghostMessage:''}; }
+    if(cfgDoc){ const c=cfgDoc.data(); PLATFORM_MODE=c.mode||'inscription'; DATA.config={mode:PLATFORM_MODE,lectureDate:c.lectureDate||'1er juillet 2026',planPublic:c.planPublic||false,ghostMode:c.ghostMode||false,ghostMessage:c.ghostMessage||'',lectureMsg:c.lectureMsg||'',preinscriptionMsg:c.preinscriptionMsg||''}; } else { DATA.config={mode:'inscription',lectureDate:'1er juillet 2026',planPublic:false,ghostMode:false,ghostMessage:'',lectureMsg:'',preinscriptionMsg:''}; }
     DATA.slots = {};
     sS.docs.forEach(d=>{ const s={id:d.id,...d.data()}; if(!DATA.slots[s.exposantId])DATA.slots[s.exposantId]=[]; DATA.slots[s.exposantId].push(s); });
   } catch(e) { console.error(e); toast('Erreur de connexion Firebase.'); }
@@ -857,6 +857,7 @@ async function renderVisiteursList(){
     <td style="display:flex;gap:6px">
       <button class="btn-primary" style="padding:5px 12px;font-size:12px" data-vid="${v.id}"><i class="ti ti-eye"></i> Planning</button>
       <button class="del-booking-btn" style="padding:5px 10px" data-del-vid="${v.id}" data-del-email="${v.email}" title="Supprimer ce visiteur et toutes ses données"><i class="ti ti-trash"></i></button>
+      ${(currentAdmin?.role?.toLowerCase()==='superadmin'||currentAdmin?.email===SUPER_ADMIN_EMAIL)?`<button class="btn-ghost" style="padding:5px 10px;font-size:12px" data-rgpd-vid="${v.id}" title="Télécharger le document RGPD accepté"><i class="ti ti-file-download"></i></button>`:''}
     </td>
   </tr>`).join('')}</tbody></table>`;
   listEl.querySelectorAll('[data-vid]').forEach(btn=>{
@@ -866,6 +867,73 @@ async function renderVisiteursList(){
   listEl.querySelectorAll('[data-del-vid]').forEach(btn=>{
     btn.addEventListener('click',()=>deleteVisiteur(btn.dataset.delVid, btn.dataset.delEmail));
   });
+  // Bouton doc RGPD superadmin
+  listEl.querySelectorAll('[data-rgpd-vid]').forEach(btn=>{
+    const v = visiteurs.find(x=>x.id===btn.dataset.rgpdVid);
+    if(v) btn.addEventListener('click',()=>downloadRgpdDoc(v));
+  });
+}
+
+function downloadRgpdDoc(v) {
+  const bks = v.bookings||[];
+  const ins = v.inscriptions||[];
+  const now = new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
+  const registDate = v.createdAt ? new Date(v.createdAt).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}) : 'Date inconnue';
+  const rdvLines = bks.map(b=>`  - RDV avec ${b.exposantId||'–'} · ${b.slotStart||'–'} (${b.mode||'inscription'})`).join('\n')||'  Aucun RDV enregistré';
+  const atLines  = ins.map(i=>`  - Atelier : ${i.atelierId||'–'} (${i.mode||'inscription'})`).join('\n')||'  Aucun atelier enregistré';
+  const txt = `DOCUMENT DE CONSENTEMENT RGPD
+Généré le : ${now}
+Plateforme : Entreprends Demain ! — entrprends-demain.github.io/planning.rdv-ateliers/
+Organisateur : Paris Initiative Entreprise (PIE) — 68 Bd Malesherbes, 75008 Paris
+
+═══════════════════════════════════════════════════════
+DONNÉES DE L'INSCRIT
+═══════════════════════════════════════════════════════
+Prénom : ${v.prenom||bks[0]?.prenom||'–'}
+Nom    : ${v.nom||bks[0]?.nom||'–'}
+Email  : ${v.email||'–'}
+Société: ${v.societe||bks[0]?.societe||'–'}
+Code personnel : ${v.code||'–'}
+Date d'inscription : ${registDate}
+
+═══════════════════════════════════════════════════════
+CONSENTEMENT RECUEILLI
+═══════════════════════════════════════════════════════
+✓ L'inscrit a coché la case de consentement lors de son inscription :
+
+  « J'accepte que mes données soient utilisées dans le cadre de cet
+  événement et conservées dans la base de données de PIE conformément
+  à la politique de confidentialité (rgpd.html). »
+
+Base légale : Consentement explicite (art. 6.1.a RGPD)
+
+═══════════════════════════════════════════════════════
+INSCRIPTIONS
+═══════════════════════════════════════════════════════
+RDV individuels :
+${rdvLines}
+
+Ateliers :
+${atLines}
+
+═══════════════════════════════════════════════════════
+DROITS DE L'INSCRIT
+═══════════════════════════════════════════════════════
+L'inscrit dispose des droits d'accès, rectification, effacement,
+opposition et portabilité. Contact : communication@paris-initiative.org
+
+Durée de conservation : jusqu'au 31 décembre 2026.
+═══════════════════════════════════════════════════════
+Document généré automatiquement par la plateforme PIE.
+`;
+  const blob = new Blob([txt],{type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `RGPD_${(v.nom||'visiteur').replace(/\s+/g,'-')}_${(v.prenom||'').replace(/\s+/g,'-')}.txt`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  toast(`Document RGPD téléchargé pour ${v.prenom} ${v.nom}`);
 }
 
 async function deleteVisiteur(visitorId, email) {
@@ -1118,6 +1186,41 @@ async function getOrCreateVisitorCode(email){
   return{code,isNew:true};
 }
 
+function generateIcsLink() {
+  // Génère un fichier .ics pour ajouter l'événement Entreprends Demain ! au calendrier
+  const dtstart = '20260922T100000';
+  const dtend   = '20260922T170000';
+  const summary = encodeURIComponent('Entreprends Demain !');
+  const desc    = encodeURIComponent(`Salon de l’entrepreneuriat durable – Cité des Métiers de Paris\nhttps://entrprends-demain.github.io/planning.rdv-ateliers/`);
+  const location= encodeURIComponent(`Cité des Métiers de Paris, 30 Av. Corentin Cariou, 75019 Paris`);
+  const ics = [
+    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Entreprends Demain//FR',
+    'BEGIN:VEVENT',
+    `DTSTART:${dtstart}`,
+    `DTEND:${dtend}`,
+    `SUMMARY:Entreprends Demain !`,
+    `DESCRIPTION:Salon de l'entrepreneuriat durable – Cité des Métiers de Paris\nhttps://entrprends-demain.github.io/planning.rdv-ateliers/`,
+    `LOCATION:Cité des Métiers de Paris, 30 Av. Corentin Cariou, 75019 Paris`,
+    `STATUS:CONFIRMED`,
+    'END:VEVENT','END:VCALENDAR'
+  ].join('\r\n');
+  const blob = new Blob([ics], {type:'text/calendar'});
+  return URL.createObjectURL(blob);
+}
+
+function generateGoogleCalLink() {
+  const base = 'https://calendar.google.com/calendar/render?action=TEMPLATE';
+  const params = new URLSearchParams({
+    text: 'Entreprends Demain !',
+    dates: '20260922T100000/20260922T170000',
+    details: "Salon de l'entrepreneuriat durable – Cité des Métiers de Paris\nhttps://entrprends-demain.github.io/planning.rdv-ateliers/",
+    location: 'Cité des Métiers de Paris, 30 Av. Corentin Cariou, 75019 Paris',
+    sf: 'true',
+    output: 'xml'
+  });
+  return base + '&' + params.toString();
+}
+
 function showCodeModal(code,prenom,expName,start,end,isPreinscription=false){
   navigator.clipboard.writeText(code).catch(()=>{});
   const overlay=document.createElement('div');
@@ -1142,10 +1245,29 @@ function showCodeModal(code,prenom,expName,start,end,isPreinscription=false){
     ${isPreinscription?`<div style="background:#EAF3DE;border:1.5px solid #6BAA38;border-radius:10px;padding:.9rem;margin-bottom:1rem;font-size:12px;color:#2E5A00;text-align:left;line-height:1.6">
       <strong><i class="ti ti-pencil"></i> Préinscription</strong> — Votre inscription est enregistrée mais reste provisoire. Elle sera confirmée définitivement à l'ouverture officielle des inscriptions.
     </div>`:''}
+    <!-- Bloc calendrier -->
+    <div style="background:#F0FFF4;border:1.5px solid #6BAA38;border-radius:12px;padding:1rem;margin-bottom:1rem;text-align:left">
+      <div style="font-size:12px;font-weight:700;color:#2E6B12;margin-bottom:.5rem"><i class="ti ti-calendar-plus" style="font-size:14px;vertical-align:-2px"></i> Ajouter l'événement à votre agenda</div>
+      <div style="font-size:12px;color:#3B6D11;margin-bottom:.75rem">Entreprends Demain ! · Mardi 22 sept. 2026 · 10h–17h · Cité des Métiers de Paris</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a id="cal-google-link" href="" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;background:#4285F4;color:#fff;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;text-decoration:none;font-family:var(--font)"><i class="ti ti-brand-google"></i> Google Calendar</a>
+        <a id="cal-ics-link" href="" download="entreprends-demain-2026.ics" style="display:inline-flex;align-items:center;gap:6px;background:var(--ink);color:#fff;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;text-decoration:none;font-family:var(--font)"><i class="ti ti-calendar-down"></i> Apple / Outlook (.ics)</a>
+      </div>
+    </div>
     <button id="code-ok-btn" style="background:var(--cyan);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;width:100%">J'ai noté mon code → Continuer</button>
   </div>`;
   document.body.appendChild(overlay);
-  document.getElementById('code-ok-btn').addEventListener('click',()=>{overlay.remove();if(pendingExp)openDrawer(pendingExp);});
+  // Lier les liens calendrier
+  const _gLink = document.getElementById('cal-google-link');
+  const _icsLink = document.getElementById('cal-ics-link');
+  if(_gLink) _gLink.href = generateGoogleCalLink();
+  if(_icsLink) _icsLink.href = generateIcsLink();
+  document.getElementById('code-ok-btn').addEventListener('click',()=>{
+    const _il = document.getElementById('cal-ics-link');
+    if(_il?.href?.startsWith('blob:')) URL.revokeObjectURL(_il.href);
+    overlay.remove();
+    if(pendingExp)openDrawer(pendingExp);
+  });
 }
 
 async function applyQuickCode(codeInputId,statusId,fieldPrefix){
@@ -1635,7 +1757,26 @@ function applyModeUI() {
   const subBar = el('sub-tabs-bar');
   if(subBar) subBar.style.display = planPublic ? 'flex' : 'none';
 
-}  // fin applyModeUI — pas de bandeau
+  // Bannière mode lecture / préinscription
+  const nav = document.querySelector('nav.nav');
+  if(nav && (PLATFORM_MODE === 'lecture' || PLATFORM_MODE === 'preinscription')) {
+    const existing = document.getElementById('platform-mode-banner');
+    if(!existing) {
+      const banner = document.createElement('div');
+      banner.id = 'platform-mode-banner';
+      if(PLATFORM_MODE === 'lecture') {
+        const msg = DATA.config?.lectureMsg || `Les inscriptions seront ouvertes à partir du ${DATA.config?.lectureDate||'1er juillet 2026'}. En attendant, vous pouvez consulter les experts et ateliers disponibles.`;
+        banner.className = 'mode-banner lecture';
+        banner.innerHTML = `<i class="ti ti-eye" style="font-size:16px;flex-shrink:0"></i><span>${msg}</span>`;
+      } else {
+        const msg = DATA.config?.preinscriptionMsg || `Les inscriptions sont actuellement en phase de préinscription. Votre inscription sera confirmée à l'ouverture officielle des inscriptions.`;
+        banner.className = 'mode-banner preinscription';
+        banner.innerHTML = `<i class="ti ti-pencil" style="font-size:16px;flex-shrink:0"></i><span>${msg}</span>`;
+      }
+      nav.after(banner);
+    }
+  }
+}  // fin applyModeUI
 
 /* ── Navigation visiteur ──────────────────────────────────────── */
 function switchVisitorTab(tab){
@@ -1992,7 +2133,7 @@ function initPlanPlacement() {
       const div = document.createElement('div');
       div.style.cssText=`position:absolute;left:${zone.x*sx}px;top:${zone.y*sy}px;width:${zone.w*sx}px;height:${zone.h*sy}px;background:${color}33;border:2.5px solid ${color};border-radius:6px;box-sizing:border-box;`;
       const lbl = document.createElement('div');
-      lbl.style.cssText=`position:absolute;top:3px;left:6px;font-size:11px;font-weight:700;color:${color};pointer-events:none;white-space:nowrap`;
+      lbl.style.cssText=`position:absolute;top:4px;left:6px;right:4px;font-size:13px;font-weight:800;color:${color};pointer-events:none;white-space:normal;word-break:break-word;line-height:1.2;text-shadow:0 1px 2px rgba(255,255,255,.8)`;
       lbl.textContent = village?.name||zone.label||'Zone';
       div.appendChild(lbl);
 
@@ -2000,8 +2141,9 @@ function initPlanPlacement() {
       stands.filter(s=>s.zoneId===zone.id).forEach(stand=>{
         const exp=DATA.exposants.find(e=>e.id===stand.exposantId); if(!exp) return;
         const sd=document.createElement('div');
-        sd.style.cssText=`position:absolute;left:${(stand.relX||.5)*zone.w*sx-36}px;top:${(stand.relY||.5)*zone.h*sy-12}px;background:${color};color:#fff;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;white-space:nowrap;pointer-events:${currentMode==='place'?'all':'none'};cursor:${currentMode==='place'?'pointer':'default'};box-shadow:0 2px 6px rgba(0,0,0,.25);z-index:2`;
-        sd.textContent=exp.name.length>18?exp.name.slice(0,16)+'…':exp.name;
+        const sdW=Math.min(zone.w*sx-8, 90);
+        sd.style.cssText=`position:absolute;left:${(stand.relX||.5)*zone.w*sx-sdW/2}px;top:${(stand.relY||.5)*zone.h*sy-16}px;width:${sdW}px;background:${color};color:#fff;border-radius:5px;padding:3px 6px;font-size:11px;font-weight:700;white-space:normal;word-break:break-word;line-height:1.3;text-align:center;pointer-events:${currentMode==='place'?'all':'none'};cursor:${currentMode==='place'?'pointer':'default'};box-shadow:0 2px 6px rgba(0,0,0,.3);z-index:2`;
+        sd.textContent=exp.name;
         if(currentMode==='place'){
           sd.title=`Retirer ${exp.name}`;
           sd.addEventListener('click',async e2=>{
@@ -2720,8 +2862,8 @@ function renderPlanVisiteur() {
   const stands = DATA.planZones.filter(z=>z.type==='stand');
 
   // Pas encore de zones définies → afficher les villages existants
+  const villages = DATA.villages.filter(v=>(v.exposants||[]).length>0);
   if(!bgZone?.url && !zones.length) {
-    const villages = DATA.villages.filter(v=>(v.exposants||[]).length>0);
     if(!villages.length){
       cont.innerHTML=`<div style="background:#f5f5f5;border:2px dashed #ccc;border-radius:16px;padding:3rem;text-align:center">
         <i class="ti ti-map-2" style="font-size:48px;color:#bbb;display:block;margin-bottom:.75rem"></i>
@@ -2912,12 +3054,80 @@ function renderPlanVisiteur() {
     zoomEl.scrollIntoView({behavior:'smooth',block:'nearest'});
   }
   // Fallback : villages sans plan image
-  const villages = DATA.villages.filter(v=>(v.exposants||[]).length>0);
-  if(!bgZone?.url && villages.length) {
+  const villages2 = DATA.villages.filter(v=>(v.exposants||[]).length>0);
+  if(!bgZone?.url && villages2.length) {
     cont.innerHTML += `<div style="margin-top:2rem"><div style="font-size:14px;font-weight:700;color:var(--ink3);margin-bottom:.75rem">Villages</div>
       <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:1rem">
-        ${villages.map(v=>{const exps=(v.exposants||[]).map(id=>DATA.exposants.find(e=>e.id===id)).filter(Boolean);return renderVillageCard(v,exps);}).join('')}
+        ${villages2.map(v=>{
+          const exps=(v.exposants||[]).map(id=>DATA.exposants.find(e=>e.id===id)).filter(Boolean);
+          const color=v.color||'var(--cyan)';
+          return `<div class="village-card-visitor" style="border:2.5px solid ${color};border-radius:14px;overflow:hidden;cursor:pointer" data-village-id="${v.id}">
+            <div style="background:${color};padding:.85rem 1.1rem;display:flex;align-items:center;gap:10px">
+              <div style="width:12px;height:12px;border-radius:50%;background:#fff;opacity:.8;flex-shrink:0"></div>
+              <div style="font-size:15px;font-weight:700;color:#fff;flex:1">${v.name}</div>
+              <div style="font-size:12px;color:rgba(255,255,255,.8)">${exps.length} exposant${exps.length>1?'s':''}</div>
+              <i class="ti ti-chevron-down" style="color:#fff;font-size:14px;transition:.2s" id="chevron2-${v.id}"></i>
+            </div>
+            <div class="village-exps-list" id="vexps2-${v.id}" style="display:none;padding:.75rem;background:${color}0D">
+              ${exps.map(e=>`<div class="village-exp-chip2" data-eid="${e.id}" data-vcolor="${color}"
+                style="display:flex;align-items:center;gap:10px;padding:.7rem .85rem;border-radius:10px;background:#fff;border:1.5px solid ${color}44;margin-bottom:6px;cursor:pointer">
+                <div style="width:32px;height:32px;border-radius:50%;background:${color}22;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${color};flex-shrink:0">${initials(e.name)}</div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:13px;font-weight:700;color:var(--ink)">${e.name}</div>
+                  <div style="font-size:11px;color:var(--ink3)">${e.expertise||e.cat||''}</div>
+                </div>
+                <i class="ti ti-info-circle" style="color:${color};font-size:16px;flex-shrink:0"></i>
+              </div>`).join('')}
+            </div>
+          </div>`;
+        }).join('')}
       </div></div>`;
+
+    // Toggle accordéon et fiches exposants pour le fallback
+    cont.querySelectorAll('.village-card-visitor').forEach(card=>{
+      const vid=card.dataset.villageId;
+      const header=card.querySelector('div[style*="padding:.85rem"]');
+      const list=document.getElementById('vexps2-'+vid);
+      const chevron=document.getElementById('chevron2-'+vid);
+      header?.addEventListener('click',()=>{
+        if(!list) return;
+        const open=list.style.display==='block';
+        list.style.display=open?'none':'block';
+        if(chevron) chevron.style.transform=open?'':'rotate(180deg)';
+      });
+    });
+    cont.querySelectorAll('.village-exp-chip2').forEach(chip=>{
+      chip.addEventListener('click',e=>{
+        e.stopPropagation();
+        const exp=DATA.exposants.find(x=>x.id===chip.dataset.eid); if(!exp) return;
+        const vcolor=chip.dataset.vcolor;
+        const existing=document.getElementById('exp-plan-modal'); if(existing) existing.remove();
+        const overlay=document.createElement('div');
+        overlay.id='exp-plan-modal';
+        overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:800;display:flex;align-items:center;justify-content:center;padding:1rem';
+        overlay.innerHTML=`<div style="background:#fff;border-radius:20px;width:100%;max-width:400px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+          <div style="background:${vcolor};padding:1.25rem 1.5rem;display:flex;align-items:center;gap:12px">
+            <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff">${initials(exp.name)}</div>
+            <div><div style="font-size:16px;font-weight:700;color:#fff">${exp.name}</div><div style="font-size:12px;color:rgba(255,255,255,.8)">${exp.cat||''}</div></div>
+            <button id="close-exp-plan-modal" style="margin-left:auto;background:rgba(255,255,255,.2);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;color:#fff;font-size:18px">×</button>
+          </div>
+          <div style="padding:1.25rem 1.5rem">
+            ${exp.expertise?`<div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:.5rem">${exp.expertise}</div>`:''}
+            ${exp.email?`<div style="font-size:13px;color:var(--ink2);margin-bottom:.4rem"><a href="mailto:${exp.email}" style="color:${vcolor}">${exp.email}</a></div>`:''}
+            ${exp.website?`<div style="font-size:13px;margin-bottom:.75rem"><a href="${exp.website.startsWith('http')?exp.website:'https://'+exp.website}" target="_blank" style="color:${vcolor}">${exp.website}</a></div>`:''}
+            ${exp.period!=='aucun'?`<button class="btn-primary btn-rdv-from-plan" data-eid="${exp.id}" style="width:100%;justify-content:center"><i class="ti ti-calendar-plus"></i> Prendre RDV</button>`:''}
+          </div>
+        </div>`;
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click',e2=>{if(e2.target===overlay)overlay.remove();});
+        document.getElementById('close-exp-plan-modal')?.addEventListener('click',()=>overlay.remove());
+        overlay.querySelector('.btn-rdv-from-plan')?.addEventListener('click',()=>{
+          overlay.remove();
+          switchVisitorTab('rdvs');
+          setTimeout(()=>openDrawer(exp.id),400);
+        });
+      });
+    });
   }
 }
 
@@ -3227,6 +3437,11 @@ function initParametres() {
   el('lecture-date')?.addEventListener('input', updateLecturePreview);
   el('save-mode-btn')?.addEventListener('click', saveMode);
   el('save-lecture-btn')?.addEventListener('click', saveLectureDate);
+  // Charger textes modes personnalisables
+  if(el('lecture-msg-input')) el('lecture-msg-input').value = DATA.config.lectureMsg||'';
+  if(el('preinscription-msg-input')) el('preinscription-msg-input').value = DATA.config.preinscriptionMsg||'';
+  el('save-lecture-msg-btn')?.addEventListener('click', saveModeMessages);
+  el('save-preinscription-msg-btn')?.addEventListener('click', saveModeMessages);
   // Afficher textarea ghost quand radio fantome sélectionné
   document.querySelectorAll('input[name="site-mode"]').forEach(r=>{
     r.addEventListener('change',()=>{
@@ -3274,6 +3489,20 @@ async function saveMode() {
       updateModeLabel();
       toast(`Mode "${selected}" activé !`);
     }
+  } catch(e) { console.error(e); toast('Erreur.'); }
+  loader(false);
+}
+
+async function saveModeMessages() {
+  loader(true);
+  try {
+    const cfgRef = doc(db,'config','platform');
+    const lectureMsg = (el('lecture-msg-input')?.value||'').trim();
+    const preinscriptionMsg = (el('preinscription-msg-input')?.value||'').trim();
+    await setDoc(cfgRef, { lectureMsg, preinscriptionMsg }, {merge:true});
+    DATA.config.lectureMsg = lectureMsg;
+    DATA.config.preinscriptionMsg = preinscriptionMsg;
+    toast('Messages enregistrés !');
   } catch(e) { console.error(e); toast('Erreur.'); }
   loader(false);
 }

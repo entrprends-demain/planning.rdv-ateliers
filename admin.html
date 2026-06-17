@@ -280,19 +280,36 @@
       </div>
     </div>
 
-    <!-- Message lecture seule -->
-    <div style="background:#fff;border:1.5px solid var(--brd2);border-radius:var(--rl);padding:1.5rem">
-      <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:.4rem"><i class="ti ti-message" style="color:var(--cyan);font-size:16px"></i> Message affiché en mode lecture seule</div>
-      <div style="font-size:13px;color:var(--ink3);margin-bottom:.75rem">Ce texte apparaît bien en évidence sur la page d'accueil visiteurs.</div>
+    <!-- Messages modes personnalisables -->
+    <div style="background:#fff;border:1.5px solid var(--brd2);border-radius:var(--rl);padding:1.5rem;margin-bottom:1.25rem">
+      <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:.4rem"><i class="ti ti-message" style="color:var(--cyan);font-size:16px"></i> Message · Mode lecture seule</div>
+      <div style="font-size:13px;color:var(--ink3);margin-bottom:.75rem">Affiché en bandeau sur la page visiteurs quand le mode est "Lecture seule". Laissez vide pour le message par défaut (date d'ouverture).</div>
       <div class="field">
-        <label>Date d'ouverture des préinscriptions</label>
+        <label>Date d'ouverture des préinscriptions (utilisée dans le message par défaut)</label>
         <input id="lecture-date" placeholder="Ex: 1er juillet 2026" style="max-width:300px" />
       </div>
-      <div style="margin-top:.75rem;padding:.9rem;background:var(--cyan-l);border:1.5px solid var(--brd2);border-radius:10px;font-size:13px;color:var(--cyan-d)">
-        <strong>Aperçu du message :</strong><br>
+      <div style="margin-top:.6rem;padding:.9rem;background:var(--cyan-l);border:1.5px solid var(--brd2);border-radius:10px;font-size:13px;color:var(--cyan-d);margin-bottom:.75rem">
+        <strong>Message par défaut :</strong><br>
         <span id="lecture-preview">Les inscriptions seront ouvertes à partir du <strong>1er juillet 2026</strong>. En attendant, vous pouvez consulter les experts et ateliers disponibles.</span>
       </div>
-      <button id="save-lecture-btn" class="btn-ghost" style="margin-top:.75rem"><i class="ti ti-device-floppy"></i> Enregistrer</button>
+      <button id="save-lecture-btn" class="btn-ghost" style="margin-bottom:.75rem"><i class="ti ti-device-floppy"></i> Enregistrer la date</button>
+      <div class="field" style="margin-top:.5rem">
+        <label>Message personnalisé (remplace le message par défaut)</label>
+        <textarea id="lecture-msg-input" rows="2" placeholder="Ex: Ouverture des inscriptions le 1er juillet — consultez dès maintenant nos experts disponibles !" style="width:100%;padding:8px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px;resize:vertical"></textarea>
+      </div>
+    </div>
+
+    <div style="background:#fff;border:1.5px solid var(--brd2);border-radius:var(--rl);padding:1.5rem">
+      <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:.4rem"><i class="ti ti-message" style="color:#B8940A;font-size:16px"></i> Message · Mode préinscription</div>
+      <div style="font-size:13px;color:var(--ink3);margin-bottom:.75rem">Affiché en bandeau sur la page visiteurs quand le mode est "Préinscription". Laissez vide pour le message par défaut.</div>
+      <div style="padding:.9rem;background:#FFF8E6;border:1.5px solid #FFD82B;border-radius:10px;font-size:13px;color:#5A4A00;margin-bottom:.75rem">
+        <strong>Message par défaut :</strong> Les inscriptions sont actuellement en phase de préinscription. Votre inscription sera confirmée à l'ouverture officielle des inscriptions.
+      </div>
+      <div class="field">
+        <label>Message personnalisé</label>
+        <textarea id="preinscription-msg-input" rows="2" placeholder="Ex: La phase de préinscription est ouverte — votre place sera confirmée le 1er août !" style="width:100%;padding:8px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px;resize:vertical"></textarea>
+      </div>
+      <button id="save-preinscription-msg-btn" class="btn-ghost" style="margin-top:.75rem"><i class="ti ti-device-floppy"></i> Enregistrer les messages</button>
     </div>
   </div>
 

@@ -8,23 +8,25 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
   <link rel="stylesheet" href="style.css" />
   <style>
-    .page-wrap { max-width: 760px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
-    .page-wrap h1 { font-family: var(--font); font-size: 24px; font-weight: 700; color: var(--cyan); margin-bottom: .4rem; }
-    .page-wrap .sub { font-size: 13px; color: var(--ink3); margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 2px solid var(--cyan-l); }
-    .page-wrap h2 { font-size: 15px; font-weight: 700; color: var(--ink); margin: 2rem 0 .75rem; padding-left: 12px; border-left: 3px solid var(--cyan); }
-    .page-wrap h3 { font-size: 14px; font-weight: 700; color: var(--ink); margin: 1.25rem 0 .5rem; }
-    .page-wrap p, .page-wrap li { font-size: 14px; color: var(--ink2); line-height: 1.75; margin-bottom: .5rem; }
-    .page-wrap ul { padding-left: 1.5rem; margin-bottom: .75rem; }
-    .page-wrap table { width:100%; border-collapse:collapse; margin:1rem 0; font-size:13px; }
-    .page-wrap th { background:var(--cyan-l); color:var(--cyan-d); padding:8px 12px; text-align:left; font-weight:600; border:1px solid var(--brd2); }
-    .page-wrap td { padding:8px 12px; border:1px solid var(--brd); color:var(--ink2); vertical-align:top; }
-    .page-wrap tr:nth-child(even) td { background:var(--surf2); }
-    .info-box { background:var(--cyan-l); border:1.5px solid var(--brd2); border-radius:12px; padding:1.1rem 1.25rem; margin:1rem 0; }
-    .info-box p { margin:0; font-size:14px; color:var(--cyan-d); line-height:1.7; }
-    .warn-box { background:#FFF8E6; border:1.5px solid #FFD82B; border-radius:12px; padding:1.1rem 1.25rem; margin:1rem 0; }
-    .warn-box p { margin:0; font-size:13px; color:#5A4A00; line-height:1.7; }
-    .back-btn { display:inline-flex; align-items:center; gap:6px; color:var(--cyan); font-size:13px; font-weight:600; text-decoration:none; margin-bottom:1.5rem; }
-    .section-sep { height:1px; background:var(--cyan-l); margin:2.5rem 0; }
+    .ml-wrap { max-width: 760px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+    .ml-wrap h1 { font-family: var(--font); font-size: 24px; font-weight: 700; color: var(--ink); margin-bottom: .3rem; }
+    .ml-wrap .sub { font-size: 13px; color: var(--ink3); margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 2px solid var(--brd2); }
+    .ml-wrap h2 { font-size: 14px; font-weight: 700; color: var(--ink); margin: 2rem 0 .6rem; text-transform: uppercase; letter-spacing: .06em; }
+    .ml-wrap p, .ml-wrap li { font-size: 14px; color: var(--ink2); line-height: 1.8; margin-bottom: .4rem; }
+    .ml-wrap ul { padding-left: 1.5rem; margin-bottom: .75rem; }
+    .ml-wrap a { color: var(--cyan); text-decoration: none; font-weight: 600; }
+    .ml-wrap a:hover { color: var(--cyan-d); }
+    .info-box { background: var(--cyan-l); border-left: 4px solid var(--cyan); border-radius: 0 10px 10px 0; padding: 1rem 1.25rem; margin: .75rem 0 1rem; }
+    .info-box p { margin: 0; font-size: 14px; color: var(--ink2); line-height: 1.7; }
+    .sep { height: 1px; background: var(--brd2); margin: 2.5rem 0; }
+    .pc-link-box { background: var(--cyan-l); border: 1.5px solid var(--cyan); border-radius: 14px; padding: 1.5rem; text-align: center; margin-top: 1.5rem; }
+    .pc-link-box p { font-size: 14px; color: var(--cyan-d); margin: 0 0 1rem; font-weight: 500; }
+    .pc-link-box a.btn-link { display: inline-flex; align-items: center; gap: 8px; background: var(--cyan); color: #fff; border-radius: 10px; padding: 10px 22px; font-size: 14px; font-weight: 700; text-decoration: none; font-family: var(--font); }
+    .pc-link-box a.btn-link:hover { background: var(--cyan-d); }
+    .back-btn { display: inline-flex; align-items: center; gap: 6px; color: var(--cyan); font-size: 13px; font-weight: 600; text-decoration: none; margin-bottom: 1.5rem; }
+    .back-btn:hover { color: var(--cyan-d); }
+    .tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+    .tag-loi { background: var(--cyan-l); color: var(--cyan-d); }
   </style>
 </head>
 <body>
@@ -39,116 +41,73 @@
   </div>
 </nav>
 
-<div class="page-wrap">
+<div class="ml-wrap">
   <a href="index.html" class="back-btn"><i class="ti ti-arrow-left"></i> Retour à l'accueil</a>
 
-  <h1>Mentions légales et politique de confidentialité</h1>
-  <p class="sub">Dernière mise à jour : juin 2026 · Événement du 22 septembre 2026</p>
+  <h1>Mentions légales</h1>
+  <p class="sub">Conformément à la loi n° 2004-575 du 21 juin 2004 pour la confiance dans l'économie numérique (LCEN) — Mis à jour : juin 2026</p>
 
-  <!-- ══ MENTIONS LÉGALES ══ -->
-  <h2>1. Mentions légales</h2>
-
-  <h3>Éditeur de la plateforme</h3>
+  <!-- ── 1. ÉDITEUR ── -->
+  <h2>1. Éditeur de la plateforme</h2>
   <div class="info-box">
-    <p><strong>Paris Initiative Entreprise (PIE)</strong><br>
-    Association loi 1901<br>
-    68 Boulevard Malesherbes, 75008 Paris<br>
-    Email : <a href="mailto:communication@paris-initiative.org" style="color:var(--cyan)">communication@paris-initiative.org</a><br>
-    Site web : <a href="https://www.pie.paris" target="_blank" style="color:var(--cyan)">www.pie.paris</a></p>
+    <p>
+      <strong>Paris Initiative Entreprise (PIE)</strong><br>
+      Association loi 1901, enregistrée sous le n° W751248628<br>
+      Siège social : 68 Boulevard Malesherbes, 75008 Paris<br>
+      Email : <a href="mailto:communication@paris-initiative.org">communication@paris-initiative.org</a><br>
+      Site institutionnel : <a href="https://www.pie.paris" target="_blank" rel="noopener">www.pie.paris</a>
+    </p>
   </div>
 
-  <h3>Responsable de publication</h3>
-  <p><strong>Dy Titouan</strong>, au nom de Paris Initiative Entreprise.</p>
+  <!-- ── 2. DIRECTEUR DE PUBLICATION ── -->
+  <h2>2. Directeur de la publication</h2>
+  <p>La publication de cette plateforme est placée sous la responsabilité de <strong>Dy Titouan</strong>, au nom de Paris Initiative Entreprise.</p>
 
-  <h3>Hébergement</h3>
-  <p>Cette plateforme est hébergée par <strong>GitHub Pages</strong> (GitHub, Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États-Unis) et utilise <strong>Google Firebase</strong> (Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, États-Unis) pour le stockage des données — serveurs localisés en Europe (région eur3).</p>
-
-  <h3>Propriété intellectuelle</h3>
-  <p>L'ensemble des contenus de cette plateforme (textes, logo, identité visuelle) est la propriété de Paris Initiative Entreprise. Toute reproduction sans autorisation est interdite.</p>
-
-  <div class="section-sep"></div>
-
-  <!-- ══ POLITIQUE DE CONFIDENTIALITÉ ══ -->
-  <h2>2. Politique de confidentialité</h2>
-
-  <h3>Responsable du traitement</h3>
-  <div class="info-box">
-    <p><strong>Paris Initiative Entreprise</strong> (association loi 1901)<br>
-    Représentée par <strong>Dy Titouan</strong><br>
-    68 Boulevard Malesherbes, 75008 Paris<br>
-    Email RGPD : <a href="mailto:communication@paris-initiative.org" style="color:var(--cyan)">communication@paris-initiative.org</a></p>
-  </div>
-
-  <h3>Données collectées</h3>
-  <p>Dans le cadre de l'événement <strong>Entreprends Demain ! — 22 septembre 2026</strong> :</p>
-  <table>
-    <thead><tr><th>Donnée</th><th>Finalité</th><th>Obligatoire</th></tr></thead>
-    <tbody>
-      <tr><td>Prénom et nom</td><td>Identification lors des RDV et ateliers</td><td>Oui</td></tr>
-      <tr><td>Adresse email</td><td>Accès au planning personnel, communication</td><td>Oui</td></tr>
-      <tr><td>Société</td><td>Contextualisation pour les experts</td><td>Non</td></tr>
-      <tr><td>Problématique</td><td>Préparation des RDV par les experts</td><td>Oui (RDV)</td></tr>
-      <tr><td>Inscription ateliers</td><td>Gestion des places et plannings</td><td>Oui (ateliers)</td></tr>
-      <tr><td>Code personnel (6 chiffres)</td><td>Accès sécurisé au planning et annulation</td><td>Généré automatiquement</td></tr>
-    </tbody>
-  </table>
-  <p>Pour les <strong>experts/exposants</strong> : nom, email professionnel, adresse professionnelle.</p>
-
-  <h3>Base légale</h3>
-  <p>Le traitement repose sur votre <strong>consentement explicite</strong> (art. 6.1.a RGPD), recueilli via une case à cocher obligatoire lors de toute inscription. Vous pouvez retirer ce consentement à tout moment.</p>
-
-  <h3>Utilisation et conservation des données</h3>
-  <p>Les données collectées dans le cadre de cet événement sont utilisées exclusivement pour :</p>
+  <!-- ── 3. HÉBERGEMENT ── -->
+  <h2>3. Hébergement</h2>
+  <p>Cette plateforme est hébergée par :</p>
   <ul>
-    <li>La gestion de vos inscriptions aux RDV individuels et ateliers</li>
-    <li>La préparation des rendez-vous par les experts que vous avez choisi de rencontrer</li>
-    <li>La communication relative à l'organisation de l'événement</li>
+    <li><strong>GitHub Pages</strong> (GitHub, Inc.) — 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États-Unis. Les fichiers statiques (HTML, CSS, JS) sont distribués via le réseau CDN mondial de GitHub. <a href="https://docs.github.com/en/pages" target="_blank" rel="noopener">Documentation GitHub Pages</a></li>
+    <li><strong>Google Firebase</strong> (Google LLC) — 1600 Amphitheatre Parkway, Mountain View, CA 94043, États-Unis. Les données sont stockées sur des serveurs localisés en <strong>Europe (région eur3)</strong>. <a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Politique Firebase</a></li>
   </ul>
-  <p>Les données liées spécifiquement à l'événement (problématique, créneaux RDV, ateliers) sont conservées <strong>3 mois après l'événement</strong>, soit jusqu'au <strong>31 décembre 2026</strong>, puis supprimées définitivement.</p>
-  <div class="info-box" style="background:#F0FFF4;border-color:#6BAA38">
-    <p style="color:#2E6B12"><strong>Engagement de PIE :</strong> Vos données ne sont jamais utilisées à des fins commerciales ou publicitaires, et ne sont jamais cédées à des tiers. Seuls les entrepreneurs ayant rempli un dossier de financement auprès de PIE et/ou étant inscrits à la newsletter PIE peuvent recevoir des informations sur les événements de l'association, tous à but non lucratif.</p>
-  </div>
 
-  <h3>Destinataires</h3>
+  <!-- ── 4. PROPRIÉTÉ INTELLECTUELLE ── -->
+  <h2>4. Propriété intellectuelle et droits d'auteur <span class="tag tag-loi">Art. L.111-1 CPI</span></h2>
+  <p>L'ensemble des contenus de cette plateforme — textes, structure, code source, charte graphique et identité visuelle — est protégé par le droit d'auteur au titre du Code de la Propriété Intellectuelle français.</p>
+
+  <p><strong>Titulaire des droits :</strong> Paris Initiative Entreprise, 68 Boulevard Malesherbes, 75008 Paris.</p>
+
   <ul>
-    <li>L'équipe organisatrice de Paris Initiative Entreprise</li>
-    <li>Les experts que vous avez choisi de rencontrer (prénom, nom, problématique uniquement)</li>
-    <li>Les équipes internes de PIE dans le cadre de leur mission d'accompagnement</li>
+    <li><strong>Logotypes partenaires</strong> : les logos des partenaires et co-organisateurs reproduits sur cette plateforme (BGE, Bpifrance, France Active, Le Projecteur, Pôle CSA, Cité des Métiers de Paris, etc.) sont la propriété exclusive de leurs titulaires respectifs et sont reproduits avec leur autorisation dans le cadre de l'événement Entreprends Demain !. Toute reproduction en dehors de ce cadre est interdite sans accord explicite de chaque titulaire.</li>
+    <li><strong>Code source</strong> : développé spécifiquement pour cet événement par Dy Titouan pour le compte de PIE. La reproduction, l'adaptation ou la diffusion du code source, partielle ou totale, est interdite sans autorisation préalable écrite.</li>
+    <li><strong>Contenus textuels</strong> : les descriptions d'experts, d'ateliers et les textes éditoriaux sont la propriété de PIE et de ses partenaires. Toute citation doit mentionner la source.</li>
   </ul>
-  <p>Aucune donnée n'est vendue, louée ou cédée à des tiers à des fins commerciales.</p>
 
-  <h3>Sous-traitants techniques</h3>
-  <table>
-    <thead><tr><th>Sous-traitant</th><th>Rôle</th><th>Localisation</th><th>Garanties</th></tr></thead>
-    <tbody>
-      <tr><td>Google Firebase</td><td>Base de données événementielle</td><td>Europe (eur3)</td><td>DPA Google Cloud, ISO 27001</td></tr>
-      <tr><td>GitHub Pages</td><td>Hébergement de la plateforme</td><td>CDN mondial</td><td>DPA GitHub, SOC 2</td></tr>
-    </tbody>
-  </table>
+  <p>Toute reproduction, représentation, modification ou exploitation de tout ou partie des contenus de cette plateforme, par quelque procédé que ce soit, sans autorisation préalable et écrite de Paris Initiative Entreprise, est interdite et constituerait une contrefaçon sanctionnée par les articles L.335-2 et suivants du Code de la Propriété Intellectuelle.</p>
 
-  <h3>Vos droits</h3>
-  <ul>
-    <li><strong>Accès</strong> : obtenir une copie de vos données</li>
-    <li><strong>Rectification</strong> : corriger des données inexactes</li>
-    <li><strong>Effacement</strong> : demander la suppression ("droit à l'oubli")</li>
-    <li><strong>Opposition</strong> : vous opposer au traitement</li>
-    <li><strong>Portabilité</strong> : recevoir vos données dans un format structuré</li>
-    <li><strong>Retrait du consentement</strong> : à tout moment, sans effet rétroactif</li>
-  </ul>
-  <div class="info-box">
-    <p>Pour exercer vos droits : <a href="mailto:communication@paris-initiative.org" style="color:var(--cyan)">communication@paris-initiative.org</a><br>
-    Délai de réponse : 30 jours maximum.<br>
-    Vous pouvez également saisir la <strong>CNIL</strong> : <a href="https://www.cnil.fr/fr/plaintes" target="_blank" style="color:var(--cyan)">cnil.fr/fr/plaintes</a></p>
+  <!-- ── 5. LIENS HYPERTEXTES ── -->
+  <h2>5. Liens hypertextes</h2>
+  <p>Cette plateforme peut contenir des liens vers des sites tiers. PIE n'exerce aucun contrôle sur ces sites et n'en est pas responsable. La création de liens hypertextes vers cette plateforme est soumise à accord préalable de PIE.</p>
+
+  <!-- ── 6. LIMITATION DE RESPONSABILITÉ ── -->
+  <h2>6. Limitation de responsabilité</h2>
+  <p>PIE s'efforce d'assurer l'exactitude et la mise à jour des informations diffusées sur cette plateforme. Cependant, PIE ne peut garantir l'exactitude, la complétude ou l'actualité des informations, et décline toute responsabilité pour toute inexactitude ou omission.</p>
+  <p>PIE ne saurait être tenu responsable des dommages directs ou indirects résultant de l'accès à la plateforme ou de l'utilisation de son contenu, notamment en cas d'interruption de service, de bug, ou d'indisponibilité technique.</p>
+
+  <!-- ── 7. DROIT APPLICABLE ── -->
+  <h2>7. Droit applicable et juridiction</h2>
+  <p>Le présent site est régi par le droit français. En cas de litige, et à défaut de résolution amiable, les tribunaux compétents de <strong>Paris</strong> seront seuls compétents.</p>
+
+  <div class="sep"></div>
+
+  <!-- ── POLITIQUE DE CONFIDENTIALITÉ ── -->
+  <h2>Politique de confidentialité et données personnelles</h2>
+  <p>La politique de confidentialité de la plateforme Entreprends Demain ! détaille les données personnelles collectées, leurs finalités, les sous-traitants techniques, vos droits RGPD et les modalités pour les exercer.</p>
+
+  <div class="pc-link-box">
+    <p>Consultez notre politique de confidentialité complète :</p>
+    <a href="rgpd.html" class="btn-link"><i class="ti ti-shield-check"></i> Politique de confidentialité</a>
   </div>
-
-  <h3>Sécurité</h3>
-  <p>Mesures mises en place : espace admin protégé par mot de passe, code personnel unique par visiteur, données stockées sur des serveurs certifiés ISO 27001, aucune donnée de paiement collectée.</p>
-
-  <h3>Cookies et traceurs</h3>
-  <p>Cette plateforme <strong>n'utilise aucun cookie publicitaire ni outil de tracking</strong>. Seul le cache local du navigateur (IndexedDB) est utilisé pour améliorer les performances — il ne contient aucune donnée personnelle identifiable et n'est jamais partagé.</p>
-
-  <h3>Modifications</h3>
-  <p>Cette politique peut être mise à jour. La date de dernière modification est indiquée en haut de page.</p>
 
 </div>
 
@@ -158,7 +117,9 @@
     <div class="footer-links">
       <a href="contact.html">Contact</a>
       <span class="footer-sep">|</span>
-      <a href="mentions.html">Mentions légales et politique de confidentialité</a>
+      <a href="mentions.html">Mentions légales</a>
+      <span class="footer-sep">|</span>
+      <a href="rgpd.html">Politique de confidentialité</a>
     </div>
   </div>
 </footer>
