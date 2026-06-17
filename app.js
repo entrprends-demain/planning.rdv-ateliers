@@ -1186,39 +1186,30 @@ async function getOrCreateVisitorCode(email){
   return{code,isNew:true};
 }
 
-function generateIcsLink() {
-  // Génère un fichier .ics pour ajouter l'événement Entreprends Demain ! au calendrier
-  const dtstart = '20260922T100000';
-  const dtend   = '20260922T170000';
-  const summary = encodeURIComponent('Entreprends Demain !');
-  const desc    = encodeURIComponent(`Salon de l’entrepreneuriat durable – Cité des Métiers de Paris\nhttps://entrprends-demain.github.io/planning.rdv-ateliers/`);
-  const location= encodeURIComponent(`Cité des Métiers de Paris, 30 Av. Corentin Cariou, 75019 Paris`);
+function generateIcsBlob() {
   const ics = [
-    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Entreprends Demain//FR',
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Entreprends Demain//FR',
     'BEGIN:VEVENT',
-    `DTSTART:${dtstart}`,
-    `DTEND:${dtend}`,
-    `SUMMARY:Entreprends Demain !`,
-    `DESCRIPTION:Salon de l'entrepreneuriat durable – Cité des Métiers de Paris\nhttps://entrprends-demain.github.io/planning.rdv-ateliers/`,
-    `LOCATION:Cité des Métiers de Paris, 30 Av. Corentin Cariou, 75019 Paris`,
-    `STATUS:CONFIRMED`,
-    'END:VEVENT','END:VCALENDAR'
+    'DTSTART:20260922T100000',
+    'DTEND:20260922T170000',
+    'SUMMARY:Entreprends Demain !',
+    'DESCRIPTION:Salon entrepreneuriat durable - Cite des Metiers de Paris\nhttps://entrprends-demain.github.io/planning.rdv-ateliers/',
+    'LOCATION:Cite des Metiers de Paris\\, 30 Av. Corentin Cariou\\, 75019 Paris',
+    'STATUS:CONFIRMED',
+    'END:VEVENT',
+    'END:VCALENDAR'
   ].join('\r\n');
-  const blob = new Blob([ics], {type:'text/calendar'});
-  return URL.createObjectURL(blob);
+  return new Blob([ics], {type:'text/calendar;charset=utf-8'});
 }
 
 function generateGoogleCalLink() {
-  const base = 'https://calendar.google.com/calendar/render?action=TEMPLATE';
-  const params = new URLSearchParams({
-    text: 'Entreprends Demain !',
-    dates: '20260922T100000/20260922T170000',
-    details: "Salon de l'entrepreneuriat durable – Cité des Métiers de Paris\nhttps://entrprends-demain.github.io/planning.rdv-ateliers/",
-    location: 'Cité des Métiers de Paris, 30 Av. Corentin Cariou, 75019 Paris',
-    sf: 'true',
-    output: 'xml'
-  });
-  return base + '&' + params.toString();
+  const text    = encodeURIComponent('Entreprends Demain !');
+  const dates   = '20260922T100000%2F20260922T170000';
+  const details = encodeURIComponent(`Salon de l’entrepreneuriat durable – Cité des Métiers de Paris\nhttps://entrprends-demain.github.io/planning.rdv-ateliers/`);
+  const loc     = encodeURIComponent(`Cité des Métiers de Paris, 30 Av. Corentin Cariou, 75019 Paris`);
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${dates}&details=${details}&location=${loc}&sf=true`;
 }
 
 function showCodeModal(code,prenom,expName,start,end,isPreinscription=false){
@@ -1226,7 +1217,10 @@ function showCodeModal(code,prenom,expName,start,end,isPreinscription=false){
   const overlay=document.createElement('div');
   overlay.id='code-modal';
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:800;display:flex;align-items:center;justify-content:center;padding:1rem';
-  overlay.innerHTML=`<div style="background:#fff;border-radius:20px;padding:2rem;max-width:440px;width:100%;text-align:center;border:2px solid var(--cyan);box-shadow:0 20px 60px rgba(0,0,0,.2)">
+  // Pré-générer URLs calendrier avant injection innerHTML
+  const _googleCalUrl = generateGoogleCalLink();
+  const _icsUrl = URL.createObjectURL(generateIcsBlob());
+    overlay.innerHTML=`<div style="background:#fff;border-radius:20px;padding:2rem;max-width:440px;width:100%;text-align:center;border:2px solid var(--cyan);box-shadow:0 20px 60px rgba(0,0,0,.2)">
     <i class="ti ti-circle-check" style="font-size:40px;color:var(--cyan);display:block;margin-bottom:.75rem"></i>
     <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:.25rem">${isPreinscription?'Préinscription enregistrée !':'Inscription confirmée !'}</div>
     <div style="font-size:13px;color:var(--ink3);margin-bottom:1.5rem">${start}–${end} chez ${expName}</div>
@@ -1245,31 +1239,24 @@ function showCodeModal(code,prenom,expName,start,end,isPreinscription=false){
     ${isPreinscription?`<div style="background:#EAF3DE;border:1.5px solid #6BAA38;border-radius:10px;padding:.9rem;margin-bottom:1rem;font-size:12px;color:#2E5A00;text-align:left;line-height:1.6">
       <strong><i class="ti ti-pencil"></i> Préinscription</strong> — Votre inscription est enregistrée mais reste provisoire. Elle sera confirmée définitivement à l'ouverture officielle des inscriptions.
     </div>`:''}
-    <!-- Bloc calendrier -->
+        <!-- Bloc calendrier -->
     <div style="background:#F0FFF4;border:1.5px solid #6BAA38;border-radius:12px;padding:1rem;margin-bottom:1rem;text-align:left">
-      <div style="font-size:12px;font-weight:700;color:#2E6B12;margin-bottom:.5rem"><i class="ti ti-calendar-plus" style="font-size:14px;vertical-align:-2px"></i> Ajouter l'événement à votre agenda</div>
+      <div style="font-size:12px;font-weight:700;color:#2E6B12;margin-bottom:.5rem"><i class="ti ti-calendar-plus" style="font-size:14px;vertical-align:-2px"></i> Ajouter l’événement à votre agenda</div>
       <div style="font-size:12px;color:#3B6D11;margin-bottom:.75rem">Entreprends Demain ! · Mardi 22 sept. 2026 · 10h–17h · Cité des Métiers de Paris</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <a id="cal-google-link" href="" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;background:#4285F4;color:#fff;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;text-decoration:none;font-family:var(--font)"><i class="ti ti-brand-google"></i> Google Calendar</a>
-        <a id="cal-ics-link" href="" download="entreprends-demain-2026.ics" style="display:inline-flex;align-items:center;gap:6px;background:var(--ink);color:#fff;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;text-decoration:none;font-family:var(--font)"><i class="ti ti-calendar-down"></i> Apple / Outlook (.ics)</a>
+        <a href="${_googleCalUrl}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;background:#4285F4;color:#fff;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;text-decoration:none;font-family:var(--font)"><i class="ti ti-brand-google"></i> Google Calendar</a>
+        <a href="${_icsUrl}" download="entreprends-demain-2026.ics" style="display:inline-flex;align-items:center;gap:6px;background:var(--ink);color:#fff;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;text-decoration:none;font-family:var(--font)"><i class="ti ti-calendar-down"></i> Apple / Outlook (.ics)</a>
       </div>
     </div>
     <button id="code-ok-btn" style="background:var(--cyan);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;width:100%">J'ai noté mon code → Continuer</button>
   </div>`;
   document.body.appendChild(overlay);
-  // Lier les liens calendrier
-  const _gLink = document.getElementById('cal-google-link');
-  const _icsLink = document.getElementById('cal-ics-link');
-  if(_gLink) _gLink.href = generateGoogleCalLink();
-  if(_icsLink) _icsLink.href = generateIcsLink();
   document.getElementById('code-ok-btn').addEventListener('click',()=>{
-    const _il = document.getElementById('cal-ics-link');
-    if(_il?.href?.startsWith('blob:')) URL.revokeObjectURL(_il.href);
+    URL.revokeObjectURL(_icsUrl);
     overlay.remove();
     if(pendingExp)openDrawer(pendingExp);
   });
 }
-
 async function applyQuickCode(codeInputId,statusId,fieldPrefix){
   const code=(el(codeInputId)?.value||'').trim();
   const status=el(statusId);
