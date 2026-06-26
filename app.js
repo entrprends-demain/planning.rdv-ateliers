@@ -94,6 +94,7 @@ const DATA = {
 };
 let selId=null, periodFilter='', atPeriodFilter='';
 let pendingExp=null, pendingSlot=null, pendingAtelierId=null;
+const _submitting = new Set(); // verrou anti-doublon soumission
 let editAtelier=null;
 
 function initials(n) { return n.trim().split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,2); }
@@ -1439,6 +1440,9 @@ async function confirmBooking(){
   if(!email){toast('Merci de renseigner votre email.');return;}
   if(!problematique){toast('Merci de décrire votre problématique.');return;}
   if(!el('m-rgpd')?.checked){toast('Merci d\'accepter la politique de confidentialité.');return;}
+  const _bookKey = email.toLowerCase()+'__'+pendingExp+'__'+pendingSlot;
+  if(_submitting.has(_bookKey)){toast('Inscription déjà en cours…');return;}
+  _submitting.add(_bookKey);
   const structure = el('m-structure')?.value.trim() || el('m-structure-search')?.value.trim() || '';
   if(el('m-societe')?.value.trim() && !structure){ toast('Merci de sélectionner votre type de structure dans la liste déroulante.'); el('m-structure-search')?.focus(); return; }
   const doublon=DATA.bookings.find(b=>b.exposantId===pendingExp&&(b.email||'').toLowerCase()===email.toLowerCase());
@@ -1465,7 +1469,7 @@ async function confirmBooking(){
     if(isNew){showCodeModal(code,prenom,DATA.exposants.find(e=>e.id===pendingExp)?.name,pendingSlot,slot?.end,PLATFORM_MODE==='preinscription');}
     else{el('d-confirm').innerHTML=`<div class="confirm-ok"><i class="ti ti-circle-check"></i><div>RDV confirmé — ${prenom} ${nom}<br><span style="font-weight:400;font-size:12px">${pendingSlot}–${slot?.end}</span></div></div>`;openDrawer(pendingExp);}
     toast(PLATFORM_MODE==='preinscription'?`Préinscription enregistrée !`:`RDV confirmé !`);
-  }catch(e){console.error(e);toast('Erreur.');}
+  }catch(e){console.error(e);toast('Erreur.');}finally{_submitting.delete(_bookKey);}
   loader(false);
 }
 
@@ -1547,6 +1551,9 @@ async function confirmAtelier(){
   const at=DATA.ateliers.find(a=>a.id===pendingAtelierId);
   const alreadyIn=DATA.inscriptions.find(i=>i.atelierId===pendingAtelierId&&(i.email||'').toLowerCase()===email.toLowerCase());
   if(alreadyIn){toast('Vous êtes déjà inscrit à cet atelier.');return;}
+  const _atKey = email.toLowerCase()+'__at__'+pendingAtelierId;
+  if(_submitting.has(_atKey)){toast('Inscription déjà en cours…');return;}
+  _submitting.add(_atKey);
   const inscrits=DATA.inscriptions.filter(i=>i.atelierId===pendingAtelierId).length;
   if(at.places>0&&inscrits>=at.places){toast('Cet atelier est complet.');return;}
   // Vérif conflits RDV
@@ -1567,7 +1574,7 @@ async function confirmAtelier(){
     if(isNew)showCodeModal(code,prenom,at.titre,at.start,at.end,PLATFORM_MODE==='preinscription');
     else toast(PLATFORM_MODE==='preinscription'?`Préinscription enregistrée — ${at.titre} !`:`Inscription confirmée — ${at.titre} !`);
     renderAteliersGrid();
-  }catch(e){console.error(e);toast('Erreur.');}
+  }catch(e){console.error(e);toast('Erreur.');}finally{_submitting.delete(_atKey);}
   loader(false);
 }
 
