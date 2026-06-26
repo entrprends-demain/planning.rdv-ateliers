@@ -1443,8 +1443,17 @@ async function confirmBooking(){
   if(el('m-societe')?.value.trim() && !structure){ toast('Merci de sélectionner votre type de structure dans la liste déroulante.'); el('m-structure-search')?.focus(); return; }
   const doublon=DATA.bookings.find(b=>b.exposantId===pendingExp&&(b.email||'').toLowerCase()===email.toLowerCase());
   if(doublon){toast(`Vous avez déjà un RDV avec cet expert à ${doublon.slotStart}.`);closeModal();return;}
-  // Vérif conflits ateliers
+  // Vérif créneau déjà occupé (autre expert même heure)
   const slot=getSlots(pendingExp).find(s=>s.start===pendingSlot);
+  const toMinC=t=>{if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m;};
+  const pS=toMinC(pendingSlot),pE=toMinC(slot?.end||pendingSlot);
+  const slotConflict=DATA.bookings.find(b=>{
+    if((b.email||'').toLowerCase()!==email.toLowerCase())return false;
+    const bS=toMinC(b.slotStart),bE=toMinC(b.slotEnd||b.slotStart);
+    return bS<pE&&pS<bE;
+  });
+  if(slotConflict){const expC=DATA.exposants.find(e=>e.id===slotConflict.exposantId);toast(`Vous avez déjà un RDV sur ce créneau (${slotConflict.slotStart}–${slotConflict.slotEnd} avec ${expC?.name||'un expert'}).`);return;}
+  // Vérif conflits ateliers
   const conflict=DATA.inscriptions.find(i=>(i.email||'').toLowerCase()===email.toLowerCase()&&checkTimeConflict(pendingSlot,slot?.end,i.atelierId));
   if(conflict){const at=DATA.ateliers.find(a=>a.id===conflict.atelierId);toast(`Conflit d'horaire avec l'atelier "${at?.titre}" à ${at?.start}.`);return;}
   loader(true);
