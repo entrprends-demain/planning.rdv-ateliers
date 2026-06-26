@@ -1775,10 +1775,16 @@ function applyModeUI() {
 }  // fin applyModeUI
 
 /* ── Navigation visiteur ──────────────────────────────────────── */
-function switchVisitorTab(tab){
+function switchVisitorTab(tab, pushHistory=true){
   applyModeUI();
   ['accueil','rdvs','ateliers','planning','exposant','exposants-list','plan-visiteur'].forEach(t=>{const e=el('tab-'+t);if(e)e.style.display=t===tab?'block':'none';});
   document.querySelectorAll('.vtab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  // Historique navigateur
+  if(pushHistory){
+    const url=new URL(window.location.href);
+    url.searchParams.set('tab',tab);
+    history.pushState({tab},'',url.toString());
+  }
   loadAll().then(()=>{
     applyModeUI();
     if(tab==='accueil')        renderAccueil();
@@ -1788,6 +1794,12 @@ function switchVisitorTab(tab){
     if(tab==='plan-visiteur')  renderPlanVisiteur();
   });
 }
+
+// Écouter le bouton retour/avant du navigateur
+window.addEventListener('popstate', e=>{
+  const tab = e.state?.tab || new URLSearchParams(window.location.search).get('tab') || 'accueil';
+  switchVisitorTab(tab, false);
+});
 
 /* ── Répertoire exposants ───────────────────────────────────────── */
 function renderExposantsList() {
@@ -1881,7 +1893,11 @@ function renderExposantsList() {
 /* ── Page d'accueil ─────────────────────────────────────────────── */
 function renderAccueil(){
   const rdvNum=el('rdv-count-num'), atNum=el('at-count-num');
-  if(rdvNum) rdvNum.textContent=DATA.exposants.length;
+  const rdvExps=DATA.exposants.filter(e=>e.period&&e.period!=='aucun').length;
+  if(rdvNum) rdvNum.textContent=rdvExps;
+  // Aussi mettre à jour le compteur dans la card RDV accueil
+  const rdvCardCount=el('rdv-card-count');
+  if(rdvCardCount) rdvCardCount.textContent=`${rdvExps} expert${rdvExps>1?'s':''} disponible${rdvExps>1?'s':''}`;
   if(atNum)  atNum.textContent=DATA.ateliers.length;
   // Brancher les boutons des cartes
   document.querySelectorAll('.accueil-card-btn, [data-goto]').forEach(btn=>{
@@ -3550,7 +3566,10 @@ if(IS_ADMIN){
 if(IS_VISITOR){
   document.querySelectorAll('.vtab').forEach(btn=>btn.addEventListener('click',()=>switchVisitorTab(btn.dataset.tab)));
   // Accueil actif par défaut
-  switchVisitorTab('accueil');
+  // Restaurer l'onglet depuis l'URL si présent
+  const _initTab = new URLSearchParams(window.location.search).get('tab') || 'accueil';
+  history.replaceState({tab:_initTab},'',window.location.href);
+  switchVisitorTab(_initTab, false);
   el('vis-search').addEventListener('input',renderGrid);
   el('vis-cat').addEventListener('change',renderGrid);
   el('vis-expertise')?.addEventListener('change',renderGrid);
