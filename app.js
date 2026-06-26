@@ -1779,11 +1779,9 @@ function switchVisitorTab(tab, pushHistory=true){
   applyModeUI();
   ['accueil','rdvs','ateliers','planning','exposant','exposants-list','plan-visiteur'].forEach(t=>{const e=el('tab-'+t);if(e)e.style.display=t===tab?'block':'none';});
   document.querySelectorAll('.vtab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
-  // Historique navigateur
+  // Historique via hash — compatible GitHub Pages
   if(pushHistory){
-    const url=new URL(window.location.href);
-    url.searchParams.set('tab',tab);
-    history.pushState({tab},'',url.toString());
+    history.pushState({tab}, '', '#'+tab);
   }
   loadAll().then(()=>{
     applyModeUI();
@@ -1795,10 +1793,11 @@ function switchVisitorTab(tab, pushHistory=true){
   });
 }
 
-// Écouter le bouton retour/avant du navigateur
+// Bouton retour/avant navigateur
 window.addEventListener('popstate', e=>{
-  const tab = e.state?.tab || new URLSearchParams(window.location.search).get('tab') || 'accueil';
-  switchVisitorTab(tab, false);
+  const tab = e.state?.tab || window.location.hash.replace('#','') || 'accueil';
+  const valid = ['accueil','rdvs','ateliers','planning','exposant','exposants-list','plan-visiteur'];
+  switchVisitorTab(valid.includes(tab)?tab:'accueil', false);
 });
 
 /* ── Répertoire exposants ───────────────────────────────────────── */
@@ -1892,13 +1891,20 @@ function renderExposantsList() {
 
 /* ── Page d'accueil ─────────────────────────────────────────────── */
 function renderAccueil(){
-  const rdvNum=el('rdv-count-num'), atNum=el('at-count-num');
-  const rdvExps=DATA.exposants.filter(e=>e.period&&e.period!=='aucun').length;
-  if(rdvNum) rdvNum.textContent=rdvExps;
-  // Aussi mettre à jour le compteur dans la card RDV accueil
-  const rdvCardCount=el('rdv-card-count');
-  if(rdvCardCount) rdvCardCount.textContent=`${rdvExps} expert${rdvExps>1?'s':''} disponible${rdvExps>1?'s':''}`;
-  if(atNum)  atNum.textContent=DATA.ateliers.length;
+  const totalExps = DATA.exposants.length;
+  const rdvExps   = DATA.exposants.filter(e=>e.period&&e.period!=='aucun').length;
+  const atTotal   = DATA.ateliers.length;
+  // Hero exposants — total tous exposants
+  const heroNum = el('rdv-count-num');
+  if(heroNum) heroNum.textContent = totalExps||'—';
+  // Card RDV — exposants qui font des RDV
+  const rdvCardCount = el('rdv-card-count');
+  if(rdvCardCount) rdvCardCount.textContent = rdvExps
+    ? `${rdvExps} expert${rdvExps>1?'s':''} disponible${rdvExps>1?'s':''}`
+    : '— experts disponibles';
+  // Card ateliers
+  const atNum = el('at-count-num');
+  if(atNum) atNum.textContent = atTotal||'—';
   // Brancher les boutons des cartes
   document.querySelectorAll('.accueil-card-btn, [data-goto]').forEach(btn=>{
     btn.onclick=()=>switchVisitorTab(btn.dataset.goto);
@@ -3567,8 +3573,10 @@ if(IS_VISITOR){
   document.querySelectorAll('.vtab').forEach(btn=>btn.addEventListener('click',()=>switchVisitorTab(btn.dataset.tab)));
   // Accueil actif par défaut
   // Restaurer l'onglet depuis l'URL si présent
-  const _initTab = new URLSearchParams(window.location.search).get('tab') || 'accueil';
-  history.replaceState({tab:_initTab},'',window.location.href);
+  const _validTabs = ['accueil','rdvs','ateliers','planning','exposant','exposants-list','plan-visiteur'];
+  const _hashTab = window.location.hash.replace('#','');
+  const _initTab = _validTabs.includes(_hashTab) ? _hashTab : 'accueil';
+  history.replaceState({tab:_initTab}, '', _initTab==='accueil'?window.location.pathname:'#'+_initTab);
   switchVisitorTab(_initTab, false);
   el('vis-search').addEventListener('input',renderGrid);
   el('vis-cat').addEventListener('change',renderGrid);
