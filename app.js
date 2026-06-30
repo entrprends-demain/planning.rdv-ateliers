@@ -689,7 +689,7 @@ function renderAteliersAdminList(){
     </div>`;
   }).join('');
   listEl.querySelectorAll('[data-atid-view]').forEach(btn=>btn.addEventListener('click',()=>showAtelierInscrits(btn.dataset.atidView)));
-  listEl.querySelectorAll('.del-exp-btn[data-atid]').forEach(btn=>btn.addEventListener('click',()=>deleteAtelier(btn.dataset.atid)));
+  listEl.querySelectorAll('.edit-exp-btn[data-atid]').forEach(btn=>btn.addEventListener('click',()=>openAtelierForm(btn.dataset.atid)));
   listEl.querySelectorAll('.del-exp-btn[data-atid]').forEach(btn=>btn.addEventListener('click',()=>deleteAtelier(btn.dataset.atid)));
   listEl.querySelectorAll('.edit-exp-btn[data-atid]').forEach(btn=>btn.addEventListener('click',()=>openAtelierForm(btn.dataset.atid)));
 }
@@ -1668,9 +1668,9 @@ function renderFlashTalksGrid(){
   if(!DATA.flashTalks.length){grid.innerHTML='<div class="empty-state"><i class="ti ti-bolt"></i><p>Aucun flash talk programmé pour le moment.</p></div>';return;}
   const list=[...DATA.flashTalks].sort((a,b)=>(a.start||'').localeCompare(b.start||''));
   grid.innerHTML=list.map(ft=>{
-    return`<div class="atelier-card" style="border-left:4px solid #B8940A">
+    return`<div class="atelier-card">
       <div class="at-header">
-        <div class="at-time-badge" style="background:#FFF8E6;color:#B8940A;border-color:#FFD82B">${ft.start||'–'}${ft.end?'–'+ft.end:''}</div>
+        <div class="at-time-badge">${ft.start||'–'}${ft.end?'–'+ft.end:''}</div>
         <div style="flex:1">
           <div class="at-title">${ft.sujet||ft.titre||'Flash talk'}</div>
           ${ft.thematique?`<div class="at-salle"><i class="ti ti-tag" style="font-size:11px"></i> ${ft.thematique}</div>`:''}
