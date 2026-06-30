@@ -2079,6 +2079,10 @@ function renderAccueil(){
   // Card ateliers
   const atNum = el('at-count-num');
   if(atNum) atNum.textContent = atTotal||'—';
+  // Hero Flash Talks
+  const ftTotal = DATA.flashTalks.length;
+  const ftNum = el('ft-count-num');
+  if(ftNum) ftNum.textContent = ftTotal||'—';
   // Brancher les boutons des cartes
   document.querySelectorAll('.accueil-card-btn, [data-goto]').forEach(btn=>{
     btn.onclick=()=>switchVisitorTab(btn.dataset.goto);
