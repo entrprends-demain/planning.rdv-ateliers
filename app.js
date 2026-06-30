@@ -139,7 +139,12 @@ async function loadAll() {
     DATA.villages     = vlS.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order||0)-(b.order||0));
     DATA.planZones    = pzS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.flashTalks   = ftS.docs.map(d=>({id:d.id,...d.data()}));
-    DATA.categories   = catS.docs.length ? catS.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order||0)-(b.order||0)) : ALL_CATS.map((c,i)=>({id:'default-'+i,name:c,order:i}));
+    {
+      const fromFs = catS.docs.map(d=>({id:d.id,...d.data()}));
+      const existingNames = new Set(fromFs.map(c=>(c.name||'').toLowerCase()));
+      const missing = ALL_CATS.filter(c=>!existingNames.has(c.toLowerCase())).map((c,i)=>({id:'default-'+i,name:c,order:1000+i}));
+      DATA.categories = [...fromFs, ...missing].sort((a,b)=>(a.order||0)-(b.order||0));
+    }
     const cfgDoc = cS.docs.find(d=>d.id==='platform') || cS.docs.find(d=>d.id==='siteConfig');
     if(cfgDoc){ const c=cfgDoc.data(); PLATFORM_MODE=c.mode||'inscription'; DATA.config={mode:PLATFORM_MODE,lectureDate:c.lectureDate||'1er juillet 2026',planPublic:c.planPublic||false,ghostMode:c.ghostMode||false,ghostMessage:c.ghostMessage||'',lectureMsg:c.lectureMsg||'',preinscriptionMsg:c.preinscriptionMsg||''}; } else { DATA.config={mode:'inscription',lectureDate:'1er juillet 2026',planPublic:false,ghostMode:false,ghostMessage:'',lectureMsg:'',preinscriptionMsg:''}; }
     DATA.slots = {};
