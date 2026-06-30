@@ -243,7 +243,10 @@
     <!-- Catégories de partenaires -->
     <div style="background:#fff;border:1.5px solid var(--brd2);border-radius:var(--rl);padding:1.5rem;margin-bottom:1.25rem">
       <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:.4rem"><i class="ti ti-tags" style="color:var(--cyan);font-size:16px"></i> Catégories de partenaires</div>
-      <div style="font-size:13px;color:var(--ink3);margin-bottom:1rem">Gérez les catégories disponibles pour les exposants et ateliers. Visible et modifiable par tous les administrateurs.</div>
+      <div style="font-size:13px;color:var(--ink3);margin-bottom:1rem">Liste des catégories disponibles pour les exposants et ateliers. Seul le super-administrateur peut en créer ou en supprimer.</div>
+      <div id="categories-restrict-note" style="display:none;background:#FFF8E6;border:1.5px solid #FFD82B;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:12px;color:#5A4A00">
+        <i class="ti ti-lock" style="font-size:13px;vertical-align:-2px"></i> Seul le super-administrateur peut ajouter ou supprimer des catégories.
+      </div>
       <div id="categories-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:1rem"></div>
       <div style="display:flex;gap:8px">
         <input id="new-category-input" placeholder="Nouvelle catégorie…" style="flex:1;padding:9px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px" />

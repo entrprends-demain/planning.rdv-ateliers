@@ -83,6 +83,8 @@ const ALL_CATS = [
   'Conseil financier, expertise comptable, direction financière',
   'Courtier, banque, assurance',
   "Développement personnel de l'entrepreneur",
+  'Accompagnement',
+  'Créer son activité',
 ];
 
 /* ── État ─────────────────────────────────────────────────────── */
@@ -3637,21 +3639,29 @@ function initParametres() {
   el('new-category-input')?.addEventListener('keydown', e=>{ if(e.key==='Enter') addCategory(); });
 }
 
-/* ── Catégories partenaires (dynamiques) ──────────────────────────── */
+/* ── Catégories partenaires (dynamiques — super-admin uniquement) ── */
 function renderCategoriesList(){
   const listEl=el('categories-list');if(!listEl)return;
+  const isSA = currentAdmin?.role?.toLowerCase()==='superadmin' || currentAdmin?.email===SUPER_ADMIN_EMAIL;
   const cats=DATA.categories.length?DATA.categories:ALL_CATS.map((c,i)=>({id:'default-'+i,name:c,order:i}));
+  // Masquer le formulaire d'ajout pour les non-super-admins
+  const addZone = el('add-category-btn')?.closest('div');
+  if(addZone) addZone.style.display = isSA ? 'flex' : 'none';
+  const restrictNote = el('categories-restrict-note');
+  if(restrictNote) restrictNote.style.display = isSA ? 'none' : 'block';
   if(!cats.length){listEl.innerHTML='<div style="font-size:12px;color:var(--ink3)">Aucune catégorie. Ajoutez-en une ci-dessous.</div>';return;}
   listEl.innerHTML=cats.map(c=>`
     <div style="display:flex;align-items:center;gap:8px;background:var(--surf2);border:1.5px solid var(--brd2);border-radius:8px;padding:8px 12px">
       <i class="ti ti-tag" style="font-size:14px;color:var(--cyan);flex-shrink:0"></i>
       <span style="flex:1;font-size:13px;color:var(--ink)">${c.name}</span>
-      <button class="del-cat-btn" data-id="${c.id}" style="background:none;border:none;color:var(--red);cursor:pointer;padding:4px"><i class="ti ti-trash" style="font-size:14px"></i></button>
+      ${isSA?`<button class="del-cat-btn" data-id="${c.id}" style="background:none;border:none;color:var(--red);cursor:pointer;padding:4px"><i class="ti ti-trash" style="font-size:14px"></i></button>`:''}
     </div>`).join('');
   listEl.querySelectorAll('.del-cat-btn').forEach(btn=>btn.addEventListener('click',()=>deleteCategory(btn.dataset.id)));
 }
 
 async function addCategory(){
+  const isSA = currentAdmin?.role?.toLowerCase()==='superadmin' || currentAdmin?.email===SUPER_ADMIN_EMAIL;
+  if(!isSA){toast('Seul le super-administrateur peut créer de nouvelles catégories.');return;}
   const input=el('new-category-input');
   const name=(input?.value||'').trim();
   if(!name){toast('Merci de saisir un nom de catégorie.');return;}
@@ -3669,6 +3679,8 @@ async function addCategory(){
 }
 
 async function deleteCategory(catId){
+  const isSA = currentAdmin?.role?.toLowerCase()==='superadmin' || currentAdmin?.email===SUPER_ADMIN_EMAIL;
+  if(!isSA){toast('Seul le super-administrateur peut supprimer une catégorie.');return;}
   if(catId.startsWith('default-')){toast('Cette catégorie par défaut ne peut pas être supprimée — ajoutez vos propres catégories.');return;}
   if(!confirm("Supprimer cette catégorie ? Les exposants/ateliers qui l'utilisent garderont leur valeur actuelle."))return;
   loader(true);
