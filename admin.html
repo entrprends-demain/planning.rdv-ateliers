@@ -40,6 +40,7 @@
   <div class="admin-tabs">
     <button class="atab active" data-tab="exposants"><i class="ti ti-users"></i> Exposants</button>
     <button class="atab" data-tab="ateliers-admin"><i class="ti ti-school"></i> Ateliers <span id="at-badge" class="rdv-badge"></span></button>
+    <button class="atab" data-tab="flashtalks-admin"><i class="ti ti-bolt"></i> Flash Talks <span id="ft-badge" class="rdv-badge" style="background:#B8940A"></span></button>
     <button class="atab" data-tab="waitlist-ateliers"><i class="ti ti-clock" style="color:#B85C1A"></i> Attente ateliers <span id="wat-badge" class="rdv-badge" style="background:#B85C1A"></span></button>
     <button class="atab" data-tab="rdvs"><i class="ti ti-calendar-check"></i> RDV <span id="rdv-badge" class="rdv-badge"></span></button>
     <button class="atab" data-tab="waitlist-rdvs"><i class="ti ti-clock" style="color:#B85C1A"></i> Attente RDV <span id="wrdv-badge" class="rdv-badge" style="background:#B85C1A"></span></button>
@@ -110,7 +111,10 @@
   <div id="tab-ateliers-admin" style="display:none;padding:1.75rem;max-width:1000px;margin:0 auto">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px">
       <div style="font-family:var(--font);font-size:20px;font-weight:700;color:var(--ink)">Gestion des ateliers</div>
-      <button id="add-atelier-btn" class="btn-primary"><i class="ti ti-plus"></i> Créer un atelier</button>
+      <div style="display:flex;gap:8px">
+        <button id="import-programme-btn" class="btn-ghost"><i class="ti ti-file-import"></i> Importer le programme Forum Créa</button>
+        <button id="add-atelier-btn" class="btn-primary"><i class="ti ti-plus"></i> Créer un atelier</button>
+      </div>
     </div>
 
     <!-- Formulaire création atelier -->
@@ -121,22 +125,17 @@
       </div>
       <div class="field"><label>Description</label><textarea id="at-desc" placeholder="Décrivez l'atelier…" rows="2" style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px;resize:vertical"></textarea></div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-        <div class="field"><label>Créneau horaire *</label>
-          <select id="at-creneau">
-            <option value="">-- Choisir --</option>
-            <optgroup label="Matin">
-              <option value="10:00-10:45">10h00 – 10h45</option>
-              <option value="11:00-11:45">11h00 – 11h45</option>
-              <option value="12:00-12:45">12h00 – 12h45</option>
-            </optgroup>
-            <optgroup label="Après-midi">
-              <option value="14:00-14:45">14h00 – 14h45</option>
-              <option value="15:00-15:45">15h00 – 15h45</option>
-              <option value="16:00-16:45">16h00 – 16h45</option>
-            </optgroup>
+        <div class="field"><label>Heure de début *</label><input id="at-start" type="time" step="300" /></div>
+        <div class="field"><label>Heure de fin *</label><input id="at-end" type="time" step="300" /></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="field"><label>Places max *</label><input id="at-places" type="number" min="1" max="500" placeholder="Ex: 30" /></div>
+        <div class="field"><label>Période</label>
+          <select id="at-period">
+            <option value="matin">Matin</option>
+            <option value="aprem">Après-midi</option>
           </select>
         </div>
-        <div class="field"><label>Places max *</label><input id="at-places" type="number" min="1" max="500" placeholder="Ex: 30" /></div>
       </div>
       <div class="field"><label>Catégories (plusieurs possibles)</label>
         <div id="at-cats-check" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
@@ -160,6 +159,31 @@
     </div>
 
     <div id="ateliers-admin-list"></div>
+  </div>
+
+  <!-- Onglet Flash Talks -->
+  <div id="tab-flashtalks-admin" style="display:none;padding:1.75rem;max-width:1000px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px">
+      <div style="font-family:var(--font);font-size:20px;font-weight:700;color:var(--ink)">Gestion des Flash Talks</div>
+      <button id="add-flashtalk-btn" class="btn-primary" style="background:#B8940A"><i class="ti ti-plus"></i> Créer un flash talk</button>
+    </div>
+
+    <!-- Formulaire création flash talk -->
+    <div id="flashtalk-form" class="add-form" style="border-radius:12px;margin-bottom:1.5rem;padding:1.25rem">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="field"><label>Heure de début *</label><input id="ft-start" type="time" step="300" /></div>
+        <div class="field"><label>Heure de fin</label><input id="ft-end" type="time" step="300" /></div>
+      </div>
+      <div class="field"><label>Thématique</label><input id="ft-thematique" placeholder="Ex: Actualité chaude, Témoignage…" /></div>
+      <div class="field"><label>Sujet de l'intervention *</label><input id="ft-sujet" placeholder="Ex: La facturation électronique : l'essentiel à savoir !" /></div>
+      <div class="field"><label>Nom de l'intervenant *</label><input id="ft-intervenant" placeholder="Ex: COGEDIS" /></div>
+      <div class="form-actions">
+        <button id="flashtalk-form-cancel" class="btn-ghost">Annuler</button>
+        <button id="flashtalk-form-submit" class="btn-primary" style="background:#B8940A"><i class="ti ti-check"></i> Enregistrer</button>
+      </div>
+    </div>
+
+    <div id="flashtalks-admin-list"></div>
   </div>
 
   <!-- Onglet RDV -->
@@ -215,6 +239,17 @@
   <div id="tab-parametres" style="display:none;padding:2rem;max-width:700px;margin:0 auto">
     <div style="font-family:var(--font);font-size:20px;font-weight:700;color:var(--ink);margin-bottom:.5rem">Paramètres de la plateforme</div>
     <div style="font-size:13px;color:var(--ink3);margin-bottom:2rem">Ces réglages s'appliquent immédiatement à la page visiteurs.</div>
+
+    <!-- Catégories de partenaires -->
+    <div style="background:#fff;border:1.5px solid var(--brd2);border-radius:var(--rl);padding:1.5rem;margin-bottom:1.25rem">
+      <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:.4rem"><i class="ti ti-tags" style="color:var(--cyan);font-size:16px"></i> Catégories de partenaires</div>
+      <div style="font-size:13px;color:var(--ink3);margin-bottom:1rem">Gérez les catégories disponibles pour les exposants et ateliers. Visible et modifiable par tous les administrateurs.</div>
+      <div id="categories-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:1rem"></div>
+      <div style="display:flex;gap:8px">
+        <input id="new-category-input" placeholder="Nouvelle catégorie…" style="flex:1;padding:9px 12px;border-radius:8px;border:1.5px solid var(--brd2);font-family:var(--font);font-size:13px" />
+        <button id="add-category-btn" class="btn-primary" style="padding:9px 16px"><i class="ti ti-plus"></i> Ajouter</button>
+      </div>
+    </div>
 
     <!-- Mode inscription -->
     <div style="background:#fff;border:1.5px solid var(--brd2);border-radius:var(--rl);padding:1.5rem;margin-bottom:1.25rem">

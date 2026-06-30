@@ -90,6 +90,7 @@ const DATA = {
   exposants: [], slots: {}, bookings: [],
   visitors: [], ateliers: [], inscriptions: [],
   waitlist: [], villages: [], planZones: [],
+  flashTalks: [], categories: [],
   config: { mode: 'inscription', lectureDate: '1er juillet 2026', planPublic: false },
 };
 let selId=null, periodFilter='', atPeriodFilter='';
@@ -113,7 +114,7 @@ function toast(msg) {
 async function loadAll() {
   loader(true);
   try {
-    const [eS,sS,bS,vS,aS,iS,wS,cS,vlS,pzS] = await Promise.all([
+    const [eS,sS,bS,vS,aS,iS,wS,cS,vlS,pzS,ftS,catS] = await Promise.all([
       getDocs(query(collection(db,'exposants'), orderBy('createdAt'))),
       getDocs(query(collection(db,'slots'),     orderBy('start'))),
       getDocs(query(collection(db,'bookings'),  orderBy('slotStart'))),
@@ -124,6 +125,8 @@ async function loadAll() {
       getDocs(collection(db,'config')),
       getDocs(collection(db,'villages')),
       getDocs(collection(db,'planZones')),
+      getDocs(query(collection(db,'flashTalks'), orderBy('start'))),
+      getDocs(collection(db,'categories')),
     ]);
     DATA.exposants    = eS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.bookings     = bS.docs.map(d=>({id:d.id,...d.data()}));
@@ -133,6 +136,8 @@ async function loadAll() {
     DATA.waitlist     = wS.docs.map(d=>({id:d.id,...d.data()}));
     DATA.villages     = vlS.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order||0)-(b.order||0));
     DATA.planZones    = pzS.docs.map(d=>({id:d.id,...d.data()}));
+    DATA.flashTalks   = ftS.docs.map(d=>({id:d.id,...d.data()}));
+    DATA.categories   = catS.docs.length ? catS.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order||0)-(b.order||0)) : ALL_CATS.map((c,i)=>({id:'default-'+i,name:c,order:i}));
     const cfgDoc = cS.docs.find(d=>d.id==='platform') || cS.docs.find(d=>d.id==='siteConfig');
     if(cfgDoc){ const c=cfgDoc.data(); PLATFORM_MODE=c.mode||'inscription'; DATA.config={mode:PLATFORM_MODE,lectureDate:c.lectureDate||'1er juillet 2026',planPublic:c.planPublic||false,ghostMode:c.ghostMode||false,ghostMessage:c.ghostMessage||'',lectureMsg:c.lectureMsg||'',preinscriptionMsg:c.preinscriptionMsg||''}; } else { DATA.config={mode:'inscription',lectureDate:'1er juillet 2026',planPublic:false,ghostMode:false,ghostMessage:'',lectureMsg:'',preinscriptionMsg:''}; }
     DATA.slots = {};
@@ -398,7 +403,7 @@ async function renderWaitlistAteliers() {
 
 function switchAdminTab(tab) {
   document.querySelectorAll('.atab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
-  ['exposants','ateliers-admin','rdvs','visiteurs','waitlist-rdvs','waitlist-ateliers','parametres','equipe','historique','plan','retroplanning'].forEach(t=>{
+  ['exposants','ateliers-admin','flashtalks-admin','rdvs','visiteurs','waitlist-rdvs','waitlist-ateliers','parametres','equipe','historique','plan','retroplanning'].forEach(t=>{
     const el2=el('tab-'+t); if(el2)el2.style.display=t===tab?(t==='exposants'?'flex':'block'):'none';
   });
   loadAll().then(()=>{
@@ -407,6 +412,7 @@ function switchAdminTab(tab) {
     if(tab==='rdvs')             renderRdvList();
     if(tab==='visiteurs')        renderVisiteursList();
     if(tab==='ateliers-admin')   renderAteliersAdmin();
+    if(tab==='flashtalks-admin') renderFlashTalksAdmin();
     if(tab==='waitlist-rdvs')    renderWaitlistRdvs();
     if(tab==='waitlist-ateliers')renderWaitlistAteliers();
     if(tab==='parametres')       { initParametres(); renderModeAdmin(); }
@@ -495,7 +501,7 @@ function openEditPanel(expId) {
       <div class="field"><label>Nom</label><input id="e-name" value="${exp.name||''}" /></div>
       <div class="field"><label>Email</label><input id="e-email" type="email" value="${exp.email||''}" /></div>
       <div class="field"><label>Site internet</label><input id="e-website" value="${exp.website||''}" placeholder="https://..." /></div>
-      <div class="field"><label>Catégorie</label><select id="e-cat">${ALL_CATS.slice(0,7).map(c=>`<option value="${c}"${exp.cat===c?' selected':''}>${c}</option>`).join('')}</select></div>
+      <div class="field"><label>Catégorie</label><select id="e-cat">${(DATA.categories.length?DATA.categories.map(c=>c.name):ALL_CATS).map(c=>`<option value="${c}"${exp.cat===c?' selected':''}>${c}</option>`).join('')}</select></div>
       <div class="field"><label>Expertise</label><input id="e-expertise" value="${exp.expertise||''}" /></div>
       <div class="field"><label>Disponibilité RDV</label><select id="e-period">
         <option value="jour"${exp.period==='jour'?' selected':''}>Journée complète</option>
@@ -758,25 +764,34 @@ function openAtelierForm(atId=null){
   if(atId){
     const at=DATA.ateliers.find(a=>a.id===atId);if(!at)return;
     el('at-titre').value=at.titre||'';el('at-salle').value=at.salle||'';
-    el('at-desc').value=at.description||'';el('at-creneau').value=at.value||at.start+'-'+at.end;
+    el('at-desc').value=at.description||'';
+    if(el('at-start'))el('at-start').value=at.start||'';
+    if(el('at-end'))el('at-end').value=at.end||'';
+    if(el('at-period'))el('at-period').value=at.period||'matin';
     el('at-places').value=at.places||'';
     form.querySelectorAll('#at-cats-check input[type=checkbox]').forEach(cb=>{cb.checked=(at.categories||[]).includes(cb.value);});
     form.querySelectorAll('#at-animateurs-check input[type=checkbox]').forEach(cb=>{cb.checked=(at.animateurs||[]).includes(cb.value);});
   } else {
     el('at-titre').value='';el('at-salle').value='';el('at-desc').value='';el('at-places').value='';
+    if(el('at-start'))el('at-start').value='';
+    if(el('at-end'))el('at-end').value='';
+    if(el('at-period'))el('at-period').value='matin';
     form.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=false);
   }
   form.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 async function saveAtelier(){
-  const titre=el('at-titre').value.trim(),salle=el('at-salle').value.trim(),creneau=el('at-creneau').value,places=parseInt(el('at-places').value)||0;
-  if(!titre||!salle||!creneau){toast('Merci de remplir titre, salle et créneau.');return;}
-  const slotDef=ATELIERS_SLOTS.find(s=>s.value===creneau);if(!slotDef){toast('Créneau invalide.');return;}
+  const titre=el('at-titre').value.trim(),salle=el('at-salle').value.trim();
+  const start=el('at-start').value,end=el('at-end').value,period=el('at-period')?.value||'matin';
+  const places=parseInt(el('at-places').value)||0;
+  if(!titre||!salle||!start||!end){toast('Merci de remplir titre, salle, heure de début et de fin.');return;}
+  if(start>=end){toast('L\'heure de fin doit être après l\'heure de début.');return;}
   const categories=[...document.querySelectorAll('#at-cats-check input:checked')].map(c=>c.value);
   const animateurs=[...document.querySelectorAll('#at-animateurs-check input:checked')].map(c=>c.value);
   const description=el('at-desc').value.trim();
-  const data={titre,salle,description,start:slotDef.start,end:slotDef.end,period:slotDef.period,value:creneau,places,categories,animateurs,createdAt:Date.now()};
+  const value=`${start}-${end}`;
+  const data={titre,salle,description,start,end,period,value,places,categories,animateurs,createdAt:Date.now()};
   loader(true);
   try{
     if(editAtelier){
@@ -806,6 +821,131 @@ async function deleteAtelier(atId){
     DATA.inscriptions=DATA.inscriptions.filter(i=>i.atelierId!==atId);
     renderAteliersAdminList();updateBadges();toast('Atelier supprimé.');
   }catch(e){console.error(e);toast('Erreur.');}
+  loader(false);
+}
+
+/* ── Flash Talks (admin) ─────────────────────────────────────────── */
+let editFlashTalk=null;
+
+function renderFlashTalksAdmin(){
+  renderFlashTalksAdminList();
+  const ftb=el('ft-badge');if(ftb)ftb.textContent=DATA.flashTalks.length||'';
+}
+
+function renderFlashTalksAdminList(){
+  const listEl=el('flashtalks-admin-list');if(!listEl)return;
+  if(!DATA.flashTalks.length){listEl.innerHTML='<div class="empty-state"><i class="ti ti-bolt"></i><p>Aucun flash talk. Créez-en un.</p></div>';return;}
+  const sorted=[...DATA.flashTalks].sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+  listEl.innerHTML=sorted.map(ft=>`
+    <div class="atelier-admin-item" style="border-left:4px solid #B8940A">
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="background:#FFF8E6;color:#B8940A;border:1px solid #FFD82B;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700">${ft.start||'–'}${ft.end?'–'+ft.end:''}</span>
+          <strong style="font-size:14px">${ft.sujet||'–'}</strong>
+        </div>
+        <div style="font-size:12px;color:var(--ink3)">
+          ${ft.thematique?`<i class="ti ti-tag" style="font-size:11px"></i> ${ft.thematique} · `:''}
+          <i class="ti ti-user-star" style="font-size:11px"></i> ${ft.intervenant||'–'}
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn-ghost edit-ft-btn" style="padding:6px 10px" data-id="${ft.id}"><i class="ti ti-pencil" style="font-size:13px"></i></button>
+        <button class="btn-ghost del-ft-btn" style="padding:6px 10px;color:var(--red)" data-id="${ft.id}"><i class="ti ti-trash" style="font-size:13px"></i></button>
+      </div>
+    </div>`).join('');
+  listEl.querySelectorAll('.edit-ft-btn').forEach(btn=>btn.addEventListener('click',()=>openFlashTalkForm(btn.dataset.id)));
+  listEl.querySelectorAll('.del-ft-btn').forEach(btn=>btn.addEventListener('click',()=>deleteFlashTalk(btn.dataset.id)));
+}
+
+function openFlashTalkForm(ftId=null){
+  const form=el('flashtalk-form');
+  form.classList.add('open');
+  editFlashTalk=ftId;
+  if(ftId){
+    const ft=DATA.flashTalks.find(f=>f.id===ftId);if(!ft)return;
+    el('ft-start').value=ft.start||'';el('ft-end').value=ft.end||'';
+    el('ft-thematique').value=ft.thematique||'';el('ft-sujet').value=ft.sujet||'';
+    el('ft-intervenant').value=ft.intervenant||'';
+  } else {
+    el('ft-start').value='';el('ft-end').value='';el('ft-thematique').value='';
+    el('ft-sujet').value='';el('ft-intervenant').value='';
+  }
+  form.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+async function saveFlashTalk(){
+  const start=el('ft-start').value,end=el('ft-end').value;
+  const thematique=el('ft-thematique').value.trim(),sujet=el('ft-sujet').value.trim(),intervenant=el('ft-intervenant').value.trim();
+  if(!start||!sujet||!intervenant){toast("Merci de remplir au minimum l'heure de début, le sujet et l'intervenant.");return;}
+  const data={start,end,thematique,sujet,intervenant,createdAt:Date.now()};
+  loader(true);
+  try{
+    if(editFlashTalk){
+      await updateDoc(doc(db,'flashTalks',editFlashTalk),data);
+      const idx=DATA.flashTalks.findIndex(f=>f.id===editFlashTalk);
+      if(idx>=0)DATA.flashTalks[idx]={id:editFlashTalk,...data};
+      toast('Flash talk mis à jour !');
+    } else {
+      const ref=await addDoc(collection(db,'flashTalks'),data);
+      DATA.flashTalks.push({id:ref.id,...data});
+      toast('Flash talk créé !');
+    }
+    el('flashtalk-form').classList.remove('open');editFlashTalk=null;
+    renderFlashTalksAdminList();updateBadges();
+  }catch(e){console.error(e);toast('Erreur.');}
+  loader(false);
+}
+
+async function deleteFlashTalk(ftId){
+  if(!confirm('Supprimer ce flash talk ?'))return;
+  loader(true);
+  try{
+    await deleteDoc(doc(db,'flashTalks',ftId));
+    DATA.flashTalks=DATA.flashTalks.filter(f=>f.id!==ftId);
+    renderFlashTalksAdminList();updateBadges();toast('Flash talk supprimé.');
+  }catch(e){console.error(e);toast('Erreur.');}
+  loader(false);
+}
+
+/* ── Import automatique programme Forum Créa (ateliers + flash talks) ── */
+const PROGRAMME_ATELIERS = [{"start": "11:00", "end": "11:45", "thematique": "Communication", "sujet": "Les bases d'un plan de communication", "structure": "GERMINAL"}, {"start": "11:50", "end": "12:35", "thematique": "Statuts juridiques", "sujet": "Les différents statuts juridiques", "structure": "PIVOD"}, {"start": "12:45", "end": "13:30", "thematique": "IA", "sujet": "Entrepreneurs : améliorez votre productivité avec l'IA", "structure": "THARGO"}, {"start": "14:00", "end": "14:45", "thematique": "Emergence", "sujet": "Les différentes étapes de la création d'entreprise", "structure": "RESSAC"}, {"start": "15:00", "end": "15:45", "thematique": "ESS", "sujet": "Faire entreprise autrement : de l'intention floue à l'impact réel", "structure": "BGE"}, {"start": "16:00", "end": "16:45", "thematique": "Etude de marché", "sujet": "L'étude de marché: Identifier son prix de vente", "structure": "ADIE"}, {"start": "11:00", "end": "11:45", "thematique": "Responsabilité Juridique", "sujet": "Ma protection sociale / Ma rémunération", "structure": "AXA"}, {"start": "11:50", "end": "12:35", "thematique": "Financement", "sujet": "Financer ma création / ma croissance", "structure": "CIC et InExtenso"}, {"start": "12:45", "end": "13:30", "thematique": "Communication", "sujet": "Stratégie de contenus et d'image durables", "structure": "Yaitso et Yes for Comm"}, {"start": "14:00", "end": "14:45", "thematique": "Juridique", "sujet": "Le régime juridique du bail commercial", "structure": "HGI et Make Office"}, {"start": "15:00", "end": "15:45", "thematique": "Stratégie", "sujet": "Trouver son associé - facteur clés du succès", "structure": "FL et JL"}, {"start": "16:00", "end": "16:45", "thematique": "Transition", "sujet": "Mon parcours économie d'énergie", "structure": "CRESS"}];
+
+const PROGRAMME_FLASHTALKS = [{"start": "11:00", "end": "11:15", "thematique": "Acteur de la création d'entreprise", "sujet": "Passionné/e par la cosmétique durable ?", "intervenant": "LMCE"}, {"start": "11:30", "end": "11:45", "thematique": "Actualité chaude", "sujet": "La facturation électronique : l'essentiel à savoir !", "intervenant": "COGEDIS"}, {"start": "11:55", "end": "12:10", "thematique": "Acteur de la création d'entreprise", "sujet": "Intervention BGE", "intervenant": "BGE"}, {"start": "12:15", "end": "12:30", "thematique": "Acteur de la création d'entreprise", "sujet": "Le portage salarial : l'alternative à l'entrepreneuriat classique !", "intervenant": "Performus"}, {"start": "13:30", "end": "13:45", "thematique": "Actualité chaude", "sujet": "Bon à savoir avant d'ouvrir votre local : la réglementation hygiène et sécurité", "intervenant": "Coeur de Cible"}, {"start": "13:45", "end": "14:00", "thematique": "Acteur de la création d'entreprise", "sujet": "Le prêt d'honneur pour soutenir vos fonds propres !", "intervenant": "PIE"}, {"start": "14:15", "end": "14:30", "thematique": "Actualité chaude", "sujet": "Comment maîtriser le volet travaux de votre projet !", "intervenant": "Y Y Studio"}, {"start": "14:45", "end": "15:00", "thematique": "Témoignage", "sujet": "L'importance de l'image pour la réussite", "intervenant": "Maria Look Conseil"}, {"start": "15:15", "end": "15:30", "thematique": "Témoignage", "sujet": "Témoignage entrepreneur", "intervenant": "Entrepreneur du Département 93"}];
+
+async function importProgramme(){
+  if(DATA.ateliers.length||DATA.flashTalks.length){
+    if(!confirm(`Le programme contient déjà ${DATA.ateliers.length} atelier(s) et ${DATA.flashTalks.length} flash talk(s).\\n\\nImporter ajoutera ${PROGRAMME_ATELIERS.length} nouveaux ateliers et ${PROGRAMME_FLASHTALKS.length} nouveaux flash talks (sans dupliquer ceux déjà présents avec le même horaire+sujet).\\n\\nContinuer ?`)) return;
+  } else {
+    if(!confirm(`Importer ${PROGRAMME_ATELIERS.length} ateliers et ${PROGRAMME_FLASHTALKS.length} flash talks issus du programme Forum Créa 22/09/2026 ?`)) return;
+  }
+  loader(true);
+  try{
+    const batch=writeBatch(db);
+    let countAt=0, countFt=0;
+    PROGRAMME_ATELIERS.forEach(a=>{
+      const exists=DATA.ateliers.some(x=>x.start===a.start&&x.sujet===a.sujet);
+      if(exists) return;
+      const period=a.start<'13:00'?'matin':'aprem';
+      const titre=a.sujet;
+      const ref=doc(collection(db,'ateliers'));
+      const data={titre,salle:a.structure||'',description:a.thematique?`Thématique : ${a.thematique}`:'',start:a.start,end:a.end,period,value:`${a.start}-${a.end}`,places:0,categories:[],animateurs:[],intervenantLibre:a.structure||'',createdAt:Date.now()};
+      batch.set(ref,data);
+      DATA.ateliers.push({id:ref.id,...data});
+      countAt++;
+    });
+    PROGRAMME_FLASHTALKS.forEach(f=>{
+      const exists=DATA.flashTalks.some(x=>x.start===f.start&&x.sujet===f.sujet);
+      if(exists) return;
+      const ref=doc(collection(db,'flashTalks'));
+      const data={start:f.start,end:f.end,thematique:f.thematique||'',sujet:f.sujet,intervenant:f.intervenant||'',createdAt:Date.now()};
+      batch.set(ref,data);
+      DATA.flashTalks.push({id:ref.id,...data});
+      countFt++;
+    });
+    await batch.commit();
+    renderAteliersAdminList?.();renderFlashTalksAdminList?.();updateBadges?.();
+    toast(`Import terminé : ${countAt} atelier(s) + ${countFt} flash talk(s) ajoutés.`);
+  }catch(e){console.error(e);toast("Erreur lors de l'import.");}
   loader(false);
 }
 
@@ -1485,7 +1625,7 @@ function renderAteliersGrid(){
   const search=(el('at-search')?.value||'').toLowerCase();
   const catF=el('at-cat')?.value||'';
   const catSel=el('at-cat');
-  if(catSel){const cur=catSel.value;catSel.innerHTML='<option value="">Toutes catégories</option>'+ALL_CATS.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');}
+  if(catSel){const cur=catSel.value;const catList=(DATA.categories.length?DATA.categories.map(c=>c.name):ALL_CATS);catSel.innerHTML='<option value="">Toutes catégories</option>'+catList.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');}
   const grid=el('ateliers-grid');if(!grid)return;
   if(!DATA.ateliers.length){grid.innerHTML='<div class="empty-state"><i class="ti ti-school"></i><p>Aucun atelier disponible pour le moment.</p></div>';return;}
   const list=DATA.ateliers.filter(at=>{
@@ -1498,9 +1638,7 @@ function renderAteliersGrid(){
   grid.innerHTML=list.map(at=>{
     const inscrits=DATA.inscriptions.filter(i=>i.atelierId===at.id).length;
     const full=at.places>0&&inscrits>=at.places;
-    const animNames=(at.animateurs||[]).map(id=>DATA.exposants.find(e=>e.id===id)?.name||'').filter(Boolean).join(', ');
-    const cats=(at.categories||[]).map(c=>`<span class="at-cat-tag">${c.split(',')[0].trim()}</span>`).join(' ');
-    const isPm=at.period==='aprem';
+    const animNames=((at.animateurs||[]).map(id=>DATA.exposants.find(e=>e.id===id)?.name||'').filter(Boolean).join(', '))||at.intervenantLibre||'';
     return`<div class="atelier-card">
       <div class="at-header">
         <div class="at-time-badge${isPm?' pm':''}">${at.start}–${at.end}</div>
@@ -1522,6 +1660,25 @@ function renderAteliersGrid(){
   }).join('');
   grid.querySelectorAll('[data-atid]').forEach(btn=>btn.addEventListener('click',()=>openModalAtelier(btn.dataset.atid)));
   grid.querySelectorAll('[data-atid-wait]').forEach(btn=>btn.addEventListener('click',()=>openModalWait('atelier',null,null,null,btn.dataset.atidWait)));
+}
+
+/* ── Flash Talks (visiteur) ─────────────────────────────────────── */
+function renderFlashTalksGrid(){
+  const grid=el('flashtalks-grid');if(!grid)return;
+  if(!DATA.flashTalks.length){grid.innerHTML='<div class="empty-state"><i class="ti ti-bolt"></i><p>Aucun flash talk programmé pour le moment.</p></div>';return;}
+  const list=[...DATA.flashTalks].sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+  grid.innerHTML=list.map(ft=>{
+    return`<div class="atelier-card" style="border-left:4px solid #B8940A">
+      <div class="at-header">
+        <div class="at-time-badge" style="background:#FFF8E6;color:#B8940A;border-color:#FFD82B">${ft.start||'–'}${ft.end?'–'+ft.end:''}</div>
+        <div style="flex:1">
+          <div class="at-title">${ft.sujet||ft.titre||'Flash talk'}</div>
+          ${ft.thematique?`<div class="at-salle"><i class="ti ti-tag" style="font-size:11px"></i> ${ft.thematique}</div>`:''}
+        </div>
+      </div>
+      ${ft.intervenant?`<div class="at-animateurs"><i class="ti ti-user-star" style="font-size:12px"></i> ${ft.intervenant}</div>`:''}
+    </div>`;
+  }).join('');
 }
 
 function openModalAtelier(atId){
@@ -1784,7 +1941,7 @@ function applyModeUI() {
 /* ── Navigation visiteur ──────────────────────────────────────── */
 function switchVisitorTab(tab, pushHistory=true){
   applyModeUI();
-  ['accueil','rdvs','ateliers','planning','exposant','exposants-list','plan-visiteur'].forEach(t=>{const e=el('tab-'+t);if(e)e.style.display=t===tab?'block':'none';});
+  ['accueil','rdvs','ateliers','flashtalks','planning','exposant','exposants-list','plan-visiteur'].forEach(t=>{const e=el('tab-'+t);if(e)e.style.display=t===tab?'block':'none';});
   document.querySelectorAll('.vtab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   // Historique via hash — compatible GitHub Pages
   if(pushHistory){
@@ -1795,6 +1952,7 @@ function switchVisitorTab(tab, pushHistory=true){
     if(tab==='accueil')        renderAccueil();
     if(tab==='rdvs')           renderGrid();
     if(tab==='ateliers')       renderAteliersGrid();
+    if(tab==='flashtalks')     renderFlashTalksGrid();
     if(tab==='exposants-list') renderExposantsList();
     if(tab==='plan-visiteur')  renderPlanVisiteur();
   });
@@ -1803,7 +1961,7 @@ function switchVisitorTab(tab, pushHistory=true){
 // Bouton retour/avant navigateur
 window.addEventListener('popstate', e=>{
   const tab = e.state?.tab || window.location.hash.replace('#','') || 'accueil';
-  const valid = ['accueil','rdvs','ateliers','planning','exposant','exposants-list','plan-visiteur'];
+  const valid = ['accueil','rdvs','ateliers','flashtalks','planning','exposant','exposants-list','plan-visiteur'];
   switchVisitorTab(valid.includes(tab)?tab:'accueil', false);
 });
 
@@ -3474,6 +3632,53 @@ function initParametres() {
       if(gw) gw.style.display = r.value==='fantome' ? 'block' : 'none';
     });
   });
+  renderCategoriesList();
+  el('add-category-btn')?.addEventListener('click', addCategory);
+  el('new-category-input')?.addEventListener('keydown', e=>{ if(e.key==='Enter') addCategory(); });
+}
+
+/* ── Catégories partenaires (dynamiques) ──────────────────────────── */
+function renderCategoriesList(){
+  const listEl=el('categories-list');if(!listEl)return;
+  const cats=DATA.categories.length?DATA.categories:ALL_CATS.map((c,i)=>({id:'default-'+i,name:c,order:i}));
+  if(!cats.length){listEl.innerHTML='<div style="font-size:12px;color:var(--ink3)">Aucune catégorie. Ajoutez-en une ci-dessous.</div>';return;}
+  listEl.innerHTML=cats.map(c=>`
+    <div style="display:flex;align-items:center;gap:8px;background:var(--surf2);border:1.5px solid var(--brd2);border-radius:8px;padding:8px 12px">
+      <i class="ti ti-tag" style="font-size:14px;color:var(--cyan);flex-shrink:0"></i>
+      <span style="flex:1;font-size:13px;color:var(--ink)">${c.name}</span>
+      <button class="del-cat-btn" data-id="${c.id}" style="background:none;border:none;color:var(--red);cursor:pointer;padding:4px"><i class="ti ti-trash" style="font-size:14px"></i></button>
+    </div>`).join('');
+  listEl.querySelectorAll('.del-cat-btn').forEach(btn=>btn.addEventListener('click',()=>deleteCategory(btn.dataset.id)));
+}
+
+async function addCategory(){
+  const input=el('new-category-input');
+  const name=(input?.value||'').trim();
+  if(!name){toast('Merci de saisir un nom de catégorie.');return;}
+  if(DATA.categories.some(c=>c.name.toLowerCase()===name.toLowerCase())){toast('Cette catégorie existe déjà.');return;}
+  loader(true);
+  try{
+    const order=DATA.categories.length;
+    const ref=await addDoc(collection(db,'categories'),{name,order,createdAt:Date.now()});
+    DATA.categories.push({id:ref.id,name,order});
+    if(input)input.value='';
+    renderCategoriesList();
+    toast('Catégorie ajoutée !');
+  }catch(e){console.error(e);toast('Erreur.');}
+  loader(false);
+}
+
+async function deleteCategory(catId){
+  if(catId.startsWith('default-')){toast('Cette catégorie par défaut ne peut pas être supprimée — ajoutez vos propres catégories.');return;}
+  if(!confirm("Supprimer cette catégorie ? Les exposants/ateliers qui l'utilisent garderont leur valeur actuelle."))return;
+  loader(true);
+  try{
+    await deleteDoc(doc(db,'categories',catId));
+    DATA.categories=DATA.categories.filter(c=>c.id!==catId);
+    renderCategoriesList();
+    toast('Catégorie supprimée.');
+  }catch(e){console.error(e);toast('Erreur.');}
+  loader(false);
 }
 
 // _initParametresReal merged into initParametres
@@ -3553,8 +3758,12 @@ if(IS_ADMIN){
   el('form-cancel')?.addEventListener('click',toggleAddForm);
   el('form-submit')?.addEventListener('click',addExposant);
   el('add-atelier-btn')?.addEventListener('click',()=>openAtelierForm());
+  el('import-programme-btn')?.addEventListener('click',importProgramme);
   el('atelier-form-cancel')?.addEventListener('click',()=>{el('atelier-form').classList.remove('open');editAtelier=null;});
   el('atelier-form-submit')?.addEventListener('click',saveAtelier);
+  el('add-flashtalk-btn')?.addEventListener('click',()=>openFlashTalkForm());
+  el('flashtalk-form-cancel')?.addEventListener('click',()=>{el('flashtalk-form').classList.remove('open');editFlashTalk=null;});
+  el('flashtalk-form-submit')?.addEventListener('click',saveFlashTalk);
   document.querySelectorAll('.atab').forEach(btn=>btn.addEventListener('click',()=>switchAdminTab(btn.dataset.tab)));
   el('rdv-filter-exp')?.addEventListener('change',renderRdvList);
   el('rdv-filter-period')?.addEventListener('change',renderRdvList);
@@ -3580,7 +3789,7 @@ if(IS_VISITOR){
   document.querySelectorAll('.vtab').forEach(btn=>btn.addEventListener('click',()=>switchVisitorTab(btn.dataset.tab)));
   // Accueil actif par défaut
   // Restaurer l'onglet depuis l'URL si présent
-  const _validTabs = ['accueil','rdvs','ateliers','planning','exposant','exposants-list','plan-visiteur'];
+  const _validTabs = ['accueil','rdvs','ateliers','flashtalks','planning','exposant','exposants-list','plan-visiteur'];
   const _hashTab = window.location.hash.replace('#','');
   const _initTab = _validTabs.includes(_hashTab) ? _hashTab : 'accueil';
   history.replaceState({tab:_initTab}, '', _initTab==='accueil'?window.location.pathname:'#'+_initTab);
