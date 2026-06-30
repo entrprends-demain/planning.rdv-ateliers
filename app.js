@@ -1641,6 +1641,8 @@ function renderAteliersGrid(){
     const inscrits=DATA.inscriptions.filter(i=>i.atelierId===at.id).length;
     const full=at.places>0&&inscrits>=at.places;
     const animNames=((at.animateurs||[]).map(id=>DATA.exposants.find(e=>e.id===id)?.name||'').filter(Boolean).join(', '))||at.intervenantLibre||'';
+    const cats=(at.categories||[]).map(c=>`<span class="at-cat-tag">${c.split(',')[0].trim()}</span>`).join(' ');
+    const isPm=at.period==='aprem';
     return`<div class="atelier-card">
       <div class="at-header">
         <div class="at-time-badge${isPm?' pm':''}">${at.start}–${at.end}</div>
