@@ -1084,103 +1084,6 @@ Document généré automatiquement par la plateforme PIE.
   toast(`Document RGPD téléchargé pour ${v.prenom} ${v.nom}`);
 }
 
-async function exportVisiteursXlsx(){
-  if(typeof XLSX==='undefined'){toast("La librairie d'export n'a pas pu se charger. Vérifiez votre connexion internet.");return;}
-  loader(true);
-  try{
-    // Recharger visitors depuis Firebase pour être à jour (comme renderVisiteursList)
-    const vS=await getDocs(collection(db,'visitors'));
-    const visitorsFresh=vS.docs.map(d=>({id:d.id,...d.data()}));
-    const emailsWithCode=new Set(visitorsFresh.map(v=>(v.email||'').toLowerCase()));
-
-    const withCode=visitorsFresh.map(v=>{
-      const emailLow=(v.email||'').toLowerCase();
-      const bk=DATA.bookings.filter(b=>(b.email||'').toLowerCase()===emailLow).sort((a,b)=>(a.slotStart||'').localeCompare(b.slotStart||''));
-      const ins=DATA.inscriptions.filter(i=>(i.email||'').toLowerCase()===emailLow);
-      const first=bk[0]||ins[0];
-      return{...v,email:v.email,bookings:bk,inscriptions:ins,prenom:first?.prenom||v.prenom||'',nom:first?.nom||v.nom||'',societe:first?.societe||v.societe||''};
-    });
-
-    const allEmails=new Set([
-      ...DATA.bookings.map(b=>(b.email||'').toLowerCase()),
-      ...DATA.inscriptions.map(i=>(i.email||'').toLowerCase()),
-    ]);
-    const withoutCode=[...allEmails].filter(e=>e&&!emailsWithCode.has(e)).map(emailLow=>{
-      const bk=DATA.bookings.filter(b=>(b.email||'').toLowerCase()===emailLow).sort((a,b)=>(a.slotStart||'').localeCompare(b.slotStart||''));
-      const ins=DATA.inscriptions.filter(i=>(i.email||'').toLowerCase()===emailLow);
-      const first=bk[0]||ins[0];
-      return{id:'nocode-'+emailLow,email:emailLow,code:'–',bookings:bk,inscriptions:ins,prenom:first?.prenom||'',nom:first?.nom||'',societe:first?.societe||''};
-    });
-
-    const visiteurs=[...withCode,...withoutCode].sort((a,b)=>(a.nom||'').localeCompare(b.nom||''));
-
-    if(!visiteurs.length){toast('Aucun visiteur à exporter.');loader(false);return;}
-
-    // Feuille 1 — Vue d'ensemble (une ligne par visiteur)
-    const overviewRows=visiteurs.map(v=>({
-      'Prénom':v.prenom||'',
-      'Nom':v.nom||'',
-      'Email':v.email||'',
-      'Société':v.societe||'',
-      'Code personnel':v.code||'–',
-      'Nb RDV':v.bookings.length,
-      'Nb Ateliers':v.inscriptions.length,
-      "Date d'inscription":v.createdAt?new Date(v.createdAt).toLocaleString('fr-FR'):'',
-    }));
-
-    // Feuille 2 — Détail RDV (une ligne par RDV)
-    const rdvRows=[];
-    visiteurs.forEach(v=>{
-      v.bookings.forEach(b=>{
-        const exp=DATA.exposants.find(e=>e.id===b.exposantId);
-        rdvRows.push({
-          'Prénom':v.prenom||'',
-          'Nom':v.nom||'',
-          'Email':v.email||'',
-          'Société':v.societe||'',
-          'Expert':exp?.name||b.exposantId||'',
-          'Créneau début':b.slotStart||'',
-          'Créneau fin':b.slotEnd||'',
-          'Problématique':b.problematique||'',
-          'Mode':b.mode||'inscription',
-        });
-      });
-    });
-
-    // Feuille 3 — Détail Ateliers (une ligne par inscription atelier)
-    const atRows=[];
-    visiteurs.forEach(v=>{
-      v.inscriptions.forEach(i=>{
-        const at=DATA.ateliers.find(a=>a.id===i.atelierId);
-        atRows.push({
-          'Prénom':v.prenom||'',
-          'Nom':v.nom||'',
-          'Email':v.email||'',
-          'Société':v.societe||'',
-          'Atelier':at?.titre||i.atelierId||'',
-          'Salle':at?.salle||'',
-          'Début':at?.start||'',
-          'Fin':at?.end||'',
-          'Mode':i.mode||'inscription',
-        });
-      });
-    });
-
-    const wb=XLSX.utils.book_new();
-    const wsOverview=XLSX.utils.json_to_sheet(overviewRows);
-    const wsRdv=XLSX.utils.json_to_sheet(rdvRows.length?rdvRows:[{'Info':'Aucun RDV enregistré'}]);
-    const wsAt=XLSX.utils.json_to_sheet(atRows.length?atRows:[{'Info':'Aucun atelier enregistré'}]);
-    XLSX.utils.book_append_sheet(wb,wsOverview,'Visiteurs');
-    XLSX.utils.book_append_sheet(wb,wsRdv,'RDV');
-    XLSX.utils.book_append_sheet(wb,wsAt,'Ateliers');
-
-    const dateStr=new Date().toISOString().slice(0,10);
-    XLSX.writeFile(wb,`Visiteurs_EntreprendsDemain_${dateStr}.xlsx`);
-    toast(`Export Excel généré : ${visiteurs.length} visiteur(s).`);
-  }catch(e){console.error(e);toast("Erreur lors de l'export Excel.");}
-  loader(false);
-}
-
 async function deleteVisiteur(visitorId, email) {
   // Si pas de vrai ID visitor (visiteur sans code), pas de doc à supprimer dans visitors
   const emailLow = (email||'').toLowerCase();
@@ -3879,7 +3782,6 @@ if(IS_ADMIN){
   el('form-submit')?.addEventListener('click',addExposant);
   el('add-atelier-btn')?.addEventListener('click',()=>openAtelierForm());
   el('import-programme-btn')?.addEventListener('click',importProgramme);
-  el('export-visiteurs-xlsx-btn')?.addEventListener('click',exportVisiteursXlsx);
   el('atelier-form-cancel')?.addEventListener('click',()=>{el('atelier-form').classList.remove('open');editAtelier=null;});
   el('atelier-form-submit')?.addEventListener('click',saveAtelier);
   el('add-flashtalk-btn')?.addEventListener('click',()=>openFlashTalkForm());
